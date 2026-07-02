@@ -1,0 +1,245 @@
+{
+  "checkForUpdates": true,
+  "updateCheckUrl": "https://raw.githubusercontent.com/Irish-Coder69/Launcher/main/update/versions.json",
+  "steps": [
+    {
+      "name": "Outlook",
+      "type": "launch",
+      "enabled": true,
+      "programPath": "olk.exe",
+      "windowStyle": "Maximized",
+      "minimizeAfterLaunch": true,
+      "minimizeAfterCompletion": false,
+      "minimizeAfterLaunchDelaySeconds": 2,
+      "maximizeBeforeMinimizeDelayMs": 1400,
+      "minimizeWindowTitles": [
+        "Outlook",
+        "Microsoft Outlook",
+        "Inbox"
+      ],
+      "arguments": "",
+      "workingDirectory": "",
+      "postLaunchDelaySeconds": 8,
+      "waitAfterStepSeconds": 4
+    },
+    {
+      "name": "Local Visual Board",
+      "type": "launch",
+      "enabled": true,
+      "programPath": "C:/Windsor Data Base/Visual Board/Visual Auto FE Updater Db.accde",
+      "arguments": "",
+      "workingDirectory": "",
+      "windowTitle": "Access - Visual Board",
+      "fallbackWindowTitles": [
+        "Visual Board",
+        "Access - Visual Board",
+        "Visual Auto FE Updater Db",
+        "JudsonF Welcome to Main Menu.",
+        "Welcome to Main Menu",
+        "Auto FE Updater",
+        "Access"
+      ],
+      "postLaunchDelaySeconds": 35,
+      "waitForWindowToCloseTitle": "Auto FE Updater",
+      "waitForWindowToCloseTimeoutSeconds": 180,
+      "waitForWindowToCloseDetectionTimeoutSeconds": 30,
+      "windowTimeoutSeconds": 240,
+      "loginWindowTitle": "Login Form",
+      "loginFallbackWindowTitles": [
+        "Login Form",
+        "Employee"
+      ],
+      "loginFieldPreferredNames": [
+        "Enter employeeID",
+        "Enter employee ID",
+        "Employee ID",
+        "Employee"
+      ],
+      "loginFieldExcludeNames": [
+        "Help",
+        "Search",
+        "Tell me",
+        "Find"
+      ],
+      "loginEnterRetryCount": 3,
+      "loginEnterRetryDelayMs": 1000,
+      "loginReattemptCount": 2,
+      "loginSubmitButtonNames": [
+        "Enter",
+        "Login",
+        "OK"
+      ],
+      "loginSubmitButtonRetryCount": 0,
+      "loginFailIfWindowStillActive": true,
+      "loginSuccessValidationEnabled": true,
+      "loginSuccessWindowTitle": "Access - Visual Board",
+      "loginSuccessFallbackWindowTitles": [
+        "Visual Board",
+        "Access - Visual Board",
+        "Microsoft Access",
+        "Access"
+      ],
+      "loginSuccessTimeoutSeconds": 60,
+      "loginSuccessIntervalMs": 1000,
+      "loginSuccessRequireLoginWindowClosed": true,
+      "loginSuccessRequireMainWindowVisible": true,
+      "moveToMonitorAfterLogin": true,
+      "targetMonitor": "Left",
+      "moveWindowSearchTimeoutSeconds": 60,
+      "moveWindowSearchIntervalMs": 1000,
+      "additionalWindowsToMoveAfterLogin": [
+        {
+          "name": "Main Menu",
+          "windowTitle": "JudsonF Welcome to Main Menu.",
+          "fallbackWindowTitles": [
+            "Welcome to Main Menu",
+            "JudsonF Welcome to Main Menu",
+            "Main menu",
+            "Main Menu",
+            "MainMenu"
+          ]
+        }
+      ],
+      "loginSequence": [
+        { "keys": "9563", "delayMs": 900 },
+        { "keys": "{ENTER}", "delayMs": 2000 }
+      ],
+      "waitForLoginCompleteSeconds": 10,
+      "waitAfterStepSeconds": 2
+    },
+      {
+        "name": "Stockroom Analytics",
+        "type": "launch",
+        "enabled": true,
+        "programPath": "N:/StockRoom DataBase/Stockroom Analytics Launcher.lnk",
+        "arguments": "",
+        "workingDirectory": "",
+        "windowTitle": "Stockroom Analytics",
+        "fallbackWindowTitles": [
+          "Stockroom Analytics",
+          "Stockroom Analytics Launcher",
+          "Microsoft Access",
+          "Access"
+        ],
+        "loginWindowTitle": "Logon Form",
+        "loginFallbackWindowTitles": [
+          "Logon Form",
+          "Logon"
+        ],
+        "postLaunchDelaySeconds": 20,
+        "waitForWindowToCloseTitle": "Auto FE Updater",
+        "waitForWindowToCloseTimeoutSeconds": 120,
+        "waitForWindowToCloseDetectionTimeoutSeconds": 30,
+        "windowTimeoutSeconds": 180,
+        "minimizeAfterCompletion": true,
+        "minimizeAdditionalWindowTitlesAfterCompletionDelaySeconds": 3,
+        "minimizeAdditionalWindowTitlesAfterCompletion": [
+          "Stockroom Analytics",
+          "Stockroom Analytics Launcher",
+          "Access - Visual Board",
+          "Visual Board",
+          "JudsonF Welcome to Main Menu.",
+          "Welcome to Main Menu"
+        ],
+        "loginSequence": [
+          { "keys": "9563", "delayMs": 600 },
+          { "keys": "{ENTER}", "delayMs": 1500 }
+        ],
+        "waitForLoginCompleteSeconds": 8,
+        "waitAfterStepSeconds": 2
+      },
+      {
+        "name": "Visual Mfg",
+        "type": "launch",
+        "enabled": true,
+        "programPath": "\\\\INFOR-VMSERVER\\Visual1000$\\VMFG\\VM.EXE",
+        "arguments": "",
+        "workingDirectory": "",
+        "windowTitle": "Visual Manufacturing",
+        "fallbackWindowTitles": [
+          "Visual Manufacturing",
+          "Visual",
+          "VMFG",
+          "VM"
+        ],
+        "loginWindowTitle": "Visual Manufacturing",
+        "loginFallbackWindowTitles": [
+          "Visual Manufacturing",
+          "Login",
+          "Logon"
+        ],
+        "postLaunchDelaySeconds": 18,
+        "windowTimeoutSeconds": 180,
+        "loginSequence": [
+          { "keys": "JUDSONF{TAB}wstockrline2{ENTER}", "delayMs": 2200 }
+        ],
+        "waitForLoginCompleteSeconds": 10,
+        "loginFailIfWindowStillActive": false,
+        "waitAfterStepSeconds": 2
+      },
+      {
+        "name": "Document Scanner",
+        "type": "launch",
+        "enabled": true,
+        "programPath": "C:/Users/wStockRLine2/AppData/Local/Document Scanner/Document Scanner.exe",
+        "arguments": "",
+        "workingDirectory": "",
+        "windowTitle": "Document Scanner",
+        "fallbackWindowTitles": [
+          "Document Scanner",
+          "Scanner"
+        ],
+        "postLaunchDelaySeconds": 5,
+        "windowTimeoutSeconds": 90,
+        "waitAfterStepSeconds": 2
+      },
+      {
+        "name": "Receiver's",
+        "type": "launch",
+        "enabled": true,
+        "programPath": "P:/Stockroom/Receiver's",
+        "arguments": "",
+        "workingDirectory": "",
+        "windowTitle": "Receiver's",
+        "fallbackWindowTitles": [
+          "Receiver's",
+          "Receivers",
+          "Receiver"
+        ],
+        "minimizeAfterLaunch": true,
+        "minimizeAfterLaunchDelaySeconds": 1,
+        "postLaunchDelaySeconds": 4,
+        "windowTimeoutSeconds": 90,
+        "waitAfterStepSeconds": 2
+      },
+      {
+        "name": "P-touch Editor 5.4",
+        "type": "launch",
+        "enabled": true,
+        "programPath": "C:/Program Files (x86)/Brother/Ptedit54/ptedit54.exe",
+        "arguments": "",
+        "workingDirectory": "",
+        "windowTitle": "P-touch Editor 5.4",
+        "fallbackWindowTitles": [
+          "P-touch Editor",
+          "ptedit54",
+          "Brother"
+        ],
+        "minimizeAfterLaunch": true,
+        "minimizeAfterLaunchDelaySeconds": 1,
+        "postLaunchDelaySeconds": 4,
+        "windowTimeoutSeconds": 90,
+        "waitAfterStepSeconds": 2
+      },
+    {
+      "name": "Update Table Example",
+      "type": "access-sql",
+      "enabled": false,
+      "databasePath": "C:/Path/To/YourDatabase.accdb",
+      "sql": [
+        "UPDATE YourTable SET UpdatedAt = Now() WHERE NeedsUpdate = True"
+      ],
+      "waitAfterStepSeconds": 1
+    }
+  ]
+}

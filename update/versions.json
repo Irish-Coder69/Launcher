@@ -1,0 +1,15 @@
+[
+  {
+    "version": "1.0.2",
+    "releaseDate": "2026-07-02",
+    "description": "Patch release with installer refresh and documentation cleanup",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.2/Launcher-1.0.2-Setup.exe",
+    "checksum": "2D56F7BD0942931FABA419EA74119909D22437AD0E9967EBBE491F2CF3A9854A",
+    "isRequired": false,
+    "notes": [
+      "Refreshed installer build",
+      "Updated documentation for the moved workspace",
+      "Installer and desktop shortcut paths remain location-relative"
+    ]
+  }
+]
