@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.8 - 2026-07-07
+
+- Removed trailing whitespace flagged by PSScriptAnalyzer in launcher script.
+- Rebuilt installer and refreshed release metadata for v1.0.8.
+
 ## 1.0.7 - 2026-07-07
 
 - Added visible launcher version in the window title and startup banner.

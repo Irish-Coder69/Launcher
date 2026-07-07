@@ -2884,7 +2884,7 @@ try {
 
                 if ($updateResult -and $updateResult.UpdateInstalled) {
                     Write-LauncherLog "Update installed to version $($updateResult.Latest). Restart Launcher to run the latest build."
-                    Write-Host "" 
+                    Write-Host ""
                     Write-Host (("=" * $script:UIWidth)) -ForegroundColor DarkCyan
                     Write-Host "  Launcher updated successfully. Restarting now will use the latest version." -ForegroundColor Green
                     Write-Host (("=" * $script:UIWidth)) -ForegroundColor DarkCyan
