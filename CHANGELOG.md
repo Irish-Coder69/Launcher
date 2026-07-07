@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.3 - 2026-07-07
+
+- Rebuilt the installer for the latest release package.
+- Updated release metadata and documentation to reference v1.0.3 assets.
+
 ## 1.0.2 - 2026-07-02
 
 - Rebuilt the installer for the moved workspace location.
