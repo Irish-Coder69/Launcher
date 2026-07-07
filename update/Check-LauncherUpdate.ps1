@@ -123,8 +123,12 @@ function Get-AvailableVersions {
 
         $versions = $response.Content | ConvertFrom-Json
 
-        if ($versions -is [array] -and $versions.Count -gt 0) {
-            return $versions | Sort-Object { [Version]$_.version } -Descending
+        # ConvertFrom-Json can return a single PSCustomObject for one-item arrays.
+        # Normalize to an array so the updater works with either shape.
+        $versionList = if ($versions -is [array]) { $versions } elseif ($null -ne $versions) { @($versions) } else { @() }
+
+        if ($versionList.Count -gt 0) {
+            return $versionList | Sort-Object { [Version]$_.version } -Descending
         }
 
         return $null
