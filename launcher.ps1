@@ -2272,14 +2272,21 @@ function Invoke-MoveWindowToMonitor {
     param(
         [object]$Step,
         [System.Diagnostics.Process]$Process,
+        [switch]$BeforeLogin,
         [switch]$DryRun
     )
 
-    $shouldMove = $false
-    if ($Step.PSObject.Properties.Name -contains "moveToMonitorAfterLogin") {
-        $shouldMove = [bool]$Step.moveToMonitorAfterLogin
+    $shouldMoveBeforeLogin = $false
+    if ($Step.PSObject.Properties.Name -contains "moveToMonitorBeforeLogin") {
+        $shouldMoveBeforeLogin = [bool]$Step.moveToMonitorBeforeLogin
     }
 
+    $shouldMoveAfterLogin = $false
+    if ($Step.PSObject.Properties.Name -contains "moveToMonitorAfterLogin") {
+        $shouldMoveAfterLogin = [bool]$Step.moveToMonitorAfterLogin
+    }
+
+    $shouldMove = if ($BeforeLogin) { $shouldMoveBeforeLogin } else { $shouldMoveAfterLogin }
     if (-not $shouldMove) {
         return
     }
@@ -2297,7 +2304,7 @@ function Invoke-MoveWindowToMonitor {
 
     $windowGroups = @(
         @{
-            Label = [string]$Step.name
+            Label  = [string]$Step.name
             Titles = @($mainWindowTitle) + $fallbackWindowTitles
         }
     )
@@ -2316,7 +2323,7 @@ function Invoke-MoveWindowToMonitor {
         1000
     }
 
-    if ($Step.PSObject.Properties.Name -contains "additionalWindowsToMoveAfterLogin") {
+    if (-not $BeforeLogin -and $Step.PSObject.Properties.Name -contains "additionalWindowsToMoveAfterLogin") {
         foreach ($windowSpec in @($Step.additionalWindowsToMoveAfterLogin)) {
             if (-not $windowSpec) {
                 continue
@@ -2334,7 +2341,7 @@ function Invoke-MoveWindowToMonitor {
             $windowTitles = @($windowTitles | Where-Object { -not [string]::IsNullOrWhiteSpace($_) })
             if ($windowTitles.Count -gt 0) {
                 $windowGroups += @{
-                    Label = $windowLabel
+                    Label  = $windowLabel
                     Titles = $windowTitles
                 }
             }
@@ -2519,6 +2526,123 @@ public static class WindowPlacement {
     }
 }
 
+function Invoke-MaximizeWindowTitle {
+    param(
+        [string]$StepName,
+        [string[]]$TitleCandidates,
+        [switch]$DryRun
+    )
+
+    $uniqueTitles = @($TitleCandidates | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+    if ($uniqueTitles.Count -eq 0) {
+        return
+    }
+
+    if ($DryRun) {
+        foreach ($candidate in $uniqueTitles) {
+            Write-LauncherLog "[DryRun] Would maximize window for '$StepName' using title '$candidate'"
+        }
+        return
+    }
+
+    Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public static class WindowMaximize {
+    [DllImport("user32.dll")]
+    public static extern bool ShowWindowAsync(IntPtr hWnd, int nCmdShow);
+
+    [DllImport("user32.dll")]
+    public static extern IntPtr GetForegroundWindow();
+}
+"@ -ErrorAction SilentlyContinue
+
+    $shell = New-Object -ComObject WScript.Shell
+    foreach ($candidate in $uniqueTitles) {
+        if (-not $shell.AppActivate($candidate)) {
+            continue
+        }
+
+        Start-Sleep -Milliseconds 250
+        $foregroundWindowHandle = $null
+        try { $foregroundWindowHandle = [WindowMaximize]::GetForegroundWindow() } catch { $null = $_ }
+        if ($foregroundWindowHandle -and $foregroundWindowHandle -ne [IntPtr]::Zero) {
+            [void][WindowMaximize]::ShowWindowAsync($foregroundWindowHandle, 3)
+            Write-LauncherLog "Maximized window for '$StepName' using title '$candidate'"
+            return
+        }
+    }
+
+    Write-LauncherLog "Could not find a window to maximize for '$StepName'" -Level "WARN"
+}
+
+function Invoke-PreLoginWindowPreparation {
+    param(
+        [object]$Step,
+        [System.Diagnostics.Process]$Process,
+        [switch]$DryRun
+    )
+
+    Invoke-MoveWindowToMonitor -Step $Step -Process $Process -BeforeLogin -DryRun:$DryRun
+
+    $shouldMaximizeBeforeLogin = $false
+    if ($Step.PSObject.Properties.Name -contains "maximizeBeforeLogin") {
+        $shouldMaximizeBeforeLogin = [bool]$Step.maximizeBeforeLogin
+    }
+
+    if ($shouldMaximizeBeforeLogin) {
+        $maximizeTitleCandidates = @()
+        if ($Step.PSObject.Properties.Name -contains "maximizeWindowTitles") {
+            $maximizeTitleCandidates += @($Step.maximizeWindowTitles | ForEach-Object { [string]$_ })
+        }
+
+        if ($maximizeTitleCandidates.Count -eq 0) {
+            if ($Step.PSObject.Properties.Name -contains "loginWindowTitle") {
+                $maximizeTitleCandidates += [string]$Step.loginWindowTitle
+            }
+            if ($Step.PSObject.Properties.Name -contains "windowTitle") {
+                $maximizeTitleCandidates += [string]$Step.windowTitle
+            }
+            if ($Step.PSObject.Properties.Name -contains "loginSuccessWindowTitle") {
+                $maximizeTitleCandidates += [string]$Step.loginSuccessWindowTitle
+            }
+            if ($Step.PSObject.Properties.Name -contains "loginFallbackWindowTitles") {
+                $maximizeTitleCandidates += @($Step.loginFallbackWindowTitles | ForEach-Object { [string]$_ })
+            }
+            if ($Step.PSObject.Properties.Name -contains "fallbackWindowTitles") {
+                $maximizeTitleCandidates += @($Step.fallbackWindowTitles | ForEach-Object { [string]$_ })
+            }
+        }
+
+        Invoke-MaximizeWindowTitle -StepName ([string]$Step.name) -TitleCandidates $maximizeTitleCandidates -DryRun:$DryRun
+    }
+
+    $preLoginMinimizeTitles = @()
+    if ($Step.PSObject.Properties.Name -contains "preLoginMinimizeWindowTitles") {
+        $preLoginMinimizeTitles = @($Step.preLoginMinimizeWindowTitles | ForEach-Object { [string]$_ })
+    }
+
+    if ($preLoginMinimizeTitles.Count -gt 0) {
+        $preLoginMinimizeDelaySeconds = if ($Step.PSObject.Properties.Name -contains "preLoginMinimizeDelaySeconds") {
+            [int]$Step.preLoginMinimizeDelaySeconds
+        }
+        else {
+            0
+        }
+
+        if ($preLoginMinimizeDelaySeconds -gt 0) {
+            if ($DryRun) {
+                Write-LauncherLog "[DryRun] Would wait $preLoginMinimizeDelaySeconds second(s) before minimizing pre-login windows for '$($Step.name)'"
+            }
+            else {
+                Start-Sleep -Seconds $preLoginMinimizeDelaySeconds
+            }
+        }
+
+        Invoke-MinimizeWindowTitle -StepName ([string]$Step.name) -TitleCandidates $preLoginMinimizeTitles -DryRun:$DryRun
+    }
+}
+
 function Invoke-LaunchStep {
     param(
         [object]$Step,
@@ -2553,6 +2677,7 @@ function Invoke-LaunchStep {
         Write-LauncherLog "[DryRun] Would launch: $programPath $arguments (WindowStyle=$windowStyle)"
         Invoke-MinimizeLaunchedWindow -Step $Step -Process $null -DryRun:$DryRun
         Wait-ForWindowToClose -Step $Step -DryRun:$DryRun
+        Invoke-PreLoginWindowPreparation -Step $Step -Process $null -DryRun:$DryRun
         if ($Step.PSObject.Properties.Name -contains "loginSequence") {
             Write-LauncherLog "[DryRun] Would run login sequence for '$($Step.name)'"
         }
@@ -2655,6 +2780,7 @@ function Invoke-LaunchStep {
 
     Wait-ForWindowToClose -Step $Step -DryRun:$DryRun
 
+    Invoke-PreLoginWindowPreparation -Step $Step -Process $process -DryRun:$DryRun
     Send-LoginSequence -Step $Step -Process $process -DryRun:$DryRun
     Invoke-UpdateTableFlow -Step $Step -Process $process -DryRun:$DryRun
 
@@ -2724,14 +2850,41 @@ try {
         }
     }
 
+    $requireUpdateBeforeRun = $false
+    if ($config.PSObject.Properties.Name -contains "requireUpdateBeforeRun") {
+        $requireUpdateBeforeRun = [bool]$config.requireUpdateBeforeRun
+    }
+
     if ($checkForUpdates -and -not $DryRun -and (Get-Command Invoke-UpdateCheck -ErrorAction SilentlyContinue)) {
         try {
             Write-LauncherLog "Checking for Launcher updates from GitHub..."
-            Invoke-UpdateCheck `
-                -InstallDir $PSScriptRoot `
-                -VersionsUrl $updateCheckUrl `
-                -Block:$false `
-                -Silent:$true | Out-Null
+            if ($requireUpdateBeforeRun) {
+                Write-LauncherLog "Update-before-run is enabled; launcher will install updates before continuing when a newer version is found."
+                $updateResult = Invoke-UpdateCheck `
+                    -InstallDir $PSScriptRoot `
+                    -VersionsUrl $updateCheckUrl `
+                    -Block:$true `
+                    -Silent:$true `
+                    -InstallBeforeContinue:$true `
+                    -RequireAnyUpdate:$true
+
+                if ($updateResult -and $updateResult.UpdateInstalled) {
+                    Write-LauncherLog "Update installed to version $($updateResult.Latest). Restart Launcher to run the latest build."
+                    Write-Host "" 
+                    Write-Host (("=" * $script:UIWidth)) -ForegroundColor DarkCyan
+                    Write-Host "  Launcher updated successfully. Restarting now will use the latest version." -ForegroundColor Green
+                    Write-Host (("=" * $script:UIWidth)) -ForegroundColor DarkCyan
+                    $completedSuccessfully = $true
+                    return
+                }
+            }
+            else {
+                Invoke-UpdateCheck `
+                    -InstallDir $PSScriptRoot `
+                    -VersionsUrl $updateCheckUrl `
+                    -Block:$false `
+                    -Silent:$true | Out-Null
+            }
         }
         catch {
             Write-LauncherLog "Update check could not be started: $($_.Exception.Message)" -Level "WARN"

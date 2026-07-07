@@ -250,7 +250,12 @@ function Main {
         }
 
         Save-LastCheckTime
-        return @{ Available = $true; Latest = $latestVersion.version }
+        return @{
+            Available = $true
+            Current = $currentVersion
+            Latest = $latestVersion.version
+            Details = $latestVersion
+        }
     }
     else {
         if (-not $Silent) {

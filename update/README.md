@@ -54,12 +54,12 @@ The launcher now loads the update helper from `update/Update-Integration.ps1` an
 
 ```json
 {
-  "version": "1.0.3",
+  "version": "1.0.4",
   "releaseDate": "2026-07-07",
   "description": "Patch release",
-  "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.3/Launcher-1.0.3-Setup.exe",
+  "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.4/Launcher-1.0.4-Setup.exe",
   "checksum": "SHA256-HERE",
-  "isRequired": false,
+  "isRequired": true,
   "notes": [
     "Refreshed installer build",
     "Updated documentation"
@@ -94,9 +94,9 @@ if ($result.Available) {
 
 ```powershell
 & ".\update\Install-LauncherUpdate.ps1" `
-  -DownloadUrl "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.3/Launcher-1.0.3-Setup.exe" `
+  -DownloadUrl "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.4/Launcher-1.0.4-Setup.exe" `
   -InstallDir "C:\Program Files\Launcher" `
-  -Checksum "A8250DA3AA49BFFBA927FDE126B04309E4B1BC0D892988F6D25D92EDD223CE8C"
+  -Checksum "0B16FF9B5FC8CA63FF9670A7166498C2512F1E610A24A92B085B852A9D89C1A6"
 ```
 
 ## Notes

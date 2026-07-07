@@ -33,7 +33,9 @@ function Invoke-UpdateCheck {
         [string]$VersionsUrl = "https://raw.githubusercontent.com/Irish-Coder69/Launcher/main/update/versions.json",
         [string]$UpdateScriptPath = (Join-Path $PSScriptRoot "update\Check-LauncherUpdate.ps1"),
         [bool]$Block = $false,
-        [bool]$Silent = $false
+        [bool]$Silent = $false,
+        [bool]$InstallBeforeContinue = $false,
+        [bool]$RequireAnyUpdate = $false
     )
 
     if (-not (Test-Path $UpdateScriptPath)) {
@@ -42,7 +44,43 @@ function Invoke-UpdateCheck {
     }
 
     if ($Block) {
-        # Run update check synchronously
+        if ($InstallBeforeContinue) {
+            # Enforced path: check silently, then install automatically when required.
+            $result = & $UpdateScriptPath -InstallDir $InstallDir -VersionsUrl $VersionsUrl -CheckOnly -Silent:$true
+            $isRequiredByManifest = $false
+            if ($result -and $result.Details -and $result.Details.PSObject.Properties.Name -contains "isRequired") {
+                $isRequiredByManifest = [bool]$result.Details.isRequired
+            }
+
+            $shouldInstall = ($result.Available -eq $true) -and ($RequireAnyUpdate -or $isRequiredByManifest)
+            if ($shouldInstall) {
+                $installScript = Join-Path (Split-Path $UpdateScriptPath) "Install-LauncherUpdate.ps1"
+                if (-not (Test-Path $installScript)) {
+                    throw "Update installer script not found: $installScript"
+                }
+
+                if (-not $result.Details -or [string]::IsNullOrWhiteSpace([string]$result.Details.downloadUrl)) {
+                    throw "Update is available but downloadUrl is missing from the manifest."
+                }
+
+                & $installScript -DownloadUrl $result.Details.downloadUrl -InstallDir $InstallDir -Checksum $result.Details.checksum
+                return @{
+                    Available = $true
+                    UpdateInstalled = $true
+                    Latest = $result.Latest
+                    Details = $result.Details
+                }
+            }
+
+            return @{
+                Available = [bool]$result.Available
+                UpdateInstalled = $false
+                Latest = $result.Latest
+                Details = $result.Details
+            }
+        }
+
+        # Run update check synchronously with user prompt flow.
         $result = & $UpdateScriptPath -InstallDir $InstallDir -VersionsUrl $VersionsUrl -Silent:$Silent
         if ($result.Available -eq $true -and $result.UserChoice -match "^Y") {
             $installScript = Join-Path (Split-Path $UpdateScriptPath) "Install-LauncherUpdate.ps1"
@@ -50,6 +88,8 @@ function Invoke-UpdateCheck {
                 & $installScript -DownloadUrl $result.Details.downloadUrl -InstallDir $InstallDir -Checksum $result.Details.checksum
             }
         }
+
+        return $result
     }
     else {
         # Run update check in background job
@@ -62,6 +102,8 @@ function Invoke-UpdateCheck {
                 }
             }
         } | Out-Null
+
+        return $null
     }
 }
 

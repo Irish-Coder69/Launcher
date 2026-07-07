@@ -1,15 +1,15 @@
 [
   {
-    "version": "1.0.3",
+    "version": "1.0.4",
     "releaseDate": "2026-07-07",
-    "description": "Patch release with refreshed installer and release metadata",
-    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.3/Launcher-1.0.3-Setup.exe",
-    "checksum": "A8250DA3AA49BFFBA927FDE126B04309E4B1BC0D892988F6D25D92EDD223CE8C",
-    "isRequired": false,
+    "description": "Required patch release with pre-run update enforcement and launch flow refinements",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.4/Launcher-1.0.4-Setup.exe",
+    "checksum": "0B16FF9B5FC8CA63FF9670A7166498C2512F1E610A24A92B085B852A9D89C1A6",
+    "isRequired": true,
     "notes": [
-      "Refreshed installer build",
-      "Updated release metadata for v1.0.3",
-      "Installer and desktop shortcut paths remain location-relative"
+      "Added required update-before-run behavior",
+      "Adjusted Visual Board and Stockroom pre-login window handling",
+      "Refreshed installer and release metadata for v1.0.4"
     ]
   }
 ]

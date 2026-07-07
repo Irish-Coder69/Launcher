@@ -1,5 +1,6 @@
 {
   "checkForUpdates": true,
+  "requireUpdateBeforeRun": true,
   "updateCheckUrl": "https://raw.githubusercontent.com/Irish-Coder69/Launcher/main/update/versions.json",
   "steps": [
     {
@@ -83,7 +84,10 @@
       "loginSuccessIntervalMs": 1000,
       "loginSuccessRequireLoginWindowClosed": true,
       "loginSuccessRequireMainWindowVisible": true,
-      "moveToMonitorAfterLogin": true,
+      "moveToMonitorBeforeLogin": true,
+      "moveToMonitorAfterLogin": false,
+      "maximizeBeforeLogin": true,
+      "minimizeAfterCompletion": true,
       "targetMonitor": "Left",
       "moveWindowSearchTimeoutSeconds": 60,
       "moveWindowSearchIntervalMs": 1000,
@@ -131,6 +135,12 @@
         "waitForWindowToCloseTimeoutSeconds": 120,
         "waitForWindowToCloseDetectionTimeoutSeconds": 30,
         "windowTimeoutSeconds": 180,
+        "preLoginMinimizeWindowTitles": [
+          "Access - Visual Board",
+          "Visual Board",
+          "JudsonF Welcome to Main Menu.",
+          "Welcome to Main Menu"
+        ],
         "minimizeAfterCompletion": true,
         "minimizeAdditionalWindowTitlesAfterCompletionDelaySeconds": 3,
         "minimizeAdditionalWindowTitlesAfterCompletion": [
