@@ -31,12 +31,21 @@ function Invoke-UpdateCheck {
     param(
         [string]$InstallDir = $PSScriptRoot,
         [string]$VersionsUrl = "https://raw.githubusercontent.com/Irish-Coder69/Launcher/main/update/versions.json",
-        [string]$UpdateScriptPath = (Join-Path $PSScriptRoot "update\Check-LauncherUpdate.ps1"),
+        [string]$UpdateScriptPath = "",
         [bool]$Block = $false,
         [bool]$Silent = $false,
         [bool]$InstallBeforeContinue = $false,
         [bool]$RequireAnyUpdate = $false
     )
+
+    if ([string]::IsNullOrWhiteSpace($UpdateScriptPath)) {
+        $scriptRoot = $PSScriptRoot
+        if ((Split-Path -Path $scriptRoot -Leaf).ToLowerInvariant() -eq "update") {
+            $scriptRoot = Split-Path -Path $scriptRoot -Parent
+        }
+
+        $UpdateScriptPath = Join-Path $scriptRoot "update\Check-LauncherUpdate.ps1"
+    }
 
     if (-not (Test-Path $UpdateScriptPath)) {
         Write-LauncherLog "Update script not found: $UpdateScriptPath" "WARN"

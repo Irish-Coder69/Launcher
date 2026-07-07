@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.9 - 2026-07-07
+
+- Fixed startup update integration path so launcher checks GitHub updates correctly from installed path.
+- Rebuilt installer and refreshed release metadata for v1.0.9.
+
 ## 1.0.8 - 2026-07-07
 
 - Removed trailing whitespace flagged by PSScriptAnalyzer in launcher script.

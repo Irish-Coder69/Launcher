@@ -1,14 +1,15 @@
 [
   {
-    "version": "1.0.8",
+    "version": "1.0.9",
     "releaseDate": "2026-07-07",
-    "description": "Required patch release with lint cleanup and refreshed installer",
-    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.8/Launcher-1.0.8-Setup.exe",
-    "checksum": "B979C4EA1E234F2378EAB9FA66DC77BD53E952340A62EE7884296B9866923FA1",
+    "description": "Required patch release with startup updater path fix and refreshed installer",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.9/Launcher-1.0.9-Setup.exe",
+    "checksum": "2ECC5B4EB18DF566D004242261AD36BC145261045A71D8B513D754A0B06007BA",
     "isRequired": true,
     "notes": [
-      "Removed trailing whitespace flagged by PSScriptAnalyzer",
-      "Refreshed installer and release metadata for v1.0.8"
+      "Fixed startup update integration path resolution",
+      "Ensured installed launcher can check GitHub updates correctly",
+      "Refreshed installer and release metadata for v1.0.9"
     ]
   }
 ]
