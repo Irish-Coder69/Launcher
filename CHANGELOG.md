@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.7 - 2026-07-07
+
+- Added visible launcher version in the window title and startup banner.
+- Added startup log line showing the running launcher version.
+- Rebuilt installer and release metadata for v1.0.7.
+
 ## 1.0.6 - 2026-07-07
 
 - Updated P-touch step to maximize then minimize once (removed duplicate minimize).

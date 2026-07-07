@@ -7,9 +7,22 @@ param(
 Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 $script:LogFile = Join-Path -Path $PSScriptRoot -ChildPath "launcher.last.log"
+$script:VersionFile = Join-Path -Path $PSScriptRoot -ChildPath "version.txt"
+$script:LauncherVersion = "unknown"
+if (Test-Path -Path $script:VersionFile) {
+    try {
+        $loadedVersion = (Get-Content -Path $script:VersionFile -Raw).Trim()
+        if (-not [string]::IsNullOrWhiteSpace($loadedVersion)) {
+            $script:LauncherVersion = $loadedVersion
+        }
+    }
+    catch {
+        $null = $_
+    }
+}
 
 # --- Console appearance ---
-$Host.UI.RawUI.WindowTitle = if ($DryRun) { "Launcher (Dry Run)" } else { "Launcher" }
+$Host.UI.RawUI.WindowTitle = if ($DryRun) { "Launcher v$($script:LauncherVersion) (Dry Run)" } else { "Launcher v$($script:LauncherVersion)" }
 try {
     $Host.UI.RawUI.BackgroundColor = [System.ConsoleColor]::Black
     $Host.UI.RawUI.ForegroundColor = [System.ConsoleColor]::Gray
@@ -65,7 +78,7 @@ function Write-LauncherLog {
 function Show-LauncherBanner {
     param([switch]$IsDryRun)
     $w = $script:UIWidth
-    $label = if ($IsDryRun) { "  LAUNCHER  -  DRY RUN  " } else { "  LAUNCHER  " }
+    $label = if ($IsDryRun) { "  LAUNCHER v$($script:LauncherVersion)  -  DRY RUN  " } else { "  LAUNCHER v$($script:LauncherVersion)  " }
     $pad   = [Math]::Max(0, [int](($w - $label.Length) / 2))
     Write-Host ""
     Write-Host (("=" * $w)) -ForegroundColor DarkCyan
@@ -2832,6 +2845,7 @@ try {
     $configDirectory = Split-Path -Path $configFile -Parent
 
     Show-LauncherBanner -IsDryRun:$DryRun
+    Write-LauncherLog "Launcher version $($script:LauncherVersion)"
     Update-DesktopLauncherLink -ScriptDirectory $PSScriptRoot
     Write-LauncherLog "Loading configuration from $configFile"
     $configRaw = Get-Content -Path $configFile -Raw
