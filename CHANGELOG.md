@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.5 - 2026-07-07
+
+- Improved update manifest fetch reliability by using GitHub Contents API for GitHub raw manifest URLs.
+- Ensured update checks always resolve the latest release metadata before startup enforcement.
+
 ## 1.0.4 - 2026-07-07
 
 - Added required update-before-run mode so Launcher can install newer versions before step execution.

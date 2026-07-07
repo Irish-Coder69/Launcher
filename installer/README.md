@@ -37,7 +37,7 @@ makensis.exe /DOUTDIR="Output" Launcher.nsi
 
 The compiled installer is created in the `Output` subfolder:
 
-- `Launcher-1.0.4-Setup.exe` - The Windows installer
+- `Launcher-1.0.5-Setup.exe` - The Windows installer
 
 ## File Structure
 
@@ -48,7 +48,7 @@ installer/
 ├── Build-Installer.ps1    # PowerShell build script
 ├── README.md              # This file
 └── Output/                # Generated installers (created after build)
-   └── Launcher-1.0.4-Setup.exe
+   └── Launcher-1.0.5-Setup.exe
 ```
 
 ## What the Installer Does

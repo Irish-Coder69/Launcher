@@ -116,12 +116,47 @@ function Get-AvailableVersions {
     try {
         Write-UpdateLog "Connecting to update server: $Url" "INFO"
 
-        $response = Invoke-WebRequest -Uri $Url `
-            -UseBasicParsing `
-            -TimeoutSec $TimeoutSeconds `
-            -ErrorAction Stop
+        $versions = $null
+        $rawGitHubPattern = '^https://raw\.githubusercontent\.com/(?<owner>[^/]+)/(?<repo>[^/]+)/(?<ref>[^/]+)/(?<path>.+)$'
+        $rawMatch = [Regex]::Match($Url, $rawGitHubPattern)
 
-        $versions = $response.Content | ConvertFrom-Json
+        if ($rawMatch.Success) {
+            $owner = $rawMatch.Groups['owner'].Value
+            $repo = $rawMatch.Groups['repo'].Value
+            $ref = $rawMatch.Groups['ref'].Value
+            $contentPath = $rawMatch.Groups['path'].Value
+            $apiUrl = "https://api.github.com/repos/$owner/$repo/contents/${contentPath}?ref=$ref"
+
+            $headers = @{
+                "User-Agent" = "Launcher-Updater"
+                "Accept" = "application/vnd.github+json"
+            }
+
+            $contentResponse = Invoke-RestMethod -Uri $apiUrl -Headers $headers -TimeoutSec $TimeoutSeconds -ErrorAction Stop
+            if (-not $contentResponse -or [string]::IsNullOrWhiteSpace([string]$contentResponse.content)) {
+                throw "GitHub content API did not return manifest content."
+            }
+
+            $manifestJson = [System.Text.Encoding]::UTF8.GetString([System.Convert]::FromBase64String(([string]$contentResponse.content -replace "`r|`n", "")))
+            $versions = $manifestJson | ConvertFrom-Json
+        }
+        else {
+            $requestUrl = $Url
+            $cacheBuster = [DateTimeOffset]::UtcNow.ToUnixTimeSeconds()
+            if ($requestUrl -match "\?") {
+                $requestUrl = "${requestUrl}&nocache=$cacheBuster"
+            }
+            else {
+                $requestUrl = "${requestUrl}?nocache=$cacheBuster"
+            }
+
+            $response = Invoke-WebRequest -Uri $requestUrl `
+                -UseBasicParsing `
+                -TimeoutSec $TimeoutSeconds `
+                -ErrorAction Stop
+
+            $versions = $response.Content | ConvertFrom-Json
+        }
 
         # ConvertFrom-Json can return a single PSCustomObject for one-item arrays.
         # Normalize to an array so the updater works with either shape.
