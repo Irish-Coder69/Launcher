@@ -229,6 +229,7 @@
         "programPath": "C:/Program Files (x86)/Brother/Ptedit54/ptedit54.exe",
         "arguments": "",
         "workingDirectory": "",
+        "windowStyle": "Maximized",
         "windowTitle": "P-touch Editor 5.4",
         "fallbackWindowTitles": [
           "P-touch Editor",
@@ -236,7 +237,9 @@
           "Brother"
         ],
         "minimizeAfterLaunch": true,
+        "minimizeAfterCompletion": false,
         "minimizeAfterLaunchDelaySeconds": 1,
+        "maximizeBeforeMinimizeDelayMs": 1200,
         "postLaunchDelaySeconds": 4,
         "windowTimeoutSeconds": 90,
         "waitAfterStepSeconds": 2

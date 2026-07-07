@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.6 - 2026-07-07
+
+- Updated P-touch step to maximize then minimize once (removed duplicate minimize).
+- Rebuilt installer and release metadata for v1.0.6.
+
 ## 1.0.5 - 2026-07-07
 
 - Improved update manifest fetch reliability by using GitHub Contents API for GitHub raw manifest URLs.
