@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.14 - 2026-07-10
+
+- Removed the Local Visual Board Add/Update Table automation step from startup flow.
+- Visual Board now proceeds directly after login without table-update password/update wait actions.
+- Rebuilt installer and refreshed release metadata for v1.0.14.
+
 ## 1.0.13 - 2026-07-10
 
 - Updated Visual Board update-table button candidate labels to the Add/Update naming.

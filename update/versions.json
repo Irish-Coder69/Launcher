@@ -1,15 +1,15 @@
 [
   {
-    "version": "1.0.13",
+    "version": "1.0.14",
     "releaseDate": "2026-07-10",
-    "description": "Patch release updating Visual Board Add/Update button targeting and metadata consistency",
-    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.13/Launcher-1.0.13-Setup.exe",
-    "checksum": "53D080B8CC937277968063ED7F53D70917A4968EC998CF8A2BB38D3B4F47EB87",
+    "description": "Patch release removing Local Visual Board Add/Update Table startup step",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.14/Launcher-1.0.14-Setup.exe",
+    "checksum": "607617CDD861350C1B0020FD66C1A031986640C302B94160A6202FEDE51E0884",
     "isRequired": true,
     "notes": [
-      "Updated Add/Update Table button label candidates in Local Visual Board flow",
-      "Preserved update-table password and completion wait behavior",
-      "Refreshed installer and release metadata for v1.0.13"
+      "Removed Local Visual Board Add/Update Table automation step",
+      "Startup now proceeds directly from Visual Board login to next steps",
+      "Refreshed installer and release metadata for v1.0.14"
     ]
   }
 ]
