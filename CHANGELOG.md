@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.10 - 2026-07-10
+
+- Restored Visual Board Add / UPDATE TABLE automation after login before Stockroom Analytics starts.
+- Added password submission and a 3-minute wait for the table update process to finish.
+- Rebuilt installer and refreshed release metadata for v1.0.10.
+
 ## 1.0.9 - 2026-07-07
 
 - Fixed startup update integration path so launcher checks GitHub updates correctly from installed path.

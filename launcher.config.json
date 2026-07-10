@@ -108,6 +108,26 @@
         { "keys": "9563", "delayMs": 900 },
         { "keys": "{ENTER}", "delayMs": 2000 }
       ],
+      "updateTableFlow": {
+        "mainWindowTitle": "Access - Visual Board",
+        "postLoginWaitSeconds": 10,
+        "updateTableButtonNames": [
+          "Add / UPDATE TABLE",
+          "Add / Update Table"
+        ],
+        "passwordWindowTitles": [
+          "Password",
+          "Enter Password",
+          "Microsoft Access"
+        ],
+        "passwordWindowFallbackTitles": [
+          "Access"
+        ],
+        "passwordWindowTimeoutSeconds": 45,
+        "password": "wstockrline2",
+        "passwordEnterKeys": "{ENTER}",
+        "waitAfterPasswordSeconds": 180
+      },
       "waitForLoginCompleteSeconds": 10,
       "waitAfterStepSeconds": 2
     },

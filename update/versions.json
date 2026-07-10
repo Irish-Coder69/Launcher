@@ -1,15 +1,15 @@
 [
   {
-    "version": "1.0.9",
-    "releaseDate": "2026-07-07",
-    "description": "Required patch release with startup updater path fix and refreshed installer",
-    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.9/Launcher-1.0.9-Setup.exe",
-    "checksum": "2ECC5B4EB18DF566D004242261AD36BC145261045A71D8B513D754A0B06007BA",
+    "version": "1.0.10",
+    "releaseDate": "2026-07-10",
+    "description": "Patch release restoring Visual Board Add / UPDATE TABLE automation before Stockroom Analytics",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.10/Launcher-1.0.10-Setup.exe",
+    "checksum": "D7E224C7844EFF1E736F3AFB8A5B689B1B39FAAE1743B4850CF9B95554833714",
     "isRequired": true,
     "notes": [
-      "Fixed startup update integration path resolution",
-      "Ensured installed launcher can check GitHub updates correctly",
-      "Refreshed installer and release metadata for v1.0.9"
+      "Restored Visual Board Add / UPDATE TABLE automation after login",
+      "Added password submission and wait for table update completion",
+      "Refreshed installer and release metadata for v1.0.10"
     ]
   }
 ]
