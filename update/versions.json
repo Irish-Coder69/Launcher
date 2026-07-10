@@ -1,15 +1,15 @@
 [
   {
-    "version": "1.0.14",
+    "version": "1.0.15",
     "releaseDate": "2026-07-10",
-    "description": "Patch release removing Local Visual Board Add/Update Table startup step",
-    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.14/Launcher-1.0.14-Setup.exe",
-    "checksum": "607617CDD861350C1B0020FD66C1A031986640C302B94160A6202FEDE51E0884",
+    "description": "Patch release preventing duplicate launcher instances and duplicate Outlook launches",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.15/Launcher-1.0.15-Setup.exe",
+    "checksum": "D854369DB38F43154583A9EE2E2BDD057A43CCB3A2C84F0D936811792A61464D",
     "isRequired": true,
     "notes": [
-      "Removed Local Visual Board Add/Update Table automation step",
-      "Startup now proceeds directly from Visual Board login to next steps",
-      "Refreshed installer and release metadata for v1.0.14"
+      "Added single-instance launcher lock to prevent duplicate runs",
+      "Added Outlook-running guard to skip duplicate Outlook launches",
+      "Refreshed installer and release metadata for v1.0.15"
     ]
   }
 ]

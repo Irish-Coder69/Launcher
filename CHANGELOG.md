@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.15 - 2026-07-10
+
+- Added a single-instance launcher lock to prevent duplicate concurrent runs.
+- Added Outlook launch guard to skip starting Outlook when it is already running.
+- Rebuilt installer and refreshed release metadata for v1.0.15.
+
 ## 1.0.14 - 2026-07-10
 
 - Removed the Local Visual Board Add/Update Table automation step from startup flow.

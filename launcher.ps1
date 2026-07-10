@@ -8,6 +8,9 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 $script:LogFile = Join-Path -Path $PSScriptRoot -ChildPath "launcher.last.log"
 $script:VersionFile = Join-Path -Path $PSScriptRoot -ChildPath "version.txt"
+$script:InstanceMutex = $null
+$script:HasInstanceLock = $false
+$script:SkipClosePrompt = $false
 $script:LauncherVersion = "unknown"
 if (Test-Path -Path $script:VersionFile) {
     try {
@@ -92,6 +95,34 @@ function Write-StepHeader {
     Write-Host ""
     Write-Host "  >  $Name" -ForegroundColor White
     Write-Host ("  " + ("-" * ($script:UIWidth - 4))) -ForegroundColor DarkGray
+}
+
+function Try-AcquireLauncherInstanceLock {
+    param([switch]$DryRun)
+
+    if ($DryRun) {
+        return $true
+    }
+
+    if ($script:HasInstanceLock -and $script:InstanceMutex) {
+        return $true
+    }
+
+    $createdNew = $false
+    $mutexName = "Local\WindsorLauncherSingleInstance"
+    $script:InstanceMutex = New-Object System.Threading.Mutex($true, $mutexName, [ref]$createdNew)
+
+    if ($createdNew) {
+        $script:HasInstanceLock = $true
+        return $true
+    }
+
+    if ($script:InstanceMutex) {
+        try { $script:InstanceMutex.Dispose() } catch { $null = $_ }
+        $script:InstanceMutex = $null
+    }
+
+    return $false
 }
 
 function Wait-ForLauncherCloseCommand {
@@ -2720,6 +2751,15 @@ function Invoke-LaunchStep {
         }
     }
 
+    $isOutlookStep = ([string]$Step.name -like "*Outlook*") -or ($rawProgramPath -match "(?i)olk\.exe|outlook")
+    if (-not $DryRun -and $isOutlookStep) {
+        $runningOutlook = @(Get-Process -Name "OUTLOOK" -ErrorAction SilentlyContinue)
+        if ($runningOutlook.Count -gt 0) {
+            Write-LauncherLog "Skipping '$($Step.name)' launch because Outlook is already running."
+            return
+        }
+    }
+
     if ($DryRun) {
         Write-LauncherLog "[DryRun] Would launch: $programPath $arguments (WindowStyle=$windowStyle)"
         Invoke-MinimizeLaunchedWindow -Step $Step -Process $null -DryRun:$DryRun
@@ -2880,6 +2920,14 @@ try {
 
     Show-LauncherBanner -IsDryRun:$DryRun
     Write-LauncherLog "Launcher version $($script:LauncherVersion)"
+
+    if (-not (Try-AcquireLauncherInstanceLock -DryRun:$DryRun)) {
+        Write-LauncherLog "Another Launcher instance is already running; exiting to avoid duplicate launches." -Level "WARN"
+        $completedSuccessfully = $true
+        $script:SkipClosePrompt = $true
+        return
+    }
+
     Update-DesktopLauncherLink -ScriptDirectory $PSScriptRoot
     Write-LauncherLog "Loading configuration from $configFile"
     $configRaw = Get-Content -Path $configFile -Raw
@@ -2998,6 +3046,13 @@ try {
     $completedSuccessfully = $true
 }
 finally {
+    if ($script:HasInstanceLock -and $script:InstanceMutex) {
+        try { $script:InstanceMutex.ReleaseMutex() } catch { $null = $_ }
+        try { $script:InstanceMutex.Dispose() } catch { $null = $_ }
+        $script:InstanceMutex = $null
+        $script:HasInstanceLock = $false
+    }
+
     if (-not $DryRun -and -not $completedSuccessfully) {
         Write-Host ""
         Write-Host (("=" * $script:UIWidth)) -ForegroundColor DarkCyan
@@ -3005,5 +3060,7 @@ finally {
         Write-Host (("=" * $script:UIWidth)) -ForegroundColor DarkCyan
     }
 
-    Wait-ForLauncherCloseCommand -DryRun:$DryRun
+    if (-not $script:SkipClosePrompt) {
+        Wait-ForLauncherCloseCommand -DryRun:$DryRun
+    }
 }
