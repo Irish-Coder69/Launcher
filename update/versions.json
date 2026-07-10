@@ -1,15 +1,15 @@
 [
   {
-    "version": "1.0.10",
+    "version": "1.0.11",
     "releaseDate": "2026-07-10",
-    "description": "Patch release restoring Visual Board Add / UPDATE TABLE automation before Stockroom Analytics",
-    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.10/Launcher-1.0.10-Setup.exe",
-    "checksum": "D7E224C7844EFF1E736F3AFB8A5B689B1B39FAAE1743B4850CF9B95554833714",
+    "description": "Patch release hardening Visual Board update-table automation reliability",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.11/Launcher-1.0.11-Setup.exe",
+    "checksum": "FFD6F35C13154ADD311F922FBA84F9FF8C87CF0C37C7EF715A154BD2E6231AE1",
     "isRequired": true,
     "notes": [
-      "Restored Visual Board Add / UPDATE TABLE automation after login",
-      "Added password submission and wait for table update completion",
-      "Refreshed installer and release metadata for v1.0.10"
+      "Expanded UI automation control detection for Update Table click path",
+      "Added broader update button candidates and extra post-login settle time",
+      "Refreshed installer and release metadata for v1.0.11"
     ]
   }
 ]

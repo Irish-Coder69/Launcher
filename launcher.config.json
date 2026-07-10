@@ -110,8 +110,9 @@
       ],
       "updateTableFlow": {
         "mainWindowTitle": "Access - Visual Board",
-        "postLoginWaitSeconds": 10,
+        "postLoginWaitSeconds": 20,
         "updateTableButtonNames": [
+          "Update Table",
           "Add / UPDATE TABLE",
           "Add / Update Table"
         ],

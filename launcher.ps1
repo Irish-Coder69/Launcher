@@ -1453,7 +1453,11 @@ function Invoke-ButtonClickByName {
             [System.Windows.Automation.ControlType]::Button,
             [System.Windows.Automation.ControlType]::Hyperlink,
             [System.Windows.Automation.ControlType]::MenuItem,
-            [System.Windows.Automation.ControlType]::Custom
+            [System.Windows.Automation.ControlType]::Custom,
+            [System.Windows.Automation.ControlType]::Text,
+            [System.Windows.Automation.ControlType]::ListItem,
+            [System.Windows.Automation.ControlType]::DataItem,
+            [System.Windows.Automation.ControlType]::Pane
         )
 
         $targetNameNormalized = ([string]$ButtonName).ToLowerInvariant() -replace '[^a-z0-9]', ''

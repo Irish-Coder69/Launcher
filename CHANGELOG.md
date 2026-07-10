@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.11 - 2026-07-10
+
+- Hardened Visual Board update-table automation to detect more Access UI control types.
+- Added broader Update Table button matching and increased post-login settle wait before update click.
+- Rebuilt installer and refreshed release metadata for v1.0.11.
+
 ## 1.0.10 - 2026-07-10
 
 - Restored Visual Board Add / UPDATE TABLE automation after login before Stockroom Analytics starts.
