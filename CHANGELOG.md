@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.13 - 2026-07-10
+
+- Updated Visual Board update-table button candidate labels to the Add/Update naming.
+- Kept the post-login update-table automation sequence and timing for stable execution.
+- Rebuilt installer and refreshed release metadata for v1.0.13.
+
 ## 1.0.12 - 2026-07-10
 
 - Added full descendant UI Automation fallback for Update Table control discovery in Visual Board.

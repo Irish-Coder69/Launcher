@@ -112,9 +112,8 @@
         "mainWindowTitle": "Access - Visual Board",
         "postLoginWaitSeconds": 20,
         "updateTableButtonNames": [
-          "Update Table",
-          "Add / UPDATE TABLE",
-          "Add / Update Table"
+          "Add/Update Table",
+          "Add/UPDATE TABLE"
         ],
         "passwordWindowTitles": [
           "Password",

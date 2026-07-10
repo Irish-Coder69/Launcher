@@ -1,15 +1,15 @@
 [
   {
-    "version": "1.0.12",
+    "version": "1.0.13",
     "releaseDate": "2026-07-10",
-    "description": "Patch release with stronger Visual Board update-table control discovery",
-    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.12/Launcher-1.0.12-Setup.exe",
-    "checksum": "87FF93DF1C36D9575DD130305404E21358A0391B7E75D61A39EFE21D43D120E6",
+    "description": "Patch release updating Visual Board Add/Update button targeting and metadata consistency",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.13/Launcher-1.0.13-Setup.exe",
+    "checksum": "53D080B8CC937277968063ED7F53D70917A4968EC998CF8A2BB38D3B4F47EB87",
     "isRequired": true,
     "notes": [
-      "Added full descendant UI Automation fallback for Update Table matching",
-      "Improved click discovery for non-standard Access control types",
-      "Refreshed installer and release metadata for v1.0.12"
+      "Updated Add/Update Table button label candidates in Local Visual Board flow",
+      "Preserved update-table password and completion wait behavior",
+      "Refreshed installer and release metadata for v1.0.13"
     ]
   }
 ]
