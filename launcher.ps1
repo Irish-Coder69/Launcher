@@ -1501,6 +1501,36 @@ function Invoke-ButtonClickByName {
                 break
             }
         }
+
+        if (-not $button) {
+            $allNamedControls = $window.FindAll([System.Windows.Automation.TreeScope]::Descendants, [System.Windows.Automation.Condition]::TrueCondition)
+            foreach ($control in $allNamedControls) {
+                $candidateName = [string]$control.Current.Name
+                if ([string]::IsNullOrWhiteSpace($candidateName)) {
+                    continue
+                }
+
+                $candidateNormalized = $candidateName.ToLowerInvariant() -replace '[^a-z0-9]', ''
+
+                if ($candidateNormalized -eq $targetNameNormalized -or $candidateNormalized.Contains($targetNameNormalized)) {
+                    $button = $control
+                    break
+                }
+
+                $matchedAllTokens = $true
+                foreach ($token in $targetTokens) {
+                    if (-not $candidateNormalized.Contains($token)) {
+                        $matchedAllTokens = $false
+                        break
+                    }
+                }
+
+                if ($matchedAllTokens) {
+                    $button = $control
+                    break
+                }
+            }
+        }
     }
 
     if (-not $button) {

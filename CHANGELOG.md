@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.12 - 2026-07-10
+
+- Added full descendant UI Automation fallback for Update Table control discovery in Visual Board.
+- Improved resilience when Access exposes clickable controls with non-standard control types.
+- Rebuilt installer and refreshed release metadata for v1.0.12.
+
 ## 1.0.11 - 2026-07-10
 
 - Hardened Visual Board update-table automation to detect more Access UI control types.
