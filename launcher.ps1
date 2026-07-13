@@ -2173,12 +2173,38 @@ public static class WindowMinimize {
     }
 
     $relatedProcesses = @()
+    $stepProcessNames = @()
     if ($Process) {
         try {
             $processById = Get-Process -Id $Process.Id -ErrorAction SilentlyContinue
             if ($processById) {
                 $relatedProcesses += $processById
             }
+
+            if (-not [string]::IsNullOrWhiteSpace([string]$Process.ProcessName)) {
+                $stepProcessNames += [string]$Process.ProcessName
+            }
+        }
+        catch {
+            $null = $_
+        }
+    }
+
+    if ($Step.PSObject.Properties.Name -contains "programPath") {
+        $programPathLeaf = [System.IO.Path]::GetFileNameWithoutExtension([string]$Step.programPath)
+        if (-not [string]::IsNullOrWhiteSpace($programPathLeaf)) {
+            $stepProcessNames += $programPathLeaf
+        }
+    }
+
+    if ($Step.PSObject.Properties.Name -contains "minimizeProcessNames") {
+        $stepProcessNames += @($Step.minimizeProcessNames | ForEach-Object { [string]$_ })
+    }
+
+    $stepProcessNames = @($stepProcessNames | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+    foreach ($processName in $stepProcessNames) {
+        try {
+            $relatedProcesses += @(Get-Process -Name $processName -ErrorAction SilentlyContinue)
         }
         catch {
             $null = $_
@@ -2229,23 +2255,26 @@ public static class WindowMinimize {
 
     if ($titleCandidates.Count -gt 0) {
         $shell = New-Object -ComObject WScript.Shell
-        foreach ($candidate in $titleCandidates) {
-            if ($shell.AppActivate($candidate)) {
-                Start-Sleep -Milliseconds 250
-                $foregroundWindowHandle = [WindowMinimize]::GetForegroundWindow()
-                $foregroundWindowHandle = $null
-                try { $foregroundWindowHandle = [WindowMinimize]::GetForegroundWindow() } catch { $null = $_ }
-                if ($foregroundWindowHandle -and $foregroundWindowHandle -ne [IntPtr]::Zero) {
-                    if ($Step.PSObject.Properties.Name -contains "windowStyle" -and [string]$Step.windowStyle -eq "Maximized") {
-                        [void][WindowMinimize]::ShowWindowAsync($foregroundWindowHandle, 3)
-                        Start-Sleep -Milliseconds $maximizePauseMs
-                    }
+        for ($attempt = 0; $attempt -lt $timeoutSeconds; $attempt++) {
+            foreach ($candidate in $titleCandidates) {
+                if ($shell.AppActivate($candidate)) {
+                    Start-Sleep -Milliseconds 250
+                    $foregroundWindowHandle = $null
+                    try { $foregroundWindowHandle = [WindowMinimize]::GetForegroundWindow() } catch { $null = $_ }
+                    if ($foregroundWindowHandle -and $foregroundWindowHandle -ne [IntPtr]::Zero) {
+                        if ($Step.PSObject.Properties.Name -contains "windowStyle" -and [string]$Step.windowStyle -eq "Maximized") {
+                            [void][WindowMinimize]::ShowWindowAsync($foregroundWindowHandle, 3)
+                            Start-Sleep -Milliseconds $maximizePauseMs
+                        }
 
-                    [void][WindowMinimize]::ShowWindowAsync($foregroundWindowHandle, 6)
-                    Write-LauncherLog "Minimized '$($Step.name)' using title '$candidate'"
-                    return
+                        [void][WindowMinimize]::ShowWindowAsync($foregroundWindowHandle, 6)
+                        Write-LauncherLog "Minimized '$($Step.name)' using title '$candidate'"
+                        return
+                    }
                 }
             }
+
+            Start-Sleep -Seconds 1
         }
     }
 

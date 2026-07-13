@@ -1,15 +1,15 @@
 [
   {
-    "version": "1.0.15",
-    "releaseDate": "2026-07-10",
-    "description": "Patch release preventing duplicate launcher instances and duplicate Outlook launches",
-    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.15/Launcher-1.0.15-Setup.exe",
-    "checksum": "D854369DB38F43154583A9EE2E2BDD057A43CCB3A2C84F0D936811792A61464D",
+    "version": "1.0.16",
+    "releaseDate": "2026-07-13",
+    "description": "Patch release improving P-touch Editor post-launch minimize reliability",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.16/Launcher-1.0.16-Setup.exe",
+    "checksum": "209B753B4660BCA6AF2A66309F07AFD5B9F2CD079FDB4936E4CD104C4ED723BB",
     "isRequired": true,
     "notes": [
-      "Added single-instance launcher lock to prevent duplicate runs",
-      "Added Outlook-running guard to skip duplicate Outlook launches",
-      "Refreshed installer and release metadata for v1.0.15"
+      "Improved minimize fallback to find windows opened by related process names",
+      "Added timed title retries when minimizing launch windows",
+      "Refreshed installer and release metadata for v1.0.16"
     ]
   }
 ]

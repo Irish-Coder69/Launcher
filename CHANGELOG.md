@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.16 - 2026-07-13
+
+- Fixed P-touch Editor 5.4 post-launch minimization reliability when the visible window is owned by a different process handle.
+- Added process-name and timed title retry fallbacks to launch-step window minimization logic.
+- Rebuilt installer and refreshed release metadata for v1.0.16.
+
 ## 1.0.15 - 2026-07-10
 
 - Added a single-instance launcher lock to prevent duplicate concurrent runs.
