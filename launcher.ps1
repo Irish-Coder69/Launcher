@@ -97,7 +97,7 @@ function Write-StepHeader {
     Write-Host ("  " + ("-" * ($script:UIWidth - 4))) -ForegroundColor DarkGray
 }
 
-function Try-AcquireLauncherInstanceLock {
+function Test-LauncherInstanceLock {
     param([switch]$DryRun)
 
     if ($DryRun) {
@@ -2950,7 +2950,7 @@ try {
     Show-LauncherBanner -IsDryRun:$DryRun
     Write-LauncherLog "Launcher version $($script:LauncherVersion)"
 
-    if (-not (Try-AcquireLauncherInstanceLock -DryRun:$DryRun)) {
+    if (-not (Test-LauncherInstanceLock -DryRun:$DryRun)) {
         Write-LauncherLog "Another Launcher instance is already running; exiting to avoid duplicate launches." -Level "WARN"
         $completedSuccessfully = $true
         $script:SkipClosePrompt = $true

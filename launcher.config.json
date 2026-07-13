@@ -231,14 +231,23 @@
         "workingDirectory": "",
         "windowStyle": "Maximized",
         "windowTitle": "P-touch Editor 5.4",
+        "minimizeWindowTitles": [
+          "P-touch Editor 5.4",
+          "P-touch Editor",
+          "Brother"
+        ],
+        "minimizeProcessNames": [
+          "ptedit54"
+        ],
         "fallbackWindowTitles": [
           "P-touch Editor",
           "ptedit54",
           "Brother"
         ],
         "minimizeAfterLaunch": true,
-        "minimizeAfterCompletion": false,
+        "minimizeAfterCompletion": true,
         "minimizeAfterLaunchDelaySeconds": 1,
+        "minimizeAfterCompletionDelaySeconds": 4,
         "maximizeBeforeMinimizeDelayMs": 1200,
         "postLaunchDelaySeconds": 4,
         "windowTimeoutSeconds": 90,
