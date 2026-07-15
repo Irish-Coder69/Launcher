@@ -1,15 +1,15 @@
 [
   {
-    "version": "1.0.17",
+    "version": "1.0.18",
     "releaseDate": "2026-07-15",
-    "description": "Stability release improving path resolution, installer/update reliability, and packaging flow",
-    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.17/Launcher-1.0.17-Setup.exe",
-    "checksum": "0562CD0E5DAD963A9B44887EDCB29C9BAE784C976152631F27720B073CD276CF",
+    "description": "Hotfix release for Stockroom Analytics target and UNC fallback resolution",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.18/Launcher-1.0.18-Setup.exe",
+    "checksum": "762AED7928DB55C2F98B4282FC73C81699C9B5FC6531381EA2A4830B19C4E466",
     "isRequired": true,
     "notes": [
-      "Added fallbackProgramPath support and mapped-drive UNC fallback resolution for launch steps",
-      "Fixed silent update installer path quoting and aligned backup/restore around Launcher.cmd",
-      "Corrected NSIS install/launch branch flow and refreshed installer build output handling"
+      "Updated Stockroom Analytics to launch the actual .accdb file path",
+      "Fixed JSON UNC escaping for fallbackProgramPath so the fallback path remains valid",
+      "Rebuilt installer and release metadata for v1.0.18"
     ]
   }
 ]

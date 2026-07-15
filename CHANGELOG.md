@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.18 - 2026-07-15
+
+- Fixed Stockroom Analytics startup path to launch the real `.accdb` target instead of a stale shortcut path.
+- Corrected UNC fallback path escaping in configuration so network fallback resolves reliably at runtime.
+- Rebuilt installer and refreshed release metadata for v1.0.18.
+
 ## 1.0.17 - 2026-07-15
 
 - Added resilient launch path resolution for mapped/network targets, including UNC fallback support via `fallbackProgramPath`.
