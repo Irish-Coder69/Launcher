@@ -16,6 +16,13 @@ $installerDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $projectRoot = Split-Path -Parent $installerDir
 $nsiScript = Join-Path $installerDir "Launcher.nsi"
 $outputDir = Join-Path $installerDir "Output"
+$nsiVersionMatch = Select-String -Path $nsiScript -Pattern '!define PRODUCT_VERSION "([^"]+)"' -AllMatches | Select-Object -First 1
+if (-not $nsiVersionMatch -or $nsiVersionMatch.Matches.Count -eq 0) {
+    throw "Could not determine PRODUCT_VERSION from $nsiScript"
+}
+$productVersion = $nsiVersionMatch.Matches[0].Groups[1].Value
+$expectedInstallerName = "Launcher-$productVersion-Setup.exe"
+$expectedInstallerPath = Join-Path $outputDir $expectedInstallerName
 
 Write-Host "================================" -ForegroundColor Cyan
 Write-Host "Launcher Installer Build Script" -ForegroundColor Cyan
@@ -93,10 +100,14 @@ if (-not (Test-Path $outputDir)) {
 }
 
 # Clean previous build (optional)
-$existingInstaller = Get-ChildItem $outputDir -Filter "*.exe" -ErrorAction SilentlyContinue
+$existingInstaller = Get-Item -LiteralPath $expectedInstallerPath -ErrorAction SilentlyContinue
 if ($existingInstaller -and -not $Force) {
     Write-Host "Warning: Existing installer found. Use -Force to rebuild." -ForegroundColor Yellow
     exit 0
+}
+
+if ($Force) {
+    Get-ChildItem $outputDir -Filter "Launcher-*-Setup.exe" -ErrorAction SilentlyContinue | Remove-Item -Force -ErrorAction SilentlyContinue
 }
 
 Write-Host ""
@@ -121,35 +132,31 @@ if ($buildSuccess) {
     Write-Host ""
 
     # Show the generated installer
-    $installers = Get-ChildItem $outputDir -Filter "*.exe" -ErrorAction SilentlyContinue
+    $installers = Get-Item -LiteralPath $expectedInstallerPath -ErrorAction SilentlyContinue
     if (-not $installers) {
         # Fallback for scripts that output in installerDir
-        $fallback = Get-ChildItem $installerDir -Filter "Launcher-*-Setup.exe" -ErrorAction SilentlyContinue
+        $fallback = Get-Item -LiteralPath (Join-Path $installerDir $expectedInstallerName) -ErrorAction SilentlyContinue
         if ($fallback) {
-            foreach ($file in $fallback) {
-                Move-Item -Path $file.FullName -Destination (Join-Path $outputDir $file.Name) -Force
-            }
-            $installers = Get-ChildItem $outputDir -Filter "*.exe" -ErrorAction SilentlyContinue
+            Move-Item -Path $fallback.FullName -Destination $expectedInstallerPath -Force
+            $installers = Get-Item -LiteralPath $expectedInstallerPath -ErrorAction SilentlyContinue
         }
     }
 
     if ($installers) {
         Write-Host "Generated installer(s):" -ForegroundColor Cyan
-        foreach ($installer in $installers) {
-            $size = [Math]::Round(($installer.Length / 1MB), 2)
-            Write-Host "  - $($installer.Name) ($size MB)" -ForegroundColor Green
-        }
+        $size = [Math]::Round(($installers.Length / 1MB), 2)
+        Write-Host "  - $($installers.Name) ($size MB)" -ForegroundColor Green
 
         Write-Host ""
         Write-Host "To install the Launcher:" -ForegroundColor Cyan
-        Write-Host "  1. Run: $($installers[0].FullName)" -ForegroundColor Gray
+        Write-Host "  1. Run: $($installers.FullName)" -ForegroundColor Gray
         Write-Host "  2. Follow the installation wizard" -ForegroundColor Gray
         Write-Host "  3. Choose your installation directory" -ForegroundColor Gray
         Write-Host "  4. Select desired components (Start Menu, Desktop shortcuts)" -ForegroundColor Gray
         Write-Host ""
 
         if ($OpenAfterBuild) {
-            Start-Process $installers[0].FullName
+            Start-Process $installers.FullName
             Write-Host "Opening installer..." -ForegroundColor Green
         }
     } else {

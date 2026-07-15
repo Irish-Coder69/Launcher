@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.17 - 2026-07-15
+
+- Added resilient launch path resolution for mapped/network targets, including UNC fallback support via `fallbackProgramPath`.
+- Hardened updater and installer flow (quoted silent install path, Launcher.cmd backup parity, and GitHub-focused connectivity checks).
+- Fixed NSIS install flow branches and updated installer build/documentation to emit and reference only the current-version installer.
+
 ## 1.0.16 - 2026-07-13
 
 - Fixed P-touch Editor 5.4 post-launch minimization reliability when the visible window is owned by a different process handle.

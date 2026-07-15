@@ -104,6 +104,8 @@ Edit `launcher.config.json`:
 
 Or use any profile name (`normal-slow`, `ultra-slow`).
 
+For launch steps that point at mapped drives or network shortcuts, you can also add an optional `fallbackProgramPath` with a UNC path. The launcher will try `programPath` first and then the fallback if the primary path is unavailable.
+
 #### Step 3: Update Installer (NSIS)
 
 Edit `installer/Launcher.nsi` around line 95:

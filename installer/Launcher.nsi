@@ -6,7 +6,7 @@
 ; Variables
 ;--------------------------------
 !define PRODUCT_NAME "Launcher"
-!define PRODUCT_VERSION "1.0.16"
+!define PRODUCT_VERSION "1.0.17"
 !define PRODUCT_PUBLISHER "Windsor Industries"
 !define PRODUCT_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
 !ifndef OUTDIR
@@ -189,8 +189,9 @@ Function .onInit
   ${If} $0 != ""
     MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION \
       "${PRODUCT_NAME} is already installed.$\n$\nClick OK to remove the previous version first, or CANCEL to abort." \
-      IDOK +2
+      IDOK removePreviousVersion
     Abort
+removePreviousVersion:
     ExecWait '$0 _?=$INSTDIR'
   ${EndIf}
 FunctionEnd
@@ -198,11 +199,13 @@ FunctionEnd
 Function .onInstSuccess
   MessageBox MB_YESNO|MB_ICONQUESTION \
     "Installation complete!$\n$\nWould you like to launch ${PRODUCT_NAME} now?" \
-    IDYES +2
-  Return
-  
+    IDYES launchInstalledApp
+  Goto doneLaunching
+
+launchInstalledApp:
   ; Launch using the .cmd wrapper which auto-detects pwsh or powershell
   ExecShell "open" "$INSTDIR\Launcher.cmd"
+doneLaunching:
 FunctionEnd
 
 ;--------------------------------

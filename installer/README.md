@@ -57,7 +57,7 @@ The installer:
 
 1. **Installs application files**
    - Copies `launcher.ps1` and all configuration files to the installation directory
-   - Creates a batch wrapper (`launcher.bat`) for easy launching
+   - Creates a command wrapper (`Launcher.cmd`) for easy launching
    - Stores the version number for auto-update checks
 
 2. **Creates shortcuts**
@@ -80,7 +80,7 @@ After installation, the user has:
 ```text
 Program Files/Launcher/
 ├── launcher.ps1
-├── launcher.bat            # Batch wrapper
+├── Launcher.cmd            # Command wrapper
 ├── launcher.config.json
 ├── version.txt             # For update checks
 └── Uninstall.exe
@@ -90,7 +90,7 @@ Program Files/Launcher/
 
 The generated shortcuts execute:
 
-- **Default**: `launcher.bat` (uses `launcher.config.json`)
+- **Default**: `Launcher.cmd` (uses `launcher.config.json`)
 
 ## Uninstalling
 
@@ -109,11 +109,7 @@ Users can uninstall via:
 
 ### Build log shows errors
 
-- Check that all source files exist in the parent directory:
-  - `launcher.ps1`
-  - `launcher.config.json`
-  - `launcher.normal-slow.config.json`
-  - `launcher.ultra-slow.config.json`
+- Check that the source files exist in the parent directory, including `launcher.ps1`, `launcher.config.json`, and any optional profile-specific config files you add.
 
 ### Installer won't run on target machine
 

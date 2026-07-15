@@ -131,7 +131,7 @@ function Backup-CurrentVersion {
         # Backup critical files
         $filesToBackup = @(
             "launcher.ps1",
-            "launcher.bat",
+            "Launcher.cmd",
             "launcher.config.json",
             "launcher.normal-slow.config.json",
             "launcher.ultra-slow.config.json",
@@ -168,7 +168,7 @@ function Install-Update {
         Write-UpdateLog "Running installer: $InstallerPath" "INFO"
 
         $process = Start-Process -FilePath $InstallerPath `
-            -ArgumentList "/S /D=$InstallDir" `
+            -ArgumentList "/S /D=`"$InstallDir`"" `
             -NoNewWindow `
             -PassThru `
             -Wait

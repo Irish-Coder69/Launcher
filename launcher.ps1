@@ -1,4 +1,4 @@
-[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '', Justification='Interactive launcher intentionally renders colorized host UI.')]
+﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '', Justification='Interactive launcher intentionally renders colorized host UI.')]
 param(
     [string]$ConfigPath = ".\launcher.config.json",
     [switch]$DryRun
@@ -166,6 +166,111 @@ function Resolve-StepPath {
     }
 
     return [System.IO.Path]::GetFullPath([System.IO.Path]::Combine($ConfigDirectory, $Path))
+}
+
+function Get-PathCandidate {
+    param(
+        [string[]]$Path
+    )
+
+    $candidates = New-Object System.Collections.Generic.List[string]
+    foreach ($pathItem in @($Path)) {
+        if ([string]::IsNullOrWhiteSpace($pathItem)) {
+            continue
+        }
+
+        $trimmedPath = ([string]$pathItem).Trim()
+        if (-not [string]::IsNullOrWhiteSpace($trimmedPath)) {
+            $candidates.Add($trimmedPath)
+        }
+
+        $dequotedPath = $trimmedPath.Trim('"')
+        if (-not [string]::IsNullOrWhiteSpace($dequotedPath)) {
+            $candidates.Add($dequotedPath)
+        }
+
+        if ($dequotedPath.Contains('/')) {
+            $candidates.Add(($dequotedPath -replace '/', '\\'))
+        }
+    }
+
+    return @($candidates | Select-Object -Unique)
+}
+
+function Get-MappedDriveFallbackPath {
+    param(
+        [string]$Path
+    )
+
+    if ([string]::IsNullOrWhiteSpace($Path)) {
+        return $null
+    }
+
+    $pathText = $Path.Trim().Trim('"')
+    if ($pathText -notmatch '^(?<drive>[a-zA-Z]):[\\/](?<relative>.*)$') {
+        return $null
+    }
+
+    $driveLetter = $Matches.drive.ToUpperInvariant()
+    $relativePath = $Matches.relative -replace '/', '\\'
+
+    $providerName = $null
+    try {
+        $logicalDisk = Get-CimInstance -ClassName Win32_LogicalDisk -Filter ("DeviceID='" + $driveLetter + ":'") -ErrorAction Stop | Select-Object -First 1
+        if ($logicalDisk -and -not [string]::IsNullOrWhiteSpace($logicalDisk.ProviderName)) {
+            $providerName = [string]$logicalDisk.ProviderName
+        }
+    }
+    catch {
+        $providerName = $null
+    }
+
+    if ([string]::IsNullOrWhiteSpace($providerName)) {
+        return $null
+    }
+
+    return ($providerName.TrimEnd('\') + '\' + $relativePath.TrimStart('\'))
+}
+
+function Resolve-AccessibleStepPath {
+    param(
+        [string[]]$Path,
+        [switch]$RetryMappedDrive
+    )
+
+    $pathCandidates = @(Get-PathCandidate -Path $Path)
+    foreach ($candidate in $pathCandidates) {
+        if (Test-Path -LiteralPath $candidate) {
+            return $candidate
+        }
+    }
+
+    if ($RetryMappedDrive -and $pathCandidates.Count -gt 0) {
+        $primaryCandidate = [string]$pathCandidates[0]
+        if ($primaryCandidate -match '^(?<drive>[a-zA-Z]):[\\/]') {
+            $driveRoot = "$($Matches.drive):\"
+            try {
+                # Touch mapped-drive root to give Windows a chance to reconnect stale mappings.
+                [void](Get-ChildItem -LiteralPath $driveRoot -ErrorAction Stop | Select-Object -First 1)
+            }
+            catch {
+                Write-Verbose "Mapped-drive probe failed for '$driveRoot'; continuing with fallback path checks."
+            }
+
+            $mappedDriveFallback = Get-MappedDriveFallbackPath -Path $primaryCandidate
+            if (-not [string]::IsNullOrWhiteSpace($mappedDriveFallback) -and (Test-Path -LiteralPath $mappedDriveFallback)) {
+                return $mappedDriveFallback
+            }
+
+            foreach ($candidate in $pathCandidates) {
+                if (Test-Path -LiteralPath $candidate) {
+                    return $candidate
+                }
+            }
+        }
+    }
+
+    return $null
 }
 
 function Get-LauncherHostPath {
@@ -2758,12 +2863,25 @@ function Invoke-LaunchStep {
     )
 
     $rawProgramPath = [string]$Step.programPath
+    $rawFallbackProgramPath = if ($Step.PSObject.Properties.Name -contains "fallbackProgramPath") { [string]$Step.fallbackProgramPath } else { "" }
     $looksLikePath = [System.IO.Path]::IsPathRooted($rawProgramPath) -or $rawProgramPath.Contains("/") -or $rawProgramPath.Contains("\\")
     $programPath = if ($looksLikePath) {
         Resolve-StepPath -Path $rawProgramPath -ConfigDirectory $ConfigDirectory
     }
     else {
         $rawProgramPath
+    }
+    $fallbackProgramPath = if ($looksLikePath -and -not [string]::IsNullOrWhiteSpace($rawFallbackProgramPath)) {
+        Resolve-StepPath -Path $rawFallbackProgramPath -ConfigDirectory $ConfigDirectory
+    }
+    else {
+        $null
+    }
+    $resolvedProgramPath = if ($looksLikePath) {
+        Resolve-AccessibleStepPath -Path @($programPath, $fallbackProgramPath) -RetryMappedDrive
+    }
+    else {
+        $null
     }
 
     $arguments = if ($Step.arguments) { [string]$Step.arguments } else { "" }
@@ -2772,8 +2890,8 @@ function Invoke-LaunchStep {
         Resolve-StepPath -Path ([string]$Step.workingDirectory) -ConfigDirectory $ConfigDirectory
     }
     else {
-        if ($looksLikePath -and (Test-Path -Path $programPath)) {
-            Split-Path -Path $programPath -Parent
+        if ($looksLikePath -and -not [string]::IsNullOrWhiteSpace($resolvedProgramPath)) {
+            Split-Path -Path $resolvedProgramPath -Parent
         }
         else {
             $ConfigDirectory
@@ -2813,11 +2931,19 @@ function Invoke-LaunchStep {
     $launchTarget = $null
     $launchTargetIsDirectory = $false
     if ($looksLikePath) {
-        if (-not (Test-Path -Path $programPath)) {
-            throw "Program not found for step '$($Step.name)': $programPath"
+        if ([string]::IsNullOrWhiteSpace($resolvedProgramPath)) {
+            $candidateSummary = (Get-PathCandidate -Path @($programPath, $fallbackProgramPath)) -join "; "
+            throw "Program not found for step '$($Step.name)': $programPath. Checked: $candidateSummary. If this is a mapped drive, confirm the drive is connected in the same Windows session running Launcher."
         }
 
-        $launchTarget = (Resolve-Path -Path $programPath).Path
+        $programPath = $resolvedProgramPath
+
+        try {
+            $launchTarget = (Resolve-Path -LiteralPath $programPath -ErrorAction Stop).Path
+        }
+        catch {
+            $launchTarget = $programPath
+        }
         try {
             $launchTargetItem = Get-Item -LiteralPath $launchTarget -ErrorAction Stop
             $launchTargetIsDirectory = [bool]$launchTargetItem.PSIsContainer

@@ -87,9 +87,9 @@ function Compare-Versions {
 
 function Test-InternetConnection {
     $urls = @(
-        "https://www.google.com",
-        "https://www.cloudflare.com",
-        "https://www.microsoft.com"
+        "https://raw.githubusercontent.com/Irish-Coder69/Launcher/main/update/versions.json",
+        "https://api.github.com",
+        "https://github.com"
     )
 
     foreach ($url in $urls) {

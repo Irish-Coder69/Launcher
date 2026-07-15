@@ -116,6 +116,7 @@
         "type": "launch",
         "enabled": true,
         "programPath": "N:/StockRoom DataBase/Stockroom Analytics Launcher.lnk",
+        "fallbackProgramPath": "\\windsornas\\WindsorDB\\StockRoom DataBase\\Stockroom Analytics Launcher.lnk",
         "arguments": "",
         "workingDirectory": "",
         "windowTitle": "Stockroom Analytics",

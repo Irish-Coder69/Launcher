@@ -1,15 +1,15 @@
 [
   {
-    "version": "1.0.16",
-    "releaseDate": "2026-07-13",
-    "description": "Patch release improving P-touch Editor post-launch minimize reliability",
-    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.16/Launcher-1.0.16-Setup.exe",
-    "checksum": "209B753B4660BCA6AF2A66309F07AFD5B9F2CD079FDB4936E4CD104C4ED723BB",
+    "version": "1.0.17",
+    "releaseDate": "2026-07-15",
+    "description": "Stability release improving path resolution, installer/update reliability, and packaging flow",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.17/Launcher-1.0.17-Setup.exe",
+    "checksum": "0562CD0E5DAD963A9B44887EDCB29C9BAE784C976152631F27720B073CD276CF",
     "isRequired": true,
     "notes": [
-      "Improved minimize fallback to find windows opened by related process names",
-      "Added timed title retries when minimizing launch windows",
-      "Refreshed installer and release metadata for v1.0.16"
+      "Added fallbackProgramPath support and mapped-drive UNC fallback resolution for launch steps",
+      "Fixed silent update installer path quoting and aligned backup/restore around Launcher.cmd",
+      "Corrected NSIS install/launch branch flow and refreshed installer build output handling"
     ]
   }
 ]
