@@ -2994,6 +2994,66 @@ function Test-ExplorerFolderWindowOpen {
     return $false
 }
 
+function Test-AccessDatabaseAlreadyRunning {
+    param(
+        [string[]]$DatabasePaths
+    )
+
+    if (-not $DatabasePaths -or $DatabasePaths.Count -eq 0) {
+        return $false
+    }
+
+    $normalizedDatabasePaths = @($DatabasePaths | ForEach-Object {
+        if ([string]::IsNullOrWhiteSpace($_)) {
+            return $null
+        }
+
+        $candidatePath = ([string]$_).Trim().Trim('"')
+        if ([string]::IsNullOrWhiteSpace($candidatePath)) {
+            return $null
+        }
+
+        try {
+            [System.IO.Path]::GetFullPath($candidatePath)
+        }
+        catch {
+            $candidatePath
+        }
+    } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+
+    if ($normalizedDatabasePaths.Count -eq 0) {
+        return $false
+    }
+
+    $accessProcesses = @()
+    try {
+        $accessProcesses = @(Get-CimInstance -ClassName Win32_Process -Filter "Name='MSACCESS.EXE'" -ErrorAction Stop)
+    }
+    catch {
+        try {
+            $accessProcesses = @(Get-CimInstance -ClassName Win32_Process -Filter "Name='MSACCESS'" -ErrorAction Stop)
+        }
+        catch {
+            return $false
+        }
+    }
+
+    foreach ($process in $accessProcesses) {
+        $commandLine = [string]$process.CommandLine
+        if ([string]::IsNullOrWhiteSpace($commandLine)) {
+            continue
+        }
+
+        foreach ($databasePath in $normalizedDatabasePaths) {
+            if ($commandLine -like "*$databasePath*") {
+                return $true
+            }
+        }
+    }
+
+    return $false
+}
+
 function Test-LaunchStepAlreadyRunning {
     param(
         [object]$Step,
@@ -3014,32 +3074,24 @@ function Test-LaunchStepAlreadyRunning {
         }
     }
 
+    $programExtension = [string]([System.IO.Path]::GetExtension([string]$programForFolderDetection)).ToLowerInvariant()
+    if (@('.accdb', '.accde') -contains $programExtension) {
+        $databasePaths = @($RawProgramPath, $ResolvedProgramPath)
+        if ($Step.PSObject.Properties.Name -contains "fallbackProgramPath") {
+            $databasePaths += [string]$Step.fallbackProgramPath
+        }
+
+        if (Test-AccessDatabaseAlreadyRunning -DatabasePaths $databasePaths) {
+            return $true
+        }
+    }
+
     $windowTitleCandidates = @()
     if ($Step.PSObject.Properties.Name -contains "runningWindowTitles") {
         $windowTitleCandidates += @($Step.runningWindowTitles | ForEach-Object { [string]$_ })
     }
-    else {
-        if ($Step.PSObject.Properties.Name -contains "windowTitle") {
-            $windowTitleCandidates += [string]$Step.windowTitle
-        }
-        if ($Step.PSObject.Properties.Name -contains "loginSuccessWindowTitle") {
-            $windowTitleCandidates += [string]$Step.loginSuccessWindowTitle
-        }
-        if ($Step.PSObject.Properties.Name -contains "loginWindowTitle") {
-            $windowTitleCandidates += [string]$Step.loginWindowTitle
-        }
-        if ($Step.PSObject.Properties.Name -contains "fallbackWindowTitles") {
-            $windowTitleCandidates += @($Step.fallbackWindowTitles | ForEach-Object { [string]$_ })
-        }
-        if ($Step.PSObject.Properties.Name -contains "loginSuccessFallbackWindowTitles") {
-            $windowTitleCandidates += @($Step.loginSuccessFallbackWindowTitles | ForEach-Object { [string]$_ })
-        }
-        if ($Step.PSObject.Properties.Name -contains "loginFallbackWindowTitles") {
-            $windowTitleCandidates += @($Step.loginFallbackWindowTitles | ForEach-Object { [string]$_ })
-        }
-        if ($Step.PSObject.Properties.Name -contains "name") {
-            $windowTitleCandidates += [string]$Step.name
-        }
+    elseif ($Step.PSObject.Properties.Name -contains "windowTitle") {
+        $windowTitleCandidates += [string]$Step.windowTitle
     }
 
     $windowTitleCandidates = @($windowTitleCandidates | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
@@ -3061,11 +3113,6 @@ function Test-LaunchStepAlreadyRunning {
         $programLeaf = [System.IO.Path]::GetFileNameWithoutExtension([string]$programForProcessDetection)
         if (-not [string]::IsNullOrWhiteSpace($programLeaf)) {
             $processCandidates += $programLeaf
-        }
-
-        $programExtension = [string]([System.IO.Path]::GetExtension([string]$programForProcessDetection)).ToLowerInvariant()
-        if (@('.accdb', '.accde') -contains $programExtension) {
-            $processCandidates += 'MSACCESS'
         }
     }
 
