@@ -2994,6 +2994,87 @@ function Test-ExplorerFolderWindowOpen {
     return $false
 }
 
+function Get-StepDirectoryLaunchTargetPath {
+    param(
+        [object]$Step,
+        [string]$BaseDirectory,
+        [switch]$CreateMissing,
+        [switch]$DryRun
+    )
+
+    if ([string]::IsNullOrWhiteSpace($BaseDirectory)) {
+        return $BaseDirectory
+    }
+
+    $ensureCurrentMonthFolder = $false
+    if ($Step -and $Step.PSObject.Properties.Name -contains "ensureCurrentMonthFolder") {
+        $ensureCurrentMonthFolder = [bool]$Step.ensureCurrentMonthFolder
+    }
+
+    $ensureCurrentDateFolder = $false
+    if ($Step -and $Step.PSObject.Properties.Name -contains "ensureCurrentDateFolder") {
+        $ensureCurrentDateFolder = [bool]$Step.ensureCurrentDateFolder
+    }
+
+    if (-not $ensureCurrentMonthFolder -and -not $ensureCurrentDateFolder) {
+        return $BaseDirectory
+    }
+
+    $monthFolderFormat = if ($Step -and $Step.PSObject.Properties.Name -contains "currentMonthFolderFormat") {
+        [string]$Step.currentMonthFolderFormat
+    }
+    else {
+        "MM"
+    }
+
+    $dateFolderFormat = if ($Step -and $Step.PSObject.Properties.Name -contains "currentDateFolderFormat") {
+        [string]$Step.currentDateFolderFormat
+    }
+    else {
+        "MM_dd_yyyy"
+    }
+
+    $today = Get-Date
+    $targetPath = $BaseDirectory
+    $monthPath = $BaseDirectory
+
+    if ($ensureCurrentMonthFolder -or $ensureCurrentDateFolder) {
+        $monthFolderName = $today.ToString($monthFolderFormat, [System.Globalization.CultureInfo]::InvariantCulture)
+        $monthPath = Join-Path -Path $BaseDirectory -ChildPath $monthFolderName
+
+        if (-not (Test-Path -LiteralPath $monthPath)) {
+            if ($DryRun) {
+                Write-LauncherLog "[DryRun] Would create current month folder '$monthPath'"
+            }
+            elseif ($CreateMissing) {
+                New-Item -ItemType Directory -Path $monthPath -Force | Out-Null
+                Write-LauncherLog "Created current month folder '$monthPath'"
+            }
+        }
+
+        $targetPath = $monthPath
+    }
+
+    if ($ensureCurrentDateFolder) {
+        $dateFolderName = $today.ToString($dateFolderFormat, [System.Globalization.CultureInfo]::InvariantCulture)
+        $datePath = Join-Path -Path $monthPath -ChildPath $dateFolderName
+
+        if (-not (Test-Path -LiteralPath $datePath)) {
+            if ($DryRun) {
+                Write-LauncherLog "[DryRun] Would create current date folder '$datePath'"
+            }
+            elseif ($CreateMissing) {
+                New-Item -ItemType Directory -Path $datePath -Force | Out-Null
+                Write-LauncherLog "Created current date folder '$datePath'"
+            }
+        }
+
+        $targetPath = $datePath
+    }
+
+    return $targetPath
+}
+
 function Test-AccessDatabaseAlreadyRunning {
     param(
         [string[]]$DatabasePaths
@@ -3067,8 +3148,11 @@ function Test-LaunchStepAlreadyRunning {
         try {
             $candidateItem = Get-Item -LiteralPath $programForFolderDetection -ErrorAction Stop
             $isDirectoryTarget = [bool]$candidateItem.PSIsContainer
-            if ($candidateItem.PSIsContainer -and (Test-ExplorerFolderWindowOpen -FolderPath $candidateItem.FullName)) {
-                return $true
+            if ($candidateItem.PSIsContainer) {
+                $directoryTargetPath = Get-StepDirectoryLaunchTargetPath -Step $Step -BaseDirectory $candidateItem.FullName -CreateMissing:$false
+                if (Test-ExplorerFolderWindowOpen -FolderPath $directoryTargetPath) {
+                    return $true
+                }
             }
         }
         catch {
@@ -3209,7 +3293,20 @@ function Invoke-LaunchStep {
     }
 
     if ($DryRun) {
-        Write-LauncherLog "[DryRun] Would launch: $programPath $arguments (WindowStyle=$windowStyle)"
+        $dryRunTarget = $programPath
+        if ($looksLikePath -and -not [string]::IsNullOrWhiteSpace($resolvedProgramPath)) {
+            try {
+                $dryRunTargetItem = Get-Item -LiteralPath $resolvedProgramPath -ErrorAction Stop
+                if ($dryRunTargetItem.PSIsContainer) {
+                    $dryRunTarget = Get-StepDirectoryLaunchTargetPath -Step $Step -BaseDirectory $dryRunTargetItem.FullName -CreateMissing -DryRun
+                }
+            }
+            catch {
+                $null = $_
+            }
+        }
+
+        Write-LauncherLog "[DryRun] Would launch: $dryRunTarget $arguments (WindowStyle=$windowStyle)"
         Invoke-MinimizeLaunchedWindow -Step $Step -Process $null -DryRun:$DryRun
         Wait-ForWindowToClose -Step $Step -DryRun:$DryRun
         Invoke-PreLoginWindowPreparation -Step $Step -Process $null -DryRun:$DryRun
@@ -3278,6 +3375,7 @@ function Invoke-LaunchStep {
 
     $process = $null
     if ($launchTargetIsDirectory) {
+        $launchTarget = Get-StepDirectoryLaunchTargetPath -Step $Step -BaseDirectory $launchTarget -CreateMissing
         Write-LauncherLog "Launch target '$launchTarget' is a directory; opening via shell"
         try {
             $shell = New-Object -ComObject WScript.Shell

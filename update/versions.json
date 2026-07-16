@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.0.34",
+    "releaseDate": "2026-07-16",
+    "description": "Receiver month/date folder auto-create and open",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.34/Launcher-1.0.34-Setup.exe",
+    "checksum": "ED5CEE7EFE7ADB4249518F141CDCDEA13206C66600BA15C936BFFC0B95F20173",
+    "isRequired": false,
+    "notes": [
+      "Receiver step now checks and creates current month folder before launch",
+      "Receiver step now checks and creates current date folder with MM_dd_yyyy format",
+      "Launcher opens the resolved date folder target for Receiver"
+    ]
+  },
+  {
     "version": "1.0.33",
     "releaseDate": "2026-07-16",
     "description": "Explicit per-step running checks with clearer logging",

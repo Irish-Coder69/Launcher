@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.34 - 2026-07-16
+
+- Added Receiver's step folder flow: check/create current month folder, then check/create current date folder.
+- Date folder format is now configurable and set to `MM_dd_yyyy` for Receiver's (example: `07_16_2026`).
+- Rebuilt installer and refreshed release metadata for v1.0.34.
+
 ## 1.0.33 - 2026-07-16
 
 - Added explicit per-step running-check logs so each step reports running/not-running before launch.
