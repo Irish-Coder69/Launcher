@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.0.24",
+    "releaseDate": "2026-07-16",
+    "description": "Launcher now skips steps that are already open",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.24/Launcher-1.0.24-Setup.exe",
+    "checksum": "1E1089D94C855D174D5BE636077D3B75A65B517E4ED2FC680312DCA23FF1F371",
+    "isRequired": false,
+    "notes": [
+      "Added launch-step detection so reruns only launch missing applications",
+      "Added per-step override fields: launchOnlyIfMissing, runningWindowTitles, runningProcessNames",
+      "Kept CLOSE prompt and lock-key reliability improvements"
+    ]
+  },
+  {
     "version": "1.0.23",
     "releaseDate": "2026-07-16",
     "description": "Restored CLOSE prompt and improved lock-key reliability",

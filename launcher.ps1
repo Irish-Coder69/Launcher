@@ -2892,6 +2892,61 @@ function Invoke-PreLoginWindowPreparation {
     }
 }
 
+function Test-LaunchStepAlreadyRunning {
+    param(
+        [object]$Step,
+        [string]$RawProgramPath,
+        [string]$ResolvedProgramPath
+    )
+
+    $windowTitleCandidates = @()
+    if ($Step.PSObject.Properties.Name -contains "runningWindowTitles") {
+        $windowTitleCandidates += @($Step.runningWindowTitles | ForEach-Object { [string]$_ })
+    }
+    else {
+        if ($Step.PSObject.Properties.Name -contains "windowTitle") {
+            $windowTitleCandidates += [string]$Step.windowTitle
+        }
+        if ($Step.PSObject.Properties.Name -contains "loginSuccessWindowTitle") {
+            $windowTitleCandidates += [string]$Step.loginSuccessWindowTitle
+        }
+    }
+
+    $windowTitleCandidates = @($windowTitleCandidates | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+    if ($windowTitleCandidates.Count -gt 0 -and (Test-AnyWindowTitleMatch -CandidateTitles $windowTitleCandidates)) {
+        return $true
+    }
+
+    $processCandidates = @()
+    if ($Step.PSObject.Properties.Name -contains "runningProcessNames") {
+        $processCandidates += @($Step.runningProcessNames | ForEach-Object { [string]$_ })
+    }
+
+    if ($RawProgramPath -match "(?i)olk\.exe|outlook") {
+        $processCandidates += "OUTLOOK"
+    }
+
+    if ($processCandidates.Count -eq 0 -and $windowTitleCandidates.Count -eq 0) {
+        $programForProcessDetection = if (-not [string]::IsNullOrWhiteSpace($ResolvedProgramPath)) { $ResolvedProgramPath } else { $RawProgramPath }
+        if (-not [string]::IsNullOrWhiteSpace($programForProcessDetection)) {
+            $programLeaf = [System.IO.Path]::GetFileNameWithoutExtension([string]$programForProcessDetection)
+            if (-not [string]::IsNullOrWhiteSpace($programLeaf)) {
+                $processCandidates += $programLeaf
+            }
+        }
+    }
+
+    $processCandidates = @($processCandidates | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+    foreach ($processCandidate in $processCandidates) {
+        $running = @(Get-Process -Name $processCandidate -ErrorAction SilentlyContinue)
+        if ($running.Count -gt 0) {
+            return $true
+        }
+    }
+
+    return $false
+}
+
 function Invoke-LaunchStep {
     param(
         [object]$Step,
@@ -2935,13 +2990,19 @@ function Invoke-LaunchStep {
         }
     }
 
-    $isOutlookStep = ([string]$Step.name -like "*Outlook*") -or ($rawProgramPath -match "(?i)olk\.exe|outlook")
-    if (-not $DryRun -and $isOutlookStep) {
-        $runningOutlook = @(Get-Process -Name "OUTLOOK" -ErrorAction SilentlyContinue)
-        if ($runningOutlook.Count -gt 0) {
-            Write-LauncherLog "Skipping '$($Step.name)' launch because Outlook is already running."
-            return
+    $launchOnlyIfMissing = $true
+    if ($Step.PSObject.Properties.Name -contains "launchOnlyIfMissing") {
+        $launchOnlyIfMissing = [bool]$Step.launchOnlyIfMissing
+    }
+
+    if ($launchOnlyIfMissing -and (Test-LaunchStepAlreadyRunning -Step $Step -RawProgramPath $rawProgramPath -ResolvedProgramPath $resolvedProgramPath)) {
+        if ($DryRun) {
+            Write-LauncherLog "[DryRun] Would skip '$($Step.name)' because it is already running"
         }
+        else {
+            Write-LauncherLog "Skipping '$($Step.name)' launch because it is already running"
+        }
+        return
     }
 
     if ($DryRun) {
