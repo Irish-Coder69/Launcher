@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.27 - 2026-07-16
+
+- Fixed lock-key enforcement fallback binding so non-boolean values no longer trigger parameter conversion errors.
+- Preserved non-fatal lock-key behavior so launcher completion is not blocked by key-state fallback issues.
+
 ## 1.0.26 - 2026-07-16
 
 - Added explicit Explorer folder-window detection so the Receiver's directory step is recognized as already open.

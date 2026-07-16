@@ -2469,17 +2469,50 @@ public static class KeyboardLockState {
 }
 "@ -ErrorAction SilentlyContinue
 
+    function ConvertTo-BooleanValue {
+        param(
+            [object]$Value,
+            [bool]$Default = $false
+        )
+
+        if ($null -eq $Value) {
+            return $Default
+        }
+
+        if ($Value -is [bool]) {
+            return [bool]$Value
+        }
+
+        if ($Value -is [int] -or $Value -is [long] -or $Value -is [short]) {
+            return ([int]$Value -ne 0)
+        }
+
+        $text = ([string]$Value).Trim()
+        if ([string]::IsNullOrWhiteSpace($text)) {
+            return $Default
+        }
+
+        switch -Regex ($text.ToLowerInvariant()) {
+            '^(true|t|yes|y|on|1)$' { return $true }
+            '^(false|f|no|n|off|0)$' { return $false }
+        }
+
+        return $Default
+    }
+
     function Test-LockKeyEnabled {
         param(
             [int]$VirtualKey,
-            [bool]$ConsoleFallback
+            [object]$ConsoleFallback
         )
+
+        $resolvedConsoleFallback = ConvertTo-BooleanValue -Value $ConsoleFallback -Default:$false
 
         try {
             return (([KeyboardLockState]::GetKeyState($VirtualKey) -band 1) -eq 1)
         }
         catch {
-            return $ConsoleFallback
+            return $resolvedConsoleFallback
         }
     }
 
@@ -2488,11 +2521,13 @@ public static class KeyboardLockState {
             [string]$Label,
             [string]$SendKeyValue,
             [int]$VirtualKey,
-            [bool]$ConsoleFallback
+            [object]$ConsoleFallback
         )
 
+        $resolvedConsoleFallback = ConvertTo-BooleanValue -Value $ConsoleFallback -Default:$false
+
         $attempts = 0
-        while ($attempts -lt 3 -and -not (Test-LockKeyEnabled -VirtualKey $VirtualKey -ConsoleFallback $ConsoleFallback)) {
+        while ($attempts -lt 3 -and -not (Test-LockKeyEnabled -VirtualKey $VirtualKey -ConsoleFallback $resolvedConsoleFallback)) {
             try {
                 $shell.SendKeys($SendKeyValue)
             }
@@ -2504,7 +2539,7 @@ public static class KeyboardLockState {
             $attempts++
         }
 
-        if (Test-LockKeyEnabled -VirtualKey $VirtualKey -ConsoleFallback $ConsoleFallback) {
+        if (Test-LockKeyEnabled -VirtualKey $VirtualKey -ConsoleFallback $resolvedConsoleFallback) {
             Write-LauncherLog "$Label is ON"
         }
         else {
@@ -2514,12 +2549,17 @@ public static class KeyboardLockState {
 
     $shell = New-Object -ComObject WScript.Shell
 
+    $capsLockFallback = $false
+    $numLockFallback = $false
+    try { $capsLockFallback = [bool][Console]::CapsLock } catch { $null = $_ }
+    try { $numLockFallback = [bool][Console]::NumberLock } catch { $null = $_ }
+
     if ($EnsureCapsLockOn) {
-        Ensure-LockKeyOn -Label "Caps Lock" -SendKeyValue '{CAPSLOCK}' -VirtualKey 0x14 -ConsoleFallback [Console]::CapsLock
+        Ensure-LockKeyOn -Label "Caps Lock" -SendKeyValue '{CAPSLOCK}' -VirtualKey 0x14 -ConsoleFallback $capsLockFallback
     }
 
     if ($EnsureNumLockOn) {
-        Ensure-LockKeyOn -Label "Num Lock" -SendKeyValue '{NUMLOCK}' -VirtualKey 0x90 -ConsoleFallback [Console]::NumberLock
+        Ensure-LockKeyOn -Label "Num Lock" -SendKeyValue '{NUMLOCK}' -VirtualKey 0x90 -ConsoleFallback $numLockFallback
     }
 }
 
@@ -3380,7 +3420,12 @@ try {
         $ensureNumLockOn = [bool]$config.ensureNumLockOn
     }
 
-    Set-LockKeysOn -EnsureCapsLockOn:$ensureCapsLockOn -EnsureNumLockOn:$ensureNumLockOn -DryRun:$DryRun
+    try {
+        Set-LockKeysOn -EnsureCapsLockOn:$ensureCapsLockOn -EnsureNumLockOn:$ensureNumLockOn -DryRun:$DryRun
+    }
+    catch {
+        Write-LauncherLog "Lock-key enforcement encountered an error and was skipped: $($_.Exception.Message)" -Level "WARN"
+    }
 
     Write-LauncherLog "Launcher sequence completed."
 
