@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.30 - 2026-07-16
+
+- Published a maintenance release to keep the installer, manifest, and runtime versioning aligned.
+- Rebuilt the installer package for distribution.
+
 ## 1.0.29 - 2026-07-16
 
 - Renamed the lock-key helper to use an approved PowerShell verb.

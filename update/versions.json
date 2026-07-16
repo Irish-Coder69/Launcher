@@ -1,5 +1,17 @@
 [
   {
+    "version": "1.0.30",
+    "releaseDate": "2026-07-16",
+    "description": "Maintenance release for version alignment",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.30/Launcher-1.0.30-Setup.exe",
+    "checksum": "E055034E738703DCB901941E759BC3D45CDB1DD235196763037E188BED0968BC",
+    "isRequired": false,
+    "notes": [
+      "Published a maintenance release to keep runtime, installer, and manifest versions aligned",
+      "Rebuilt the installer package for distribution"
+    ]
+  },
+  {
     "version": "1.0.29",
     "releaseDate": "2026-07-16",
     "description": "Approved verb rename for lock-key helper",
