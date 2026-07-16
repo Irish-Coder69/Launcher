@@ -1,15 +1,15 @@
 [
   {
-    "version": "1.0.28",
+    "version": "1.0.29",
     "releaseDate": "2026-07-16",
-    "description": "Access app detection is now program-specific",
-    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.28/Launcher-1.0.28-Setup.exe",
-    "checksum": "89E05284FEAFCD42CA150D3700D862652DF75DE47E6DD8AFD212B1CFE44C7997",
+    "description": "Approved verb rename for lock-key helper",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.29/Launcher-1.0.29-Setup.exe",
+    "checksum": "E08026AC8DAA2A111E9107D86C458455589306DD146C56BA5B42AEAA99CE90B1",
     "isRequired": false,
     "notes": [
-      "Added exact Access database-path detection so Visual Board and Stockroom Analytics are not conflated",
-      "Preserved app-specific open checks for non-Access launch steps",
-      "Rebuilt installer and aligned runtime, installer, and manifest versioning to 1.0.28"
+      "Renamed the lock-key helper to use an approved PowerShell verb",
+      "Preserved the existing lock-key enforcement behavior and call flow",
+      "Rebuilt installer and aligned runtime, installer, and manifest versioning to 1.0.29"
     ]
   },
   {

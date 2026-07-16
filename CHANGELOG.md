@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.29 - 2026-07-16
+
+- Renamed the lock-key helper to use an approved PowerShell verb.
+- Kept the lock-key enforcement logic and call flow unchanged.
+- Rebuilt installer and refreshed release metadata for v1.0.29.
+
 ## 1.0.28 - 2026-07-16
 
 - Fixed Access app detection so Visual Board and Stockroom Analytics are checked as separate programs.

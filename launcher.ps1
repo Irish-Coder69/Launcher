@@ -2516,7 +2516,7 @@ public static class KeyboardLockState {
         }
     }
 
-    function Ensure-LockKeyOn {
+    function Set-LockKeyOn {
         param(
             [string]$Label,
             [string]$SendKeyValue,
@@ -2555,11 +2555,11 @@ public static class KeyboardLockState {
     try { $numLockFallback = [bool][Console]::NumberLock } catch { $null = $_ }
 
     if ($EnsureCapsLockOn) {
-        Ensure-LockKeyOn -Label "Caps Lock" -SendKeyValue '{CAPSLOCK}' -VirtualKey 0x14 -ConsoleFallback $capsLockFallback
+        Set-LockKeyOn -Label "Caps Lock" -SendKeyValue '{CAPSLOCK}' -VirtualKey 0x14 -ConsoleFallback $capsLockFallback
     }
 
     if ($EnsureNumLockOn) {
-        Ensure-LockKeyOn -Label "Num Lock" -SendKeyValue '{NUMLOCK}' -VirtualKey 0x90 -ConsoleFallback $numLockFallback
+        Set-LockKeyOn -Label "Num Lock" -SendKeyValue '{NUMLOCK}' -VirtualKey 0x90 -ConsoleFallback $numLockFallback
     }
 }
 
