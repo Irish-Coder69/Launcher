@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.28 - 2026-07-16
+
+- Fixed Access app detection so Visual Board and Stockroom Analytics are checked as separate programs.
+- Removed shared open-state signals that could cause one Access app to suppress the other.
+- Rebuilt installer and refreshed release metadata for v1.0.28.
+
 ## 1.0.27 - 2026-07-16
 
 - Fixed lock-key enforcement fallback binding so non-boolean values no longer trigger parameter conversion errors.

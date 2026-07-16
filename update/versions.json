@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.0.28",
+    "releaseDate": "2026-07-16",
+    "description": "Access app detection is now program-specific",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.28/Launcher-1.0.28-Setup.exe",
+    "checksum": "89E05284FEAFCD42CA150D3700D862652DF75DE47E6DD8AFD212B1CFE44C7997",
+    "isRequired": false,
+    "notes": [
+      "Added exact Access database-path detection so Visual Board and Stockroom Analytics are not conflated",
+      "Preserved app-specific open checks for non-Access launch steps",
+      "Rebuilt installer and aligned runtime, installer, and manifest versioning to 1.0.28"
+    ]
+  },
+  {
     "version": "1.0.27",
     "releaseDate": "2026-07-16",
     "description": "Lock-key fallback binding fix and version sync",
