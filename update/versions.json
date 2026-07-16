@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.0.23",
+    "releaseDate": "2026-07-16",
+    "description": "Restored CLOSE prompt and improved lock-key reliability",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.23/Launcher-1.0.23-Setup.exe",
+    "checksum": "EEFDCA6C4644F27B0B01CCC82395701EAB3E088733C845ED49A7DE22322ABB69",
+    "isRequired": false,
+    "notes": [
+      "Restored the idle CLOSE command prompt",
+      "Added lock-key state verification and retries for Caps Lock and Num Lock",
+      "Preserved Visual Board main-window maximize behavior"
+    ]
+  },
+  {
     "version": "1.0.22",
     "releaseDate": "2026-07-16",
     "description": "Visual Board maximize now targets the main program window",

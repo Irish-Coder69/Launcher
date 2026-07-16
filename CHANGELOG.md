@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.23 - 2026-07-16
+
+- Restored the idle CLOSE command prompt so the launcher can be closed from the terminal.
+- Hardened Caps Lock and Num Lock enforcement with verification and retries to ensure ON state.
+- Rebuilt installer and refreshed release metadata for v1.0.23.
+
 ## 1.0.22 - 2026-07-16
 
 - Fixed the Visual Board pre-login maximize behavior so it targets the main program window instead of the login form.

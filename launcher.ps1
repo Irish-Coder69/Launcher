@@ -135,10 +135,19 @@ function Wait-ForLauncherCloseCommand {
     }
 
     Write-Host ""
-    Write-Host "  Launcher is idle. Leave this window open or close it when you're done." -ForegroundColor DarkGray
+    Write-Host "  Launcher is idle. Type CLOSE and press Enter to exit." -ForegroundColor DarkGray
 
     while ($true) {
-        Start-Sleep -Seconds 60
+        $commandInput = Read-Host "  Command"
+        if ([string]::IsNullOrWhiteSpace($commandInput)) {
+            continue
+        }
+
+        if ($commandInput.Trim().ToUpperInvariant() -eq "CLOSE") {
+            break
+        }
+
+        Write-Host "  Type CLOSE to exit launcher." -ForegroundColor Yellow
     }
 }
 
@@ -2451,23 +2460,60 @@ function Set-LockKeysOn {
         return
     }
 
+    Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public static class KeyboardLockState {
+    [DllImport("user32.dll")]
+    public static extern short GetKeyState(int nVirtKey);
+}
+"@ -ErrorAction SilentlyContinue
+
+    function Test-LockKeyEnabled {
+        param(
+            [int]$VirtualKey,
+            [bool]$ConsoleFallback
+        )
+
+        try {
+            return (([KeyboardLockState]::GetKeyState($VirtualKey) -band 1) -eq 1)
+        }
+        catch {
+            return $ConsoleFallback
+        }
+    }
+
+    function Ensure-LockKeyOn {
+        param(
+            [string]$Label,
+            [string]$SendKeyValue,
+            [int]$VirtualKey,
+            [bool]$ConsoleFallback
+        )
+
+        $attempts = 0
+        while ($attempts -lt 3 -and -not (Test-LockKeyEnabled -VirtualKey $VirtualKey -ConsoleFallback $ConsoleFallback)) {
+            $shell.SendKeys($SendKeyValue)
+            Start-Sleep -Milliseconds 200
+            $attempts++
+        }
+
+        if (Test-LockKeyEnabled -VirtualKey $VirtualKey -ConsoleFallback $ConsoleFallback) {
+            Write-LauncherLog "$Label is ON"
+        }
+        else {
+            Write-LauncherLog "Could not confirm $Label is ON" -Level "WARN"
+        }
+    }
+
     $shell = New-Object -ComObject WScript.Shell
 
-    if ($EnsureCapsLockOn -and -not [Console]::CapsLock) {
-        $shell.SendKeys('{CAPSLOCK}')
-        Start-Sleep -Milliseconds 150
-    }
-
-    if ($EnsureNumLockOn -and -not [Console]::NumberLock) {
-        $shell.SendKeys('{NUMLOCK}')
-        Start-Sleep -Milliseconds 150
-    }
-
     if ($EnsureCapsLockOn) {
-        Write-LauncherLog "Caps Lock is ON"
+        Ensure-LockKeyOn -Label "Caps Lock" -SendKeyValue '{CAPSLOCK}' -VirtualKey 0x14 -ConsoleFallback [Console]::CapsLock
     }
+
     if ($EnsureNumLockOn) {
-        Write-LauncherLog "Num Lock is ON"
+        Ensure-LockKeyOn -Label "Num Lock" -SendKeyValue '{NUMLOCK}' -VirtualKey 0x90 -ConsoleFallback [Console]::NumberLock
     }
 }
 
