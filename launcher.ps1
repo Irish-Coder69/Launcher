@@ -2436,8 +2436,8 @@ public static class WindowMinimize {
 function Set-LockKeysOn {
     [CmdletBinding(SupportsShouldProcess)]
     param(
-        [bool]$EnsureCapsLockOn = $false,
-        [bool]$EnsureNumLockOn = $false,
+        [bool]$EnsureCapsLockOn = $true,
+        [bool]$EnsureNumLockOn = $true,
         [switch]$DryRun
     )
 
@@ -3179,12 +3179,12 @@ try {
         }
     }
 
-    $ensureCapsLockOn = $false
+    $ensureCapsLockOn = $true
     if ($config.PSObject.Properties.Name -contains "ensureCapsLockOn") {
         $ensureCapsLockOn = [bool]$config.ensureCapsLockOn
     }
 
-    $ensureNumLockOn = $false
+    $ensureNumLockOn = $true
     if ($config.PSObject.Properties.Name -contains "ensureNumLockOn") {
         $ensureNumLockOn = [bool]$config.ensureNumLockOn
     }
@@ -3198,6 +3198,7 @@ try {
     Write-Host "  All steps completed." -ForegroundColor Green
     Write-Host (("=" * $script:UIWidth)) -ForegroundColor DarkCyan
 
+    $script:SkipClosePrompt = $true
     $completedSuccessfully = $true
 }
 finally {

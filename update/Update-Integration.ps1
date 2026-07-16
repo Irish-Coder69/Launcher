@@ -56,9 +56,19 @@ function Invoke-UpdateCheck {
         if ($InstallBeforeContinue) {
             # Enforced path: check silently, then install automatically when required.
             $result = & $UpdateScriptPath -InstallDir $InstallDir -VersionsUrl $VersionsUrl -CheckOnly -Silent:$true
+            $resultDetails = $null
+            if ($result) {
+                if ($result -is [hashtable] -and $result.ContainsKey('Details')) {
+                    $resultDetails = $result['Details']
+                }
+                elseif ($result.PSObject.Properties.Name -contains 'Details') {
+                    $resultDetails = $result.Details
+                }
+            }
+
             $isRequiredByManifest = $false
-            if ($result -and $result.Details -and $result.Details.PSObject.Properties.Name -contains "isRequired") {
-                $isRequiredByManifest = [bool]$result.Details.isRequired
+            if ($resultDetails -and $resultDetails.PSObject.Properties.Name -contains "isRequired") {
+                $isRequiredByManifest = [bool]$resultDetails.isRequired
             }
 
             $shouldInstall = ($result.Available -eq $true) -and ($RequireAnyUpdate -or $isRequiredByManifest)
@@ -68,16 +78,16 @@ function Invoke-UpdateCheck {
                     throw "Update installer script not found: $installScript"
                 }
 
-                if (-not $result.Details -or [string]::IsNullOrWhiteSpace([string]$result.Details.downloadUrl)) {
+                if (-not $resultDetails -or [string]::IsNullOrWhiteSpace([string]$resultDetails.downloadUrl)) {
                     throw "Update is available but downloadUrl is missing from the manifest."
                 }
 
-                & $installScript -DownloadUrl $result.Details.downloadUrl -InstallDir $InstallDir -Checksum $result.Details.checksum
+                & $installScript -DownloadUrl $resultDetails.downloadUrl -InstallDir $InstallDir -Checksum $resultDetails.checksum
                 return @{
                     Available = $true
                     UpdateInstalled = $true
                     Latest = $result.Latest
-                    Details = $result.Details
+                    Details = $resultDetails
                 }
             }
 
@@ -85,7 +95,7 @@ function Invoke-UpdateCheck {
                 Available = [bool]$result.Available
                 UpdateInstalled = $false
                 Latest = $result.Latest
-                Details = $result.Details
+                Details = $resultDetails
             }
         }
 
@@ -94,7 +104,19 @@ function Invoke-UpdateCheck {
         if ($result.Available -eq $true -and $result.UserChoice -match "^Y") {
             $installScript = Join-Path (Split-Path $UpdateScriptPath) "Install-LauncherUpdate.ps1"
             if (Test-Path $installScript) {
-                & $installScript -DownloadUrl $result.Details.downloadUrl -InstallDir $InstallDir -Checksum $result.Details.checksum
+                $resultDetails = $null
+                if ($result -is [hashtable] -and $result.ContainsKey('Details')) {
+                    $resultDetails = $result['Details']
+                }
+                elseif ($result.PSObject.Properties.Name -contains 'Details') {
+                    $resultDetails = $result.Details
+                }
+
+                if (-not $resultDetails) {
+                    throw "Update is available but Details were not returned by the updater."
+                }
+
+                & $installScript -DownloadUrl $resultDetails.downloadUrl -InstallDir $InstallDir -Checksum $resultDetails.checksum
             }
         }
 
@@ -107,7 +129,17 @@ function Invoke-UpdateCheck {
             if ($result.Available -eq $true -and $result.UserChoice -match "^Y") {
                 $installScript = Join-Path (Split-Path $using:UpdateScriptPath) "Install-LauncherUpdate.ps1"
                 if (Test-Path $installScript) {
-                    & $installScript -DownloadUrl $result.Details.downloadUrl -InstallDir $using:InstallDir -Checksum $result.Details.checksum
+                    $resultDetails = $null
+                    if ($result -is [hashtable] -and $result.ContainsKey('Details')) {
+                        $resultDetails = $result['Details']
+                    }
+                    elseif ($result.PSObject.Properties.Name -contains 'Details') {
+                        $resultDetails = $result.Details
+                    }
+
+                    if ($null -ne $resultDetails) {
+                        & $installScript -DownloadUrl $resultDetails.downloadUrl -InstallDir $using:InstallDir -Checksum $resultDetails.checksum
+                    }
                 }
             }
         } | Out-Null

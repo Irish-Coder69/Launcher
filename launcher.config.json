@@ -2,6 +2,8 @@
   "checkForUpdates": true,
   "requireUpdateBeforeRun": true,
   "updateCheckUrl": "https://raw.githubusercontent.com/Irish-Coder69/Launcher/main/update/versions.json",
+  "ensureCapsLockOn": true,
+  "ensureNumLockOn": true,
   "steps": [
     {
       "name": "Outlook",

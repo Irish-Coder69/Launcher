@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.19 - 2026-07-16
+
+- Launcher now exits automatically after all configured steps finish opening instead of waiting for the CLOSE prompt.
+- Kept the lock-key and update integration fixes from the same release train.
+- Rebuilt installer and refreshed release metadata for v1.0.19.
+
 ## 1.0.18 - 2026-07-15
 
 - Fixed Stockroom Analytics startup path to launch the real `.accdb` target instead of a stale shortcut path.

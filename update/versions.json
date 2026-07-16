@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.0.19",
+    "releaseDate": "2026-07-16",
+    "description": "Launcher now exits automatically after startup steps complete",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.19/Launcher-1.0.19-Setup.exe",
+    "checksum": "1F6722CEB09093913384C09F2FA745989BAF3586D68AAEB8848F4BEB3D33E242",
+    "isRequired": true,
+    "notes": [
+      "Launcher exits automatically after all configured steps complete",
+      "Preserved the Caps Lock and Num Lock end-of-run fix",
+      "Updated update integration to tolerate missing Details payloads"
+    ]
+  },
+  {
     "version": "1.0.18",
     "releaseDate": "2026-07-15",
     "description": "Hotfix release for Stockroom Analytics target and UNC fallback resolution",
