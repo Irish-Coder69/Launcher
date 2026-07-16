@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.0.32",
+    "releaseDate": "2026-07-16",
+    "description": "Reduce false already-running skips across launch steps",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.32/Launcher-1.0.32-Setup.exe",
+    "checksum": "7F2293F4545D18205C9C434B308230369429D5BFF6CF2973A45A5B656EC6B85E",
+    "isRequired": false,
+    "notes": [
+      "Tightened running-state checks to avoid false skips when applications are closed",
+      "When both window and process candidates exist, both now must match",
+      "Avoided inferred process-name checks for directory launch targets"
+    ]
+  },
+  {
     "version": "1.0.31",
     "releaseDate": "2026-07-16",
     "description": "Fix Visual Mfg false already-running skip",

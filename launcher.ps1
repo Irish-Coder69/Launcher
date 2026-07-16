@@ -3062,9 +3062,11 @@ function Test-LaunchStepAlreadyRunning {
     )
 
     $programForFolderDetection = if (-not [string]::IsNullOrWhiteSpace($ResolvedProgramPath)) { $ResolvedProgramPath } else { $RawProgramPath }
+    $isDirectoryTarget = $false
     if (-not [string]::IsNullOrWhiteSpace($programForFolderDetection)) {
         try {
             $candidateItem = Get-Item -LiteralPath $programForFolderDetection -ErrorAction Stop
+            $isDirectoryTarget = [bool]$candidateItem.PSIsContainer
             if ($candidateItem.PSIsContainer -and (Test-ExplorerFolderWindowOpen -FolderPath $candidateItem.FullName)) {
                 return $true
             }
@@ -3095,8 +3097,9 @@ function Test-LaunchStepAlreadyRunning {
     }
 
     $windowTitleCandidates = @($windowTitleCandidates | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
-    if ($windowTitleCandidates.Count -gt 0 -and (Test-AnyWindowTitleMatch -CandidateTitles $windowTitleCandidates)) {
-        return $true
+    $windowMatch = $false
+    if ($windowTitleCandidates.Count -gt 0) {
+        $windowMatch = Test-AnyWindowTitleMatch -CandidateTitles $windowTitleCandidates
     }
 
     $processCandidates = @()
@@ -3109,7 +3112,7 @@ function Test-LaunchStepAlreadyRunning {
     }
 
     $programForProcessDetection = if (-not [string]::IsNullOrWhiteSpace($ResolvedProgramPath)) { $ResolvedProgramPath } else { $RawProgramPath }
-    if (-not [string]::IsNullOrWhiteSpace($programForProcessDetection)) {
+    if (-not $isDirectoryTarget -and -not [string]::IsNullOrWhiteSpace($programForProcessDetection)) {
         $programLeaf = [System.IO.Path]::GetFileNameWithoutExtension([string]$programForProcessDetection)
         if (-not [string]::IsNullOrWhiteSpace($programLeaf)) {
             $processCandidates += $programLeaf
@@ -3117,11 +3120,25 @@ function Test-LaunchStepAlreadyRunning {
     }
 
     $processCandidates = @($processCandidates | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+    $processMatch = $false
     foreach ($processCandidate in $processCandidates) {
         $running = @(Get-Process -Name $processCandidate -ErrorAction SilentlyContinue)
         if ($running.Count -gt 0) {
-            return $true
+            $processMatch = $true
+            break
         }
+    }
+
+    if ($windowTitleCandidates.Count -gt 0 -and $processCandidates.Count -gt 0) {
+        return ($windowMatch -and $processMatch)
+    }
+
+    if ($windowTitleCandidates.Count -gt 0) {
+        return $windowMatch
+    }
+
+    if ($processCandidates.Count -gt 0) {
+        return $processMatch
     }
 
     return $false

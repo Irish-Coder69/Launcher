@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.32 - 2026-07-16
+
+- Tightened step running-state detection to reduce false skips when apps are closed.
+- Running checks now combine window and process signals when both are configured, and avoid inferred process checks for folder targets.
+- Rebuilt installer and refreshed release metadata for v1.0.32.
+
 ## 1.0.31 - 2026-07-16
 
 - Fixed Visual Mfg false "already running" detection by removing overly broad window/process match terms.
