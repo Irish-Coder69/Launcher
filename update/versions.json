@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.0.27",
+    "releaseDate": "2026-07-16",
+    "description": "Lock-key fallback binding fix and version sync",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.27/Launcher-1.0.27-Setup.exe",
+    "checksum": "943EFC18F8AB6BE83789615DDBDC408B92F47385C45CBBF3D5AB197DC94BC4ED",
+    "isRequired": false,
+    "notes": [
+      "Fixed lock-key fallback conversion handling to prevent boolean parameter binding failures",
+      "Preserved non-fatal lock-key enforcement so launcher completion is not interrupted",
+      "Rebuilt installer and aligned runtime and installer versioning to 1.0.27"
+    ]
+  },
+  {
     "version": "1.0.26",
     "releaseDate": "2026-07-16",
     "description": "Receiver folder detection and non-fatal lock-key toggles",
