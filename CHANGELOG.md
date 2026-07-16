@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.0.22 - 2026-07-16
+
+- Fixed the Visual Board pre-login maximize behavior so it targets the main program window instead of the login form.
+- Rebuilt installer and refreshed release metadata for v1.0.22.
+
 ## 1.0.21 - 2026-07-16
 
 - Restored the interactive update prompt flow so Launcher asks before downloading and installing an update.

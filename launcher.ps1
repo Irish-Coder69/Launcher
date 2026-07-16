@@ -2800,14 +2800,14 @@ function Invoke-PreLoginWindowPreparation {
         }
 
         if ($maximizeTitleCandidates.Count -eq 0) {
-            if ($Step.PSObject.Properties.Name -contains "loginWindowTitle") {
-                $maximizeTitleCandidates += [string]$Step.loginWindowTitle
+            if ($Step.PSObject.Properties.Name -contains "loginSuccessWindowTitle") {
+                $maximizeTitleCandidates += [string]$Step.loginSuccessWindowTitle
             }
             if ($Step.PSObject.Properties.Name -contains "windowTitle") {
                 $maximizeTitleCandidates += [string]$Step.windowTitle
             }
-            if ($Step.PSObject.Properties.Name -contains "loginSuccessWindowTitle") {
-                $maximizeTitleCandidates += [string]$Step.loginSuccessWindowTitle
+            if ($Step.PSObject.Properties.Name -contains "loginWindowTitle") {
+                $maximizeTitleCandidates += [string]$Step.loginWindowTitle
             }
             if ($Step.PSObject.Properties.Name -contains "loginFallbackWindowTitles") {
                 $maximizeTitleCandidates += @($Step.loginFallbackWindowTitles | ForEach-Object { [string]$_ })

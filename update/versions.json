@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.0.22",
+    "releaseDate": "2026-07-16",
+    "description": "Visual Board maximize now targets the main program window",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.22/Launcher-1.0.22-Setup.exe",
+    "checksum": "EB0CFE54CE3041CE306BA278374C87DE8656B2CE6240A0D011A7AF4FBF088BBA",
+    "isRequired": false,
+    "notes": [
+      "Fixed the Visual Board pre-login maximize behavior to target the main program window",
+      "Kept the interactive update prompt flow",
+      "Preserved the passive idle state after all steps complete"
+    ]
+  },
+  {
     "version": "1.0.21",
     "releaseDate": "2026-07-16",
     "description": "Launcher restores the interactive update prompt flow",
