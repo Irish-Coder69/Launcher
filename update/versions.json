@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.0.33",
+    "releaseDate": "2026-07-16",
+    "description": "Explicit per-step running checks with clearer logging",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.33/Launcher-1.0.33-Setup.exe",
+    "checksum": "3FAC97595BCEC94F843414AC47E60E8B8D46EDC67C710A0410A57E1DA41B2F08",
+    "isRequired": false,
+    "notes": [
+      "Each launch step now logs whether it is running or not before launch/skip",
+      "Reduced generic running-title aliases that could cause false app matches",
+      "Rebuilt installer and aligned runtime, installer, and manifest versioning to 1.0.33"
+    ]
+  },
+  {
     "version": "1.0.32",
     "releaseDate": "2026-07-16",
     "description": "Reduce false already-running skips across launch steps",

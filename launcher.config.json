@@ -12,8 +12,7 @@
       "programPath": "olk.exe",
       "runningWindowTitles": [
         "Outlook",
-        "Microsoft Outlook",
-        "Inbox"
+        "Microsoft Outlook"
       ],
       "runningProcessNames": [
         "OUTLOOK"
@@ -40,7 +39,6 @@
       "programPath": "C:/Windsor Data Base/Visual Board/Visual Auto FE Updater Db.accde",
       "runningWindowTitles": [
         "Access - Visual Board",
-        "Login Form",
         "Visual Board",
         "Visual Auto FE Updater Db",
         "JudsonF Welcome to Main Menu.",
@@ -138,8 +136,7 @@
         "fallbackProgramPath": "\\\\windsornas\\WindsorDB\\StockRoom DataBase\\Stockroom Analytics Launcher.accdb",
           "runningWindowTitles": [
             "Stockroom Analytics",
-            "Stockroom Analytics Launcher",
-            "Logon Form"
+            "Stockroom Analytics Launcher"
           ],
         "arguments": "",
         "workingDirectory": "",
@@ -222,8 +219,7 @@
         "enabled": true,
         "programPath": "C:/Users/wStockRLine2/AppData/Local/Document Scanner/Document Scanner.exe",
         "runningWindowTitles": [
-          "Document Scanner",
-          "Scanner"
+          "Document Scanner"
         ],
         "arguments": "",
         "workingDirectory": "",
@@ -242,9 +238,7 @@
         "enabled": true,
         "programPath": "P:/Stockroom/Receiver's",
         "runningWindowTitles": [
-          "Receiver's",
-          "Receivers",
-          "Receiver"
+          "Receiver's"
         ],
         "arguments": "",
         "workingDirectory": "",
@@ -267,8 +261,7 @@
         "programPath": "C:/Program Files (x86)/Brother/Ptedit54/ptedit54.exe",
         "runningWindowTitles": [
           "P-touch Editor 5.4",
-          "P-touch Editor",
-          "Brother"
+          "P-touch Editor"
         ],
         "runningProcessNames": [
           "ptedit54"

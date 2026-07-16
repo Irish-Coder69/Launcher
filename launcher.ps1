@@ -3192,14 +3192,20 @@ function Invoke-LaunchStep {
         $launchOnlyIfMissing = [bool]$Step.launchOnlyIfMissing
     }
 
-    if ($launchOnlyIfMissing -and (Test-LaunchStepAlreadyRunning -Step $Step -RawProgramPath $rawProgramPath -ResolvedProgramPath $resolvedProgramPath)) {
-        if ($DryRun) {
-            Write-LauncherLog "[DryRun] Would skip '$($Step.name)' because it is already running"
+    if ($launchOnlyIfMissing) {
+        $alreadyRunning = Test-LaunchStepAlreadyRunning -Step $Step -RawProgramPath $rawProgramPath -ResolvedProgramPath $resolvedProgramPath
+        if ($alreadyRunning) {
+            Write-LauncherLog "Checked '$($Step.name)': already running"
+            if ($DryRun) {
+                Write-LauncherLog "[DryRun] Would skip '$($Step.name)' because it is already running"
+            }
+            else {
+                Write-LauncherLog "Skipping '$($Step.name)' launch because it is already running"
+            }
+            return
         }
-        else {
-            Write-LauncherLog "Skipping '$($Step.name)' launch because it is already running"
-        }
-        return
+
+        Write-LauncherLog "Checked '$($Step.name)': not running"
     }
 
     if ($DryRun) {

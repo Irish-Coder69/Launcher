@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.33 - 2026-07-16
+
+- Added explicit per-step running-check logs so each step reports running/not-running before launch.
+- Tightened step-specific running window aliases to reduce false positives from generic titles.
+- Rebuilt installer and refreshed release metadata for v1.0.33.
+
 ## 1.0.32 - 2026-07-16
 
 - Tightened step running-state detection to reduce false skips when apps are closed.
