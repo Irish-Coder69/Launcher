@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.0.25",
+    "releaseDate": "2026-07-16",
+    "description": "Improved already-open detection for launch steps",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.25/Launcher-1.0.25-Setup.exe",
+    "checksum": "F1D2FE3AAEF8B222ECA1E7BDE9DC2FEF95AA0D228FAD0B1C864966100E51513E",
+    "isRequired": false,
+    "notes": [
+      "Expanded already-open detection to include broader window-title candidates",
+      "Always performs process fallback checks even when title candidates exist",
+      "Added MSACCESS fallback process detection for Access launch targets"
+    ]
+  },
+  {
     "version": "1.0.24",
     "releaseDate": "2026-07-16",
     "description": "Launcher now skips steps that are already open",

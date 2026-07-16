@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.25 - 2026-07-16
+
+- Improved already-open detection so launch steps use broader window-title matching and always run process fallback checks.
+- Added Access process fallback detection (`MSACCESS`) for `.accdb` / `.accde` launch targets.
+- Rebuilt installer and refreshed release metadata for v1.0.25.
+
 ## 1.0.24 - 2026-07-16
 
 - Added launch-step detection so reruns skip apps that are already open and only launch missing steps.

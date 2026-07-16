@@ -2910,6 +2910,21 @@ function Test-LaunchStepAlreadyRunning {
         if ($Step.PSObject.Properties.Name -contains "loginSuccessWindowTitle") {
             $windowTitleCandidates += [string]$Step.loginSuccessWindowTitle
         }
+        if ($Step.PSObject.Properties.Name -contains "loginWindowTitle") {
+            $windowTitleCandidates += [string]$Step.loginWindowTitle
+        }
+        if ($Step.PSObject.Properties.Name -contains "fallbackWindowTitles") {
+            $windowTitleCandidates += @($Step.fallbackWindowTitles | ForEach-Object { [string]$_ })
+        }
+        if ($Step.PSObject.Properties.Name -contains "loginSuccessFallbackWindowTitles") {
+            $windowTitleCandidates += @($Step.loginSuccessFallbackWindowTitles | ForEach-Object { [string]$_ })
+        }
+        if ($Step.PSObject.Properties.Name -contains "loginFallbackWindowTitles") {
+            $windowTitleCandidates += @($Step.loginFallbackWindowTitles | ForEach-Object { [string]$_ })
+        }
+        if ($Step.PSObject.Properties.Name -contains "name") {
+            $windowTitleCandidates += [string]$Step.name
+        }
     }
 
     $windowTitleCandidates = @($windowTitleCandidates | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
@@ -2926,13 +2941,16 @@ function Test-LaunchStepAlreadyRunning {
         $processCandidates += "OUTLOOK"
     }
 
-    if ($processCandidates.Count -eq 0 -and $windowTitleCandidates.Count -eq 0) {
-        $programForProcessDetection = if (-not [string]::IsNullOrWhiteSpace($ResolvedProgramPath)) { $ResolvedProgramPath } else { $RawProgramPath }
-        if (-not [string]::IsNullOrWhiteSpace($programForProcessDetection)) {
-            $programLeaf = [System.IO.Path]::GetFileNameWithoutExtension([string]$programForProcessDetection)
-            if (-not [string]::IsNullOrWhiteSpace($programLeaf)) {
-                $processCandidates += $programLeaf
-            }
+    $programForProcessDetection = if (-not [string]::IsNullOrWhiteSpace($ResolvedProgramPath)) { $ResolvedProgramPath } else { $RawProgramPath }
+    if (-not [string]::IsNullOrWhiteSpace($programForProcessDetection)) {
+        $programLeaf = [System.IO.Path]::GetFileNameWithoutExtension([string]$programForProcessDetection)
+        if (-not [string]::IsNullOrWhiteSpace($programLeaf)) {
+            $processCandidates += $programLeaf
+        }
+
+        $programExtension = [string]([System.IO.Path]::GetExtension([string]$programForProcessDetection)).ToLowerInvariant()
+        if (@('.accdb', '.accde') -contains $programExtension) {
+            $processCandidates += 'MSACCESS'
         }
     }
 
