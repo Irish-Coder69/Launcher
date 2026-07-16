@@ -135,19 +135,10 @@ function Wait-ForLauncherCloseCommand {
     }
 
     Write-Host ""
-    Write-Host "  Launcher is idle. Type CLOSE and press Enter to exit." -ForegroundColor DarkGray
+    Write-Host "  Launcher is idle. Leave this window open or close it when you're done." -ForegroundColor DarkGray
 
     while ($true) {
-        $commandInput = Read-Host "  Command"
-        if ([string]::IsNullOrWhiteSpace($commandInput)) {
-            continue
-        }
-
-        if ($commandInput.Trim().ToUpperInvariant() -eq "CLOSE") {
-            break
-        }
-
-        Write-Host "  Type CLOSE to exit launcher." -ForegroundColor Yellow
+        Start-Sleep -Seconds 60
     }
 }
 
@@ -3198,7 +3189,6 @@ try {
     Write-Host "  All steps completed." -ForegroundColor Green
     Write-Host (("=" * $script:UIWidth)) -ForegroundColor DarkCyan
 
-    $script:SkipClosePrompt = $true
     $completedSuccessfully = $true
 }
 finally {

@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.0.20",
+    "releaseDate": "2026-07-16",
+    "description": "Launcher now stays open in a passive idle state after startup steps complete",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.20/Launcher-1.0.20-Setup.exe",
+    "checksum": "9B237F0914939041D1BF6DDD5B94505FE05C174DAF80F98A825CC4F79C314B74",
+    "isRequired": true,
+    "notes": [
+      "Launcher now stays open in a passive idle state after all configured steps complete",
+      "Removed the CLOSE input prompt from the idle path",
+      "Preserved the Caps Lock and Num Lock end-of-run fix"
+    ]
+  },
+  {
     "version": "1.0.19",
     "releaseDate": "2026-07-16",
     "description": "Launcher now exits automatically after startup steps complete",
