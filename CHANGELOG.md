@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.31 - 2026-07-16
+
+- Fixed Visual Mfg false "already running" detection by removing overly broad window/process match terms.
+- Visual Mfg now skips only on specific Visual Manufacturing indicators.
+- Rebuilt installer and refreshed release metadata for v1.0.31.
+
 ## 1.0.30 - 2026-07-16
 
 - Published a maintenance release to keep the installer, manifest, and runtime versioning aligned.

@@ -190,12 +190,7 @@
         "programPath": "\\\\INFOR-VMSERVER\\Visual1000$\\VMFG\\VM.EXE",
         "runningWindowTitles": [
           "Visual Manufacturing",
-          "Visual",
-          "VMFG",
-          "VM"
-        ],
-        "runningProcessNames": [
-          "VM"
+          "VMFG"
         ],
         "arguments": "",
         "workingDirectory": "",

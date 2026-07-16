@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.0.31",
+    "releaseDate": "2026-07-16",
+    "description": "Fix Visual Mfg false already-running skip",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.31/Launcher-1.0.31-Setup.exe",
+    "checksum": "4B1243B4E9B759D71833F359714DBD2B92919A64BE76EB81CDB9A2DBE6F49C01",
+    "isRequired": false,
+    "notes": [
+      "Removed overly broad Visual Mfg running-window/process candidates",
+      "Visual Mfg now uses stricter identifiers for already-running detection",
+      "Rebuilt installer and aligned runtime, installer, and manifest versioning to 1.0.31"
+    ]
+  },
+  {
     "version": "1.0.30",
     "releaseDate": "2026-07-16",
     "description": "Maintenance release for version alignment",
