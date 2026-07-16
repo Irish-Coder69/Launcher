@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.0.21",
+    "releaseDate": "2026-07-16",
+    "description": "Launcher restores the interactive update prompt flow",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.21/Launcher-1.0.21-Setup.exe",
+    "checksum": "6FBADF6760C6E1792CBA48727133CE9545468E0F8D015AB457B4659D34B0356C",
+    "isRequired": false,
+    "notes": [
+      "Restored the interactive update prompt before downloading and installing",
+      "Disabled required pre-run update mode by default",
+      "Preserved the passive idle launcher behavior after all steps complete"
+    ]
+  },
+  {
     "version": "1.0.20",
     "releaseDate": "2026-07-16",
     "description": "Launcher now stays open in a passive idle state after startup steps complete",

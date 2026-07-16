@@ -1,6 +1,6 @@
 {
   "checkForUpdates": true,
-  "requireUpdateBeforeRun": true,
+  "requireUpdateBeforeRun": false,
   "updateCheckUrl": "https://raw.githubusercontent.com/Irish-Coder69/Launcher/main/update/versions.json",
   "ensureCapsLockOn": true,
   "ensureNumLockOn": true,

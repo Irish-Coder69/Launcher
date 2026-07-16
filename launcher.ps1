@@ -3124,8 +3124,8 @@ try {
                 Invoke-UpdateCheck `
                     -InstallDir $PSScriptRoot `
                     -VersionsUrl $updateCheckUrl `
-                    -Block:$false `
-                    -Silent:$true | Out-Null
+                    -Block:$true `
+                    -Silent:$false | Out-Null
             }
         }
         catch {

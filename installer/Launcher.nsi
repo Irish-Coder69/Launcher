@@ -6,7 +6,7 @@
 ; Variables
 ;--------------------------------
 !define PRODUCT_NAME "Launcher"
-!define PRODUCT_VERSION "1.0.20"
+!define PRODUCT_VERSION "1.0.21"
 !define PRODUCT_PUBLISHER "Windsor Industries"
 !define PRODUCT_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
 !ifndef OUTDIR

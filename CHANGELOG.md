@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.21 - 2026-07-16
+
+- Restored the interactive update prompt flow so Launcher asks before downloading and installing an update.
+- Disabled required pre-run update mode by default in the launcher configuration.
+- Rebuilt installer and refreshed release metadata for v1.0.21.
+
 ## 1.0.20 - 2026-07-16
 
 - Launcher now stays open in a passive idle state after all configured steps finish instead of prompting for CLOSE.
