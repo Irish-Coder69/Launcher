@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.0.26",
+    "releaseDate": "2026-07-16",
+    "description": "Receiver folder detection and non-fatal lock-key toggles",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.26/Launcher-1.0.26-Setup.exe",
+    "checksum": "E68E2C6547D994089B10835681E623DA1860579BE165A49A97867BF8CD957746",
+    "isRequired": false,
+    "notes": [
+      "Added explicit Explorer folder-window detection for directory launch steps",
+      "Made lock-key SendKeys failures warning-only to prevent run termination",
+      "Preserved existing already-open app detection and skip behavior"
+    ]
+  },
+  {
     "version": "1.0.25",
     "releaseDate": "2026-07-16",
     "description": "Improved already-open detection for launch steps",

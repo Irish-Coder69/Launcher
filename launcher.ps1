@@ -2493,7 +2493,13 @@ public static class KeyboardLockState {
 
         $attempts = 0
         while ($attempts -lt 3 -and -not (Test-LockKeyEnabled -VirtualKey $VirtualKey -ConsoleFallback $ConsoleFallback)) {
-            $shell.SendKeys($SendKeyValue)
+            try {
+                $shell.SendKeys($SendKeyValue)
+            }
+            catch {
+                Write-LauncherLog "Could not toggle $Label on attempt $($attempts + 1): $($_.Exception.Message)" -Level "WARN"
+                break
+            }
             Start-Sleep -Milliseconds 200
             $attempts++
         }
@@ -2892,12 +2898,81 @@ function Invoke-PreLoginWindowPreparation {
     }
 }
 
+function Test-ExplorerFolderWindowOpen {
+    param(
+        [string]$FolderPath
+    )
+
+    if ([string]::IsNullOrWhiteSpace($FolderPath)) {
+        return $false
+    }
+
+    $normalizedTarget = $null
+    try {
+        $normalizedTarget = [System.IO.Path]::GetFullPath([string]$FolderPath).TrimEnd('\\')
+    }
+    catch {
+        $normalizedTarget = ([string]$FolderPath).TrimEnd('\\')
+    }
+
+    try {
+        $shellApp = New-Object -ComObject Shell.Application
+        foreach ($window in @($shellApp.Windows())) {
+            if (-not $window) {
+                continue
+            }
+
+            $candidatePath = $null
+            try {
+                $candidatePath = [string]$window.Document.Folder.Self.Path
+            }
+            catch {
+                $candidatePath = $null
+            }
+
+            if ([string]::IsNullOrWhiteSpace($candidatePath)) {
+                continue
+            }
+
+            $normalizedCandidate = $candidatePath
+            try {
+                $normalizedCandidate = [System.IO.Path]::GetFullPath($candidatePath)
+            }
+            catch {
+                $normalizedCandidate = $candidatePath
+            }
+
+            if ($normalizedCandidate.TrimEnd('\\').Equals($normalizedTarget, [System.StringComparison]::OrdinalIgnoreCase)) {
+                return $true
+            }
+        }
+    }
+    catch {
+        return $false
+    }
+
+    return $false
+}
+
 function Test-LaunchStepAlreadyRunning {
     param(
         [object]$Step,
         [string]$RawProgramPath,
         [string]$ResolvedProgramPath
     )
+
+    $programForFolderDetection = if (-not [string]::IsNullOrWhiteSpace($ResolvedProgramPath)) { $ResolvedProgramPath } else { $RawProgramPath }
+    if (-not [string]::IsNullOrWhiteSpace($programForFolderDetection)) {
+        try {
+            $candidateItem = Get-Item -LiteralPath $programForFolderDetection -ErrorAction Stop
+            if ($candidateItem.PSIsContainer -and (Test-ExplorerFolderWindowOpen -FolderPath $candidateItem.FullName)) {
+                return $true
+            }
+        }
+        catch {
+            $null = $_
+        }
+    }
 
     $windowTitleCandidates = @()
     if ($Step.PSObject.Properties.Name -contains "runningWindowTitles") {

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.26 - 2026-07-16
+
+- Added explicit Explorer folder-window detection so the Receiver's directory step is recognized as already open.
+- Made lock-key toggling warning-only on send failure so key-toggle issues no longer stop the launcher run.
+- Rebuilt installer and refreshed release metadata for v1.0.26.
+
 ## 1.0.25 - 2026-07-16
 
 - Improved already-open detection so launch steps use broader window-title matching and always run process fallback checks.
