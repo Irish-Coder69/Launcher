@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.0 - 2026-07-17
+
+- Promoted the native migration baseline to the active version line to avoid false update prompts from older 1.0.x history.
+- Preserved the native desktop migration scope: WPF app shell (`Launcher.App`) plus shared core library (`Launcher.Core`).
+- Preserved native settings edit/save flow and initial native running-state and close-target detection actions.
+- Preserved native win-x64 publish profile and publish script workflow.
+
 ## 1.0.0 - 2026-07-17 (Build 1)
 
 - Introduced the first native desktop migration baseline with a WPF application shell and shared core library.

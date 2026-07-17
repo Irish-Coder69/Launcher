@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.1.0",
+    "releaseDate": "2026-07-17",
+    "description": "Native migration baseline promoted to active version line",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.1.0/Launcher-1.1.0-Setup.exe",
+    "checksum": "35B995FD71623FE57CBFC68CEBB6585260F70AB1B6E92B519AFD9A9263C2B28B",
+    "isRequired": false,
+    "notes": [
+      "Preserved native WPF app shell and Launcher.Core migration foundation",
+      "Preserved native settings edit/save workflow and initial native detection actions",
+      "Version line moved forward to prevent false update prompts from legacy 1.0.x entries"
+    ]
+  },
+  {
     "version": "1.0.0",
     "releaseDate": "2026-07-17",
     "description": "Native migration baseline (Build 1)",
