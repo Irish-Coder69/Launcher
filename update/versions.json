@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.0.37",
+    "releaseDate": "2026-07-17",
+    "description": "Lock-key ShouldProcess analyzer warning cleanup",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.37/Launcher-1.0.37-Setup.exe",
+    "checksum": "F0F327AB8968360901B5174B33B8F8000CCFB280938F714481CB112463A7BBD8",
+    "isRequired": false,
+    "notes": [
+      "Resolved duplicate analyzer warnings for lock-key helper verbs",
+      "Updated lock-key helper structure to satisfy ShouldProcess expectations",
+      "Rebuilt installer and aligned runtime, installer, and manifest versioning to 1.0.37"
+    ]
+  },
+  {
     "version": "1.0.36",
     "releaseDate": "2026-07-17",
     "description": "Fix extra Access start page during Stockroom step",

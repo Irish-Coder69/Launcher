@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.37 - 2026-07-17
+
+- Resolved duplicate analyzer warnings for lock-key helper verbs in `launcher.ps1`.
+- Updated lock-key helper structure to satisfy `ShouldProcess` expectations.
+- Rebuilt installer and refreshed release metadata for v1.0.37.
+
 ## 1.0.36 - 2026-07-17
 
 - Fixed Stockroom Analytics launch to start Access databases via `MSACCESS.EXE /nostartup`.

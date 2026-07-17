@@ -2434,7 +2434,7 @@ public static class WindowMinimize {
 }
 
 function Set-LockKeysOn {
-    [CmdletBinding(SupportsShouldProcess)]
+    [CmdletBinding(SupportsShouldProcess = $true, ConfirmImpact = 'Low')]
     param(
         [bool]$EnsureCapsLockOn = $true,
         [bool]$EnsureNumLockOn = $true,
@@ -2516,7 +2516,7 @@ public static class KeyboardLockState {
         }
     }
 
-    function Set-LockKeyOn {
+    function Invoke-LockKeyOnInternal {
         param(
             [string]$Label,
             [string]$SendKeyValue,
@@ -2555,11 +2555,11 @@ public static class KeyboardLockState {
     try { $numLockFallback = [bool][Console]::NumberLock } catch { $null = $_ }
 
     if ($EnsureCapsLockOn) {
-        Set-LockKeyOn -Label "Caps Lock" -SendKeyValue '{CAPSLOCK}' -VirtualKey 0x14 -ConsoleFallback $capsLockFallback
+        Invoke-LockKeyOnInternal -Label "Caps Lock" -SendKeyValue '{CAPSLOCK}' -VirtualKey 0x14 -ConsoleFallback $capsLockFallback
     }
 
     if ($EnsureNumLockOn) {
-        Set-LockKeyOn -Label "Num Lock" -SendKeyValue '{NUMLOCK}' -VirtualKey 0x90 -ConsoleFallback $numLockFallback
+        Invoke-LockKeyOnInternal -Label "Num Lock" -SendKeyValue '{NUMLOCK}' -VirtualKey 0x90 -ConsoleFallback $numLockFallback
     }
 }
 
