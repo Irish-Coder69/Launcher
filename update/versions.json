@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.0.36",
+    "releaseDate": "2026-07-17",
+    "description": "Fix extra Access start page during Stockroom step",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.36/Launcher-1.0.36-Setup.exe",
+    "checksum": "09678692AF9C1579D1B5F1EE50F6312388C299142FC8AEF84A9FDA127C7D029A",
+    "isRequired": false,
+    "notes": [
+      "Access database launch now uses MSACCESS.EXE with /nostartup",
+      "Reduced chance of extra Access start-page windows during Stockroom launch",
+      "Rebuilt installer and aligned runtime, installer, and manifest versioning to 1.0.36"
+    ]
+  },
+  {
     "version": "1.0.35",
     "releaseDate": "2026-07-17",
     "description": "Receiver month folder now uses month name and year",

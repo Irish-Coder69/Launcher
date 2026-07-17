@@ -3374,6 +3374,29 @@ function Invoke-LaunchStep {
     }
 
     $process = $null
+    $launchExtension = [string]([System.IO.Path]::GetExtension([string]$launchTarget)).ToLowerInvariant()
+    $shouldLaunchViaAccessExecutable = $false
+    if (-not $launchTargetIsDirectory -and @('.accdb', '.accde') -contains $launchExtension) {
+        $shouldLaunchViaAccessExecutable = $true
+    }
+
+    if ($shouldLaunchViaAccessExecutable) {
+        $accessArguments = @("/nostartup", ('"' + [string]$launchTarget + '"'))
+        if (-not [string]::IsNullOrWhiteSpace($arguments)) {
+            $accessArguments += $arguments
+        }
+
+        $startInfo = @{
+            FilePath         = "MSACCESS.EXE"
+            WorkingDirectory = $workingDirectory
+            PassThru         = $true
+            WindowStyle      = $windowStyle
+            ArgumentList     = $accessArguments
+        }
+
+        Write-LauncherLog "Launching Access database '$launchTarget' via MSACCESS.EXE"
+    }
+
     if ($launchTargetIsDirectory) {
         $launchTarget = Get-StepDirectoryLaunchTargetPath -Step $Step -BaseDirectory $launchTarget -CreateMissing
         Write-LauncherLog "Launch target '$launchTarget' is a directory; opening via shell"
@@ -3392,7 +3415,6 @@ function Invoke-LaunchStep {
             $process = Start-Process @startInfo
         }
         catch {
-            $launchExtension = [string]([System.IO.Path]::GetExtension([string]$launchTarget)).ToLowerInvariant()
             $useShellFallback = $looksLikePath -and (@('.lnk', '.accdb', '.accde') -contains $launchExtension -or $launchTargetIsDirectory)
             if ($useShellFallback) {
                 Write-LauncherLog "Direct launch failed for '$launchTarget'; retrying via shell open" -Level "WARN"

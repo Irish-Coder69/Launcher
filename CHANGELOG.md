@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.36 - 2026-07-17
+
+- Fixed Stockroom Analytics launch to start Access databases via `MSACCESS.EXE /nostartup`.
+- Prevented extra Access start-page windows during the Stockroom Analytics step.
+- Rebuilt installer and refreshed release metadata for v1.0.36.
+
 ## 1.0.35 - 2026-07-17
 
 - Updated Receiver month folder naming to `MMMM yyyy` (example: `July 2026`).
