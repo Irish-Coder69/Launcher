@@ -1,0 +1,12 @@
+# Build outputs
+**/bin/
+**/obj/
+
+# Native publish output
+publish/
+
+# Rider/VS user files
+**/*.user
+**/*.suo
+**/*.userosscache
+**/*.sln.docstates

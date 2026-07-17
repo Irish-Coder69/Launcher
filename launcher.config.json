@@ -4,6 +4,12 @@
   "updateCheckUrl": "https://raw.githubusercontent.com/Irish-Coder69/Launcher/main/update/versions.json",
   "ensureCapsLockOn": true,
   "ensureNumLockOn": true,
+  "closeOptions": {
+    "closeOnlyTrackedApps": true,
+    "defaultCloseMethod": "both",
+    "defaultCloseTimeoutSeconds": 12,
+    "defaultCloseForce": false
+  },
   "steps": [
     {
       "name": "Outlook",
@@ -15,6 +21,18 @@
         "Microsoft Outlook"
       ],
       "runningProcessNames": [
+        "OUTLOOK"
+      ],
+      "closeEnabled": true,
+      "closeMethod": "both",
+      "closeTimeoutSeconds": 12,
+      "closeForce": false,
+      "closeWindowTitles": [
+        "Outlook",
+        "Microsoft Outlook",
+        "Inbox"
+      ],
+      "closeProcessNames": [
         "OUTLOOK"
       ],
       "windowStyle": "Maximized",
@@ -44,6 +62,20 @@
         "JudsonF Welcome to Main Menu.",
         "Welcome to Main Menu",
         "Auto FE Updater"
+      ],
+      "closeEnabled": true,
+      "closeMethod": "both",
+      "closeTimeoutSeconds": 15,
+      "closeForce": false,
+      "closeWindowTitles": [
+        "Access - Visual Board",
+        "Visual Board",
+        "Visual Auto FE Updater Db",
+        "JudsonF Welcome to Main Menu.",
+        "Welcome to Main Menu"
+      ],
+      "closeProcessNames": [
+        "MSACCESS"
       ],
       "arguments": "",
       "workingDirectory": "",
@@ -138,6 +170,17 @@
             "Stockroom Analytics",
             "Stockroom Analytics Launcher"
           ],
+        "closeEnabled": true,
+        "closeMethod": "both",
+        "closeTimeoutSeconds": 15,
+        "closeForce": false,
+        "closeWindowTitles": [
+          "Stockroom Analytics",
+          "Stockroom Analytics Launcher"
+        ],
+        "closeProcessNames": [
+          "MSACCESS"
+        ],
         "arguments": "",
         "workingDirectory": "",
         "windowTitle": "Stockroom Analytics",
@@ -189,6 +232,17 @@
           "Visual Manufacturing",
           "VMFG"
         ],
+        "closeEnabled": true,
+        "closeMethod": "both",
+        "closeTimeoutSeconds": 12,
+        "closeForce": false,
+        "closeWindowTitles": [
+          "Visual Manufacturing",
+          "VMFG"
+        ],
+        "closeProcessNames": [
+          "VM"
+        ],
         "arguments": "",
         "workingDirectory": "",
         "windowTitle": "Visual Manufacturing",
@@ -221,6 +275,16 @@
         "runningWindowTitles": [
           "Document Scanner"
         ],
+        "closeEnabled": true,
+        "closeMethod": "both",
+        "closeTimeoutSeconds": 10,
+        "closeForce": false,
+        "closeWindowTitles": [
+          "Document Scanner"
+        ],
+        "closeProcessNames": [
+          "Document Scanner"
+        ],
         "arguments": "",
         "workingDirectory": "",
         "windowTitle": "Document Scanner",
@@ -243,6 +307,16 @@
         "currentDateFolderFormat": "MM_dd_yyyy",
         "runningWindowTitles": [
           "Receiver's"
+        ],
+        "closeEnabled": true,
+        "closeMethod": "graceful",
+        "closeTimeoutSeconds": 8,
+        "closeForce": false,
+        "closeWindowTitles": [
+          "Receiver's"
+        ],
+        "closeProcessNames": [
+          "explorer"
         ],
         "arguments": "",
         "workingDirectory": "",
@@ -268,6 +342,17 @@
           "P-touch Editor"
         ],
         "runningProcessNames": [
+          "ptedit54"
+        ],
+        "closeEnabled": true,
+        "closeMethod": "both",
+        "closeTimeoutSeconds": 10,
+        "closeForce": false,
+        "closeWindowTitles": [
+          "P-touch Editor 5.4",
+          "P-touch Editor"
+        ],
+        "closeProcessNames": [
           "ptedit54"
         ],
         "arguments": "",

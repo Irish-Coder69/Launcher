@@ -1,6 +1,8 @@
 ﻿[Diagnostics.CodeAnalysis.SuppressMessageAttribute('PSAvoidUsingWriteHost', '', Justification='Interactive launcher intentionally renders colorized host UI.')]
 param(
     [string]$ConfigPath = ".\launcher.config.json",
+    [ValidateSet("Start", "Close", "StartAndWaitForCloseCommand")]
+    [string]$Mode = "Start",
     [switch]$DryRun
 )
 
@@ -8,6 +10,8 @@ Set-StrictMode -Version Latest
 $ErrorActionPreference = "Stop"
 $script:LogFile = Join-Path -Path $PSScriptRoot -ChildPath "launcher.last.log"
 $script:VersionFile = Join-Path -Path $PSScriptRoot -ChildPath "version.txt"
+$script:SessionDirectory = Join-Path -Path $env:LOCALAPPDATA -ChildPath "Launcher"
+$script:SessionStateFile = Join-Path -Path $script:SessionDirectory -ChildPath "launcher-session.json"
 $script:InstanceMutex = $null
 $script:HasInstanceLock = $false
 $script:SkipClosePrompt = $false
@@ -127,15 +131,21 @@ function Test-LauncherInstanceLock {
 
 function Wait-ForLauncherCloseCommand {
     param(
-        [switch]$DryRun
+        [switch]$DryRun,
+        [switch]$AllowCloseApps
     )
 
     if ($DryRun) {
-        return
+        return "CLOSE"
     }
 
     Write-Host ""
-    Write-Host "  Launcher is idle. Type CLOSE and press Enter to exit." -ForegroundColor DarkGray
+    if ($AllowCloseApps) {
+        Write-Host "  Launcher is idle. Type CLOSEAPPS to close launched apps, or CLOSE to exit." -ForegroundColor DarkGray
+    }
+    else {
+        Write-Host "  Launcher is idle. Type CLOSE and press Enter to exit." -ForegroundColor DarkGray
+    }
 
     while ($true) {
         $commandInput = Read-Host "  Command"
@@ -143,12 +153,441 @@ function Wait-ForLauncherCloseCommand {
             continue
         }
 
-        if ($commandInput.Trim().ToUpperInvariant() -eq "CLOSE") {
-            break
+        $normalizedInput = $commandInput.Trim().ToUpperInvariant()
+        if ($normalizedInput -eq "CLOSE") {
+            return "CLOSE"
         }
 
-        Write-Host "  Type CLOSE to exit launcher." -ForegroundColor Yellow
+        if ($AllowCloseApps -and $normalizedInput -eq "CLOSEAPPS") {
+            return "CLOSEAPPS"
+        }
+
+        if ($AllowCloseApps) {
+            Write-Host "  Type CLOSEAPPS to close launched apps, or CLOSE to exit launcher." -ForegroundColor Yellow
+        }
+        else {
+            Write-Host "  Type CLOSE to exit launcher." -ForegroundColor Yellow
+        }
     }
+}
+
+function Save-LauncherSessionState {
+    param(
+        [string]$ConfigPath,
+        [System.Collections.Generic.List[object]]$LaunchedSteps,
+        [switch]$DryRun
+    )
+
+    if ($DryRun) {
+        Write-LauncherLog "[DryRun] Would save launcher session state to $($script:SessionStateFile)"
+        return
+    }
+
+    if (-not (Test-Path -Path $script:SessionDirectory)) {
+        New-Item -ItemType Directory -Path $script:SessionDirectory -Force | Out-Null
+    }
+
+    $entries = @()
+    if ($LaunchedSteps) {
+        $entries = @($LaunchedSteps)
+    }
+
+    $state = [ordered]@{
+        schemaVersion = 1
+        mode = "Start"
+        configPath = $ConfigPath
+        recordedAt = (Get-Date).ToString("o")
+        launchedSteps = $entries
+    }
+
+    ($state | ConvertTo-Json -Depth 8) | Set-Content -Path $script:SessionStateFile -Encoding UTF8
+    Write-LauncherLog "Saved launcher session state: $($entries.Count) launched step(s) recorded"
+}
+
+function Load-LauncherSessionState {
+    if (-not (Test-Path -Path $script:SessionStateFile)) {
+        return $null
+    }
+
+    try {
+        $rawState = Get-Content -Path $script:SessionStateFile -Raw
+        if ([string]::IsNullOrWhiteSpace($rawState)) {
+            return $null
+        }
+
+        return ($rawState | ConvertFrom-Json)
+    }
+    catch {
+        Write-LauncherLog "Session state file is unreadable and will be ignored: $($_.Exception.Message)" -Level "WARN"
+        return $null
+    }
+}
+
+function Clear-LauncherSessionState {
+    param([switch]$DryRun)
+
+    if ($DryRun) {
+        Write-LauncherLog "[DryRun] Would clear launcher session state file"
+        return
+    }
+
+    if (Test-Path -Path $script:SessionStateFile) {
+        Remove-Item -Path $script:SessionStateFile -Force -ErrorAction SilentlyContinue
+    }
+}
+
+function Get-StepCloseConfiguration {
+    param(
+        [object]$Step,
+        [string]$RawProgramPath,
+        [string]$ResolvedProgramPath,
+        [hashtable]$Defaults
+    )
+
+    $closeEnabled = $true
+    if ($Step.PSObject.Properties.Name -contains "closeEnabled") {
+        $closeEnabled = [bool]$Step.closeEnabled
+    }
+
+    $closeMethod = if ($Defaults.ContainsKey("defaultCloseMethod")) { [string]$Defaults.defaultCloseMethod } else { "both" }
+    if ($Step.PSObject.Properties.Name -contains "closeMethod") {
+        $closeMethod = [string]$Step.closeMethod
+    }
+    if (@("graceful", "process", "both") -notcontains $closeMethod) {
+        $closeMethod = "both"
+    }
+
+    $closeTimeoutSeconds = if ($Defaults.ContainsKey("defaultCloseTimeoutSeconds")) { [int]$Defaults.defaultCloseTimeoutSeconds } else { 12 }
+    if ($Step.PSObject.Properties.Name -contains "closeTimeoutSeconds") {
+        $closeTimeoutSeconds = [int]$Step.closeTimeoutSeconds
+    }
+    if ($closeTimeoutSeconds -lt 1) {
+        $closeTimeoutSeconds = 1
+    }
+
+    $closeForce = if ($Defaults.ContainsKey("defaultCloseForce")) { [bool]$Defaults.defaultCloseForce } else { $false }
+    if ($Step.PSObject.Properties.Name -contains "closeForce") {
+        $closeForce = [bool]$Step.closeForce
+    }
+
+    $windowCandidates = @()
+    if ($Step.PSObject.Properties.Name -contains "closeWindowTitles") {
+        $windowCandidates += @($Step.closeWindowTitles | ForEach-Object { [string]$_ })
+    }
+    else {
+        if ($Step.PSObject.Properties.Name -contains "runningWindowTitles") {
+            $windowCandidates += @($Step.runningWindowTitles | ForEach-Object { [string]$_ })
+        }
+        if ($Step.PSObject.Properties.Name -contains "windowTitle") {
+            $windowCandidates += [string]$Step.windowTitle
+        }
+        if ($Step.PSObject.Properties.Name -contains "fallbackWindowTitles") {
+            $windowCandidates += @($Step.fallbackWindowTitles | ForEach-Object { [string]$_ })
+        }
+    }
+
+    $processCandidates = @()
+    if ($Step.PSObject.Properties.Name -contains "closeProcessNames") {
+        $processCandidates += @($Step.closeProcessNames | ForEach-Object { [string]$_ })
+    }
+    else {
+        if ($Step.PSObject.Properties.Name -contains "runningProcessNames") {
+            $processCandidates += @($Step.runningProcessNames | ForEach-Object { [string]$_ })
+        }
+
+        $programForProcessDetection = if (-not [string]::IsNullOrWhiteSpace($ResolvedProgramPath)) { $ResolvedProgramPath } else { $RawProgramPath }
+        $isDirectoryTarget = $false
+        if (-not [string]::IsNullOrWhiteSpace($programForProcessDetection)) {
+            try {
+                $candidateItem = Get-Item -LiteralPath $programForProcessDetection -ErrorAction Stop
+                $isDirectoryTarget = [bool]$candidateItem.PSIsContainer
+            }
+            catch {
+                $null = $_
+            }
+        }
+
+        if (-not $isDirectoryTarget -and -not [string]::IsNullOrWhiteSpace($programForProcessDetection)) {
+            $programLeaf = [System.IO.Path]::GetFileNameWithoutExtension([string]$programForProcessDetection)
+            if (-not [string]::IsNullOrWhiteSpace($programLeaf)) {
+                $processCandidates += $programLeaf
+            }
+
+            $programExtension = [string]([System.IO.Path]::GetExtension([string]$programForProcessDetection)).ToLowerInvariant()
+            if (@('.accdb', '.accde') -contains $programExtension) {
+                $processCandidates += "MSACCESS"
+            }
+        }
+    }
+
+    $windowCandidates = @($windowCandidates | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+    $processCandidates = @($processCandidates | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+
+    return [pscustomobject]@{
+        CloseEnabled = $closeEnabled
+        CloseMethod = $closeMethod
+        CloseTimeoutSeconds = $closeTimeoutSeconds
+        CloseForce = $closeForce
+        CloseWindowTitles = $windowCandidates
+        CloseProcessNames = $processCandidates
+    }
+}
+
+function Get-RunningProcessByWindowTitleCandidates {
+    param([string[]]$TitleCandidates)
+
+    $matches = New-Object System.Collections.Generic.List[System.Diagnostics.Process]
+    if (-not $TitleCandidates -or $TitleCandidates.Count -eq 0) {
+        return @()
+    }
+
+    $windowedProcesses = Get-Process -ErrorAction SilentlyContinue | Where-Object {
+        $_.MainWindowHandle -ne 0 -and -not [string]::IsNullOrWhiteSpace($_.MainWindowTitle)
+    }
+
+    foreach ($candidate in $TitleCandidates) {
+        if ([string]::IsNullOrWhiteSpace($candidate)) {
+            continue
+        }
+
+        foreach ($proc in $windowedProcesses) {
+            if ($proc.MainWindowTitle -eq $candidate -or $proc.MainWindowTitle -like "*$candidate*") {
+                $matches.Add($proc)
+            }
+        }
+    }
+
+    return @($matches | Sort-Object -Property Id -Unique)
+}
+
+function Get-RunningProcessByNameCandidates {
+    param([string[]]$ProcessCandidates)
+
+    $matches = New-Object System.Collections.Generic.List[System.Diagnostics.Process]
+    foreach ($processCandidate in @($ProcessCandidates)) {
+        if ([string]::IsNullOrWhiteSpace([string]$processCandidate)) {
+            continue
+        }
+
+        foreach ($proc in @(Get-Process -Name ([string]$processCandidate) -ErrorAction SilentlyContinue)) {
+            $matches.Add($proc)
+        }
+    }
+
+    return @($matches | Sort-Object -Property Id -Unique)
+}
+
+function Invoke-CloseStep {
+    param(
+        [object]$Step,
+        [string]$ConfigDirectory,
+        [object]$SessionStep,
+        [bool]$CloseOnlyTrackedApps,
+        [hashtable]$Defaults,
+        [switch]$DryRun
+    )
+
+    $rawProgramPath = if ($Step.PSObject.Properties.Name -contains "programPath") { [string]$Step.programPath } else { "" }
+    $rawFallbackProgramPath = if ($Step.PSObject.Properties.Name -contains "fallbackProgramPath") { [string]$Step.fallbackProgramPath } else { "" }
+    $looksLikePath = [System.IO.Path]::IsPathRooted($rawProgramPath) -or $rawProgramPath.Contains("/") -or $rawProgramPath.Contains("\\")
+
+    $programPath = if ($looksLikePath) {
+        Resolve-StepPath -Path $rawProgramPath -ConfigDirectory $ConfigDirectory
+    }
+    else {
+        $rawProgramPath
+    }
+
+    $fallbackProgramPath = if ($looksLikePath -and -not [string]::IsNullOrWhiteSpace($rawFallbackProgramPath)) {
+        Resolve-StepPath -Path $rawFallbackProgramPath -ConfigDirectory $ConfigDirectory
+    }
+    else {
+        $null
+    }
+
+    $resolvedProgramPath = if ($looksLikePath) {
+        Resolve-AccessibleStepPath -Path @($programPath, $fallbackProgramPath) -RetryMappedDrive
+    }
+    else {
+        $null
+    }
+
+    $closeConfig = Get-StepCloseConfiguration -Step $Step -RawProgramPath $rawProgramPath -ResolvedProgramPath $resolvedProgramPath -Defaults $Defaults
+    if (-not $closeConfig.CloseEnabled) {
+        Write-LauncherLog "Skipping close for '$($Step.name)' because closeEnabled=false"
+        return
+    }
+
+    if ($CloseOnlyTrackedApps -and -not $SessionStep) {
+        Write-LauncherLog "Skipping close for '$($Step.name)' because it was not launched in the recorded session"
+        return
+    }
+
+    $trackedIds = @()
+    if ($SessionStep -and $SessionStep.PSObject.Properties.Name -contains "processIds") {
+        $trackedIds = @($SessionStep.processIds | ForEach-Object { [int]$_ } | Where-Object { $_ -gt 0 } | Select-Object -Unique)
+    }
+
+    $targetProcesses = New-Object System.Collections.Generic.List[System.Diagnostics.Process]
+    foreach ($processId in $trackedIds) {
+        $proc = Get-Process -Id $processId -ErrorAction SilentlyContinue
+        if ($proc) {
+            $targetProcesses.Add($proc)
+        }
+    }
+
+    if ($targetProcesses.Count -eq 0) {
+        foreach ($proc in @(Get-RunningProcessByNameCandidates -ProcessCandidates $closeConfig.CloseProcessNames)) {
+            $targetProcesses.Add($proc)
+        }
+    }
+
+    if ($targetProcesses.Count -eq 0) {
+        foreach ($proc in @(Get-RunningProcessByWindowTitleCandidates -TitleCandidates $closeConfig.CloseWindowTitles)) {
+            $targetProcesses.Add($proc)
+        }
+    }
+
+    $targetProcesses = New-Object System.Collections.Generic.List[System.Diagnostics.Process] (@($targetProcesses | Sort-Object -Property Id -Unique))
+    if ($targetProcesses.Count -eq 0) {
+        Write-LauncherLog "No matching running apps found to close for '$($Step.name)'"
+        return
+    }
+
+    $targetSummary = @($targetProcesses | ForEach-Object { "$($_.ProcessName)#$($_.Id)" }) -join ", "
+    Write-LauncherLog "Closing '$($Step.name)' targets: $targetSummary"
+
+    if ($DryRun) {
+        Write-LauncherLog "[DryRun] Would close '$($Step.name)' using method '$($closeConfig.CloseMethod)'"
+        return
+    }
+
+    if ($closeConfig.CloseMethod -in @("graceful", "both")) {
+        foreach ($proc in $targetProcesses) {
+            if ($proc.HasExited) {
+                continue
+            }
+
+            if ($proc.MainWindowHandle -ne 0) {
+                try {
+                    [void]$proc.CloseMainWindow()
+                }
+                catch {
+                    Write-LauncherLog "Graceful close failed for process '$($proc.ProcessName)' ($($proc.Id)): $($_.Exception.Message)" -Level "WARN"
+                }
+            }
+        }
+
+        $waitStart = Get-Date
+        while (((Get-Date) - $waitStart).TotalSeconds -lt $closeConfig.CloseTimeoutSeconds) {
+            $remaining = @($targetProcesses | Where-Object { -not $_.HasExited })
+            if ($remaining.Count -eq 0) {
+                break
+            }
+
+            Start-Sleep -Milliseconds 500
+            foreach ($remainingProc in $remaining) {
+                try { $remainingProc.Refresh() } catch { $null = $_ }
+            }
+        }
+    }
+
+    $remainingAfterGraceful = @($targetProcesses | Where-Object { -not $_.HasExited })
+    if ($remainingAfterGraceful.Count -gt 0) {
+        if ($closeConfig.CloseMethod -eq "process" -or ($closeConfig.CloseMethod -eq "both" -and $closeConfig.CloseForce)) {
+            foreach ($proc in $remainingAfterGraceful) {
+                try {
+                    if ($closeConfig.CloseForce) {
+                        Stop-Process -Id $proc.Id -Force -ErrorAction Stop
+                    }
+                    else {
+                        Stop-Process -Id $proc.Id -ErrorAction Stop
+                    }
+                }
+                catch {
+                    Write-LauncherLog "Process termination failed for '$($proc.ProcessName)' ($($proc.Id)): $($_.Exception.Message)" -Level "WARN"
+                }
+            }
+        }
+        else {
+            $remainingSummary = @($remainingAfterGraceful | ForEach-Object { "$($_.ProcessName)#$($_.Id)" }) -join ", "
+            Write-LauncherLog "Some windows for '$($Step.name)' are still open after graceful close: $remainingSummary" -Level "WARN"
+        }
+    }
+}
+
+function Invoke-CloseSequence {
+    param(
+        [object]$Config,
+        [string]$ConfigDirectory,
+        [switch]$DryRun
+    )
+
+    $closeDefaults = @{
+        defaultCloseMethod = "both"
+        defaultCloseTimeoutSeconds = 12
+        defaultCloseForce = $false
+    }
+    $closeOnlyTrackedApps = $true
+
+    if ($Config.PSObject.Properties.Name -contains "closeOptions" -and $Config.closeOptions) {
+        $closeOptions = $Config.closeOptions
+        if ($closeOptions.PSObject.Properties.Name -contains "defaultCloseMethod") {
+            $closeDefaults.defaultCloseMethod = [string]$closeOptions.defaultCloseMethod
+        }
+        if ($closeOptions.PSObject.Properties.Name -contains "defaultCloseTimeoutSeconds") {
+            $closeDefaults.defaultCloseTimeoutSeconds = [int]$closeOptions.defaultCloseTimeoutSeconds
+        }
+        if ($closeOptions.PSObject.Properties.Name -contains "defaultCloseForce") {
+            $closeDefaults.defaultCloseForce = [bool]$closeOptions.defaultCloseForce
+        }
+        if ($closeOptions.PSObject.Properties.Name -contains "closeOnlyTrackedApps") {
+            $closeOnlyTrackedApps = [bool]$closeOptions.closeOnlyTrackedApps
+        }
+    }
+
+    $sessionState = Load-LauncherSessionState
+    if ($closeOnlyTrackedApps -and -not $sessionState) {
+        Write-LauncherLog "Close mode is set to tracked-only, but no recorded launcher session was found." -Level "WARN"
+        return
+    }
+
+    $sessionByName = @{}
+    if ($sessionState -and $sessionState.launchedSteps) {
+        foreach ($sessionStep in @($sessionState.launchedSteps)) {
+            $stepName = [string]$sessionStep.stepName
+            if (-not [string]::IsNullOrWhiteSpace($stepName)) {
+                $sessionByName[$stepName] = $sessionStep
+            }
+        }
+    }
+
+    $launchSteps = @($Config.steps | Where-Object {
+        $_.enabled -and ([string]$_.type -eq "launch")
+    })
+
+    [Array]::Reverse($launchSteps)
+
+    foreach ($step in $launchSteps) {
+        Write-StepHeader -Name ("Close " + [string]$step.name)
+        $sessionStep = $null
+        if ($sessionByName.ContainsKey([string]$step.name)) {
+            $sessionStep = $sessionByName[[string]$step.name]
+        }
+
+        Invoke-CloseStep -Step $step -ConfigDirectory $ConfigDirectory -SessionStep $sessionStep -CloseOnlyTrackedApps:$closeOnlyTrackedApps -Defaults $closeDefaults -DryRun:$DryRun
+
+        if ($step.waitAfterStepSeconds -and [int]$step.waitAfterStepSeconds -gt 0) {
+            if ($DryRun) {
+                Write-LauncherLog "[DryRun] Would wait $([int]$step.waitAfterStepSeconds) second(s) after close step '$($step.name)'"
+            }
+            else {
+                Start-Sleep -Seconds ([int]$step.waitAfterStepSeconds)
+            }
+        }
+    }
+
+    Write-LauncherLog "Close sequence completed."
 }
 
 function Resolve-StepPath {
@@ -3489,6 +3928,7 @@ function Invoke-LaunchStep {
 $configFile = $null
 $configDirectory = $null
 $completedSuccessfully = $false
+$launchedSteps = New-Object System.Collections.Generic.List[object]
 
 try {
     $configFile = Resolve-Path -Path $ConfigPath -ErrorAction Stop
@@ -3567,57 +4007,148 @@ try {
         throw "No steps were found in $configFile"
     }
 
-    foreach ($step in $config.steps) {
-        if (-not $step.enabled) {
-            Write-LauncherLog "Skipping disabled step '$($step.name)'"
-            continue
+    if ($Mode -eq "Close") {
+        Write-LauncherLog "Running in close mode."
+        Invoke-CloseSequence -Config $config -ConfigDirectory $configDirectory -DryRun:$DryRun
+        if (-not $DryRun) {
+            Clear-LauncherSessionState
+        }
+    }
+    else {
+        foreach ($step in $config.steps) {
+            if (-not $step.enabled) {
+                Write-LauncherLog "Skipping disabled step '$($step.name)'"
+                continue
+            }
+
+            Write-StepHeader -Name $step.name
+
+            try {
+                switch ([string]$step.type) {
+                    "launch" {
+                        $runningBeforeLaunch = $false
+                        $rawProgramPathForTracking = [string]$step.programPath
+                        $resolvedProgramPathForTracking = $null
+                        $rawFallbackProgramPathForTracking = if ($step.PSObject.Properties.Name -contains "fallbackProgramPath") { [string]$step.fallbackProgramPath } else { "" }
+                        $looksLikePathForTracking = [System.IO.Path]::IsPathRooted($rawProgramPathForTracking) -or $rawProgramPathForTracking.Contains("/") -or $rawProgramPathForTracking.Contains("\\")
+
+                        if ($looksLikePathForTracking) {
+                            $programPathForTracking = Resolve-StepPath -Path $rawProgramPathForTracking -ConfigDirectory $configDirectory
+                            $fallbackProgramPathForTracking = if (-not [string]::IsNullOrWhiteSpace($rawFallbackProgramPathForTracking)) {
+                                Resolve-StepPath -Path $rawFallbackProgramPathForTracking -ConfigDirectory $configDirectory
+                            }
+                            else {
+                                $null
+                            }
+
+                            $resolvedProgramPathForTracking = Resolve-AccessibleStepPath -Path @($programPathForTracking, $fallbackProgramPathForTracking) -RetryMappedDrive
+                        }
+
+                        if ($step.PSObject.Properties.Name -contains "launchOnlyIfMissing") {
+                            if ([bool]$step.launchOnlyIfMissing) {
+                                $runningBeforeLaunch = Test-LaunchStepAlreadyRunning -Step $step -RawProgramPath $rawProgramPathForTracking -ResolvedProgramPath $resolvedProgramPathForTracking
+                            }
+                        }
+                        else {
+                            $runningBeforeLaunch = Test-LaunchStepAlreadyRunning -Step $step -RawProgramPath $rawProgramPathForTracking -ResolvedProgramPath $resolvedProgramPathForTracking
+                        }
+
+                        $beforeProcessIds = @()
+                        $closeConfigForTracking = Get-StepCloseConfiguration -Step $step -RawProgramPath $rawProgramPathForTracking -ResolvedProgramPath $resolvedProgramPathForTracking -Defaults @{
+                            defaultCloseMethod = "both"
+                            defaultCloseTimeoutSeconds = 12
+                            defaultCloseForce = $false
+                        }
+                        if ($closeConfigForTracking.CloseProcessNames.Count -gt 0) {
+                            $beforeProcessIds = @(
+                                Get-RunningProcessByNameCandidates -ProcessCandidates $closeConfigForTracking.CloseProcessNames | ForEach-Object { [int]$_.Id }
+                            )
+                        }
+
+                        Invoke-LaunchStep -Step $step -ConfigDirectory $configDirectory -DryRun:$DryRun
+
+                        if (-not $runningBeforeLaunch) {
+                            $afterProcessIds = @()
+                            if ($closeConfigForTracking.CloseProcessNames.Count -gt 0) {
+                                $afterProcessIds = @(
+                                    Get-RunningProcessByNameCandidates -ProcessCandidates $closeConfigForTracking.CloseProcessNames | ForEach-Object { [int]$_.Id }
+                                )
+                            }
+
+                            $newProcessIds = @($afterProcessIds | Where-Object { $beforeProcessIds -notcontains $_ } | Select-Object -Unique)
+                            if ($newProcessIds.Count -eq 0) {
+                                $newProcessIds = $afterProcessIds
+                            }
+
+                            $launchedSteps.Add([pscustomobject]@{
+                                stepName = [string]$step.name
+                                stepType = [string]$step.type
+                                processIds = @($newProcessIds)
+                                closed = $false
+                                launchedAt = (Get-Date).ToString("o")
+                            }) | Out-Null
+                        }
+
+                        break
+                    }
+                    "access-sql" {
+                        Invoke-AccessSqlStep -Step $step -ConfigDirectory $configDirectory -DryRun:$DryRun
+                        break
+                    }
+                    default {
+                        throw "Unsupported step type '$($step.type)' in step '$($step.name)'"
+                    }
+                }
+
+                if ($step.waitAfterStepSeconds -and [int]$step.waitAfterStepSeconds -gt 0) {
+                    Start-Sleep -Seconds ([int]$step.waitAfterStepSeconds)
+                }
+            }
+            catch {
+                Write-LauncherLog "Step '$($step.name)' failed: $($_.Exception.Message)" -Level "ERROR"
+                throw
+            }
         }
 
-        Write-StepHeader -Name $step.name
+        if ($DryRun) {
+            Write-LauncherLog "[DryRun] Would record launcher session state for close mode"
+        }
+        else {
+            Save-LauncherSessionState -ConfigPath $configFile -LaunchedSteps $launchedSteps
+        }
+
+        $ensureCapsLockOn = $true
+        if ($config.PSObject.Properties.Name -contains "ensureCapsLockOn") {
+            $ensureCapsLockOn = [bool]$config.ensureCapsLockOn
+        }
+
+        $ensureNumLockOn = $true
+        if ($config.PSObject.Properties.Name -contains "ensureNumLockOn") {
+            $ensureNumLockOn = [bool]$config.ensureNumLockOn
+        }
 
         try {
-            switch ([string]$step.type) {
-                "launch" {
-                    Invoke-LaunchStep -Step $step -ConfigDirectory $configDirectory -DryRun:$DryRun
-                    break
-                }
-                "access-sql" {
-                    Invoke-AccessSqlStep -Step $step -ConfigDirectory $configDirectory -DryRun:$DryRun
-                    break
-                }
-                default {
-                    throw "Unsupported step type '$($step.type)' in step '$($step.name)'"
-                }
-            }
-
-            if ($step.waitAfterStepSeconds -and [int]$step.waitAfterStepSeconds -gt 0) {
-                Start-Sleep -Seconds ([int]$step.waitAfterStepSeconds)
-            }
+            Set-LockKeysOn -EnsureCapsLockOn:$ensureCapsLockOn -EnsureNumLockOn:$ensureNumLockOn -DryRun:$DryRun
         }
         catch {
-            Write-LauncherLog "Step '$($step.name)' failed: $($_.Exception.Message)" -Level "ERROR"
-            throw
+            Write-LauncherLog "Lock-key enforcement encountered an error and was skipped: $($_.Exception.Message)" -Level "WARN"
+        }
+
+        Write-LauncherLog "Launcher sequence completed."
+
+        if ($Mode -eq "StartAndWaitForCloseCommand") {
+            $closeCommand = Wait-ForLauncherCloseCommand -DryRun:$DryRun -AllowCloseApps
+            if ($closeCommand -eq "CLOSEAPPS") {
+                Write-LauncherLog "CLOSEAPPS command received; running close sequence in reverse step order."
+                Invoke-CloseSequence -Config $config -ConfigDirectory $configDirectory -DryRun:$DryRun
+                if (-not $DryRun) {
+                    Clear-LauncherSessionState
+                }
+            }
+
+            $script:SkipClosePrompt = $true
         }
     }
-
-    $ensureCapsLockOn = $true
-    if ($config.PSObject.Properties.Name -contains "ensureCapsLockOn") {
-        $ensureCapsLockOn = [bool]$config.ensureCapsLockOn
-    }
-
-    $ensureNumLockOn = $true
-    if ($config.PSObject.Properties.Name -contains "ensureNumLockOn") {
-        $ensureNumLockOn = [bool]$config.ensureNumLockOn
-    }
-
-    try {
-        Set-LockKeysOn -EnsureCapsLockOn:$ensureCapsLockOn -EnsureNumLockOn:$ensureNumLockOn -DryRun:$DryRun
-    }
-    catch {
-        Write-LauncherLog "Lock-key enforcement encountered an error and was skipped: $($_.Exception.Message)" -Level "WARN"
-    }
-
-    Write-LauncherLog "Launcher sequence completed."
 
     Write-Host ""
     Write-Host (("=" * $script:UIWidth)) -ForegroundColor DarkCyan
@@ -3642,6 +4173,6 @@ finally {
     }
 
     if (-not $script:SkipClosePrompt) {
-        Wait-ForLauncherCloseCommand -DryRun:$DryRun
+        [void](Wait-ForLauncherCloseCommand -DryRun:$DryRun)
     }
 }
