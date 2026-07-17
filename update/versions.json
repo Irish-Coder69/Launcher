@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.0.0",
+    "releaseDate": "2026-07-17",
+    "description": "Native migration baseline (Build 1)",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.0/Launcher-1.0.0-Setup.exe",
+    "checksum": "7CB6F3424BB1CA53D1051C91DDDBAFB975543A102DD7EFAFB5C5641F7DD28481",
+    "isRequired": false,
+    "notes": [
+      "Introduced native WPF app shell and Launcher.Core foundation",
+      "Added native settings edit/save workflow and initial native detection actions",
+      "Added native publish profile and win-x64 publish script"
+    ]
+  },
+  {
     "version": "1.0.37",
     "releaseDate": "2026-07-17",
     "description": "Lock-key ShouldProcess analyzer warning cleanup",

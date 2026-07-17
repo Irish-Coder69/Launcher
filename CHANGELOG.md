@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.0.0 - 2026-07-17 (Build 1)
+
+- Introduced the first native desktop migration baseline with a WPF application shell and shared core library.
+- Added native settings editing and save flow for launcher defaults and step enablement.
+- Added native detect actions for running-state and close-target discovery, while preserving script-bridge execution modes.
+- Added native publish profile and publishing script for win-x64 distribution.
+
 ## 1.0.37 - 2026-07-17
 
 - Resolved duplicate analyzer warnings for lock-key helper verbs in `launcher.ps1`.
