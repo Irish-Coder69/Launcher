@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.0.35",
+    "releaseDate": "2026-07-17",
+    "description": "Receiver month folder now uses month name and year",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.0.35/Launcher-1.0.35-Setup.exe",
+    "checksum": "012F048EA6449658C4FA2E6E46A99DD35A6B9ACED5CE1CA9A8CA48604DAAE28A",
+    "isRequired": false,
+    "notes": [
+      "Changed Receiver month folder format to MMMM yyyy",
+      "Kept Receiver date folder format as MM_dd_yyyy",
+      "Rebuilt installer and aligned runtime, installer, and manifest versioning to 1.0.35"
+    ]
+  },
+  {
     "version": "1.0.34",
     "releaseDate": "2026-07-16",
     "description": "Receiver month/date folder auto-create and open",

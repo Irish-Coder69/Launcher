@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.0.35 - 2026-07-17
+
+- Updated Receiver month folder naming to `MMMM yyyy` (example: `July 2026`).
+- Kept Receiver date folder naming as `MM_dd_yyyy` (example: `07_17_2026`).
+- Rebuilt installer and refreshed release metadata for v1.0.35.
+
 ## 1.0.34 - 2026-07-16
 
 - Added Receiver's step folder flow: check/create current month folder, then check/create current date folder.

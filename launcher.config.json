@@ -239,7 +239,7 @@
         "programPath": "P:/Stockroom/Receiver's",
         "ensureCurrentMonthFolder": true,
         "ensureCurrentDateFolder": true,
-        "currentMonthFolderFormat": "MM",
+        "currentMonthFolderFormat": "MMMM yyyy",
         "currentDateFolderFormat": "MM_dd_yyyy",
         "runningWindowTitles": [
           "Receiver's"
