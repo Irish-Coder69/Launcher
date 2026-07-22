@@ -3541,6 +3541,15 @@ function Test-AccessDatabaseAlreadyRunning {
         }
     } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
 
+    $databaseNameCandidates = @($normalizedDatabasePaths | ForEach-Object {
+        try {
+            [System.IO.Path]::GetFileName([string]$_)
+        }
+        catch {
+            $null
+        }
+    } | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)
+
     if ($normalizedDatabasePaths.Count -eq 0) {
         return $false
     }
@@ -3566,6 +3575,12 @@ function Test-AccessDatabaseAlreadyRunning {
 
         foreach ($databasePath in $normalizedDatabasePaths) {
             if ($commandLine -like "*$databasePath*") {
+                return $true
+            }
+        }
+
+        foreach ($databaseName in $databaseNameCandidates) {
+            if ($commandLine -like "*$databaseName*") {
                 return $true
             }
         }

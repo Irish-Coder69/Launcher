@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.2 - 2026-07-22
+
+- Fixed Access-backed rerun detection so Visual Board and Stockroom Analytics recognize already-open databases even when the command line path form changes.
+- Broadened the Access running check to match both the normalized database path and the database filename.
+- Rebuilt the installer for the updated release line.
+
 ## 1.1.1 - 2026-07-22
 
 - Fixed rerun detection so Access-backed launch steps now recognize already-open Visual Board and Stockroom Analytics sessions.
