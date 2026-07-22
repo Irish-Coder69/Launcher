@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.1.6",
+    "releaseDate": "2026-07-22",
+    "description": "Default native launcher runs are now live (Dry Run off)",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.1.6/Launcher-1.1.6-Setup.exe",
+    "checksum": "1EAABB142296D7E344B5D6481A1FC973ECC2619080CBEEBD8A783B4962B4992E",
+    "isRequired": false,
+    "notes": [
+      "Native UI now opens with Dry Run unchecked by default",
+      "Start and Close actions run live unless Dry Run is manually enabled",
+      "Rebuilt the installer for the 1.1.6 release line"
+    ]
+  },
+  {
     "version": "1.1.5",
     "releaseDate": "2026-07-22",
     "description": "Ship the native WPF launcher as the installed app",

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.6 - 2026-07-22
+
+- Native WPF app now starts with Dry Run disabled by default.
+- Normal Start/Close actions run live unless Dry Run is explicitly enabled in the UI.
+- Rebuilt the installer for the updated native default behavior.
+
 ## 1.1.5 - 2026-07-22
 
 - Switched the installed launcher shortcut to the native WPF app instead of the PowerShell wrapper.

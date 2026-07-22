@@ -24,7 +24,7 @@
                     <TextBlock Margin="0,4,0,0" Text="Phase 1 bridge: run existing launcher.ps1 with Start/Close modes while native migration is underway." Foreground="#8FA8D8" TextWrapping="Wrap" />
                     <TextBlock x:Name="StatusText" Margin="0,8,0,0" Text="Ready" Foreground="#8CE0A1" FontWeight="SemiBold" />
                 </StackPanel>
-                <CheckBox x:Name="DryRunCheckBox" Grid.Column="1" Margin="12,4,0,0" Content="Dry Run" IsChecked="True" Foreground="#DCE6FF" VerticalAlignment="Top" />
+                <CheckBox x:Name="DryRunCheckBox" Grid.Column="1" Margin="12,4,0,0" Content="Dry Run" IsChecked="False" Foreground="#DCE6FF" VerticalAlignment="Top" />
             </Grid>
         </Border>
 
