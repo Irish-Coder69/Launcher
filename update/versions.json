@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.1.5",
+    "releaseDate": "2026-07-22",
+    "description": "Ship the native WPF launcher as the installed app",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.1.5/Launcher-1.1.5-Setup.exe",
+    "checksum": "4F83DCAAAFE81DBF6526E1EF3EB6E6CF98E45D49D8FEF827FFF1022C06E6E8D8",
+    "isRequired": false,
+    "notes": [
+      "Installer now packages the native WPF executable as the main launcher",
+      "Start Menu and Desktop shortcuts now open Launcher.exe directly",
+      "Rebuilt the installer for the 1.1.5 release line"
+    ]
+  },
+  {
     "version": "1.1.4",
     "releaseDate": "2026-07-22",
     "description": "Recognize already-open Visual Mfg login windows",

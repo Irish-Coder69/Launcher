@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.5 - 2026-07-22
+
+- Switched the installed launcher shortcut to the native WPF app instead of the PowerShell wrapper.
+- The installer now publishes `Launcher.App.exe` from `native\publish\win-x64` and installs it as `Launcher.exe`.
+- Rebuilt the installer for the native app release line.
+
 ## 1.1.4 - 2026-07-22
 
 - Added Visual Mfg login titles to the running-state candidates so an already-open login window is recognized as already running.

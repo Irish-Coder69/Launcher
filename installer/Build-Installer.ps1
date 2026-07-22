@@ -14,6 +14,10 @@ Set-StrictMode -Version Latest
 # Configuration
 $installerDir = Split-Path -Parent $MyInvocation.MyCommand.Path
 $projectRoot = Split-Path -Parent $installerDir
+$nativeDir = Join-Path $projectRoot "native"
+$publishScript = Join-Path $nativeDir "Publish-NativeApp.ps1"
+$nativePublishOutput = Join-Path $nativeDir "publish\win-x64"
+$nativeExecutable = Join-Path $nativePublishOutput "Launcher.App.exe"
 $nsiScript = Join-Path $installerDir "Launcher.nsi"
 $outputDir = Join-Path $installerDir "Output"
 $nsiVersionMatch = Select-String -Path $nsiScript -Pattern '!define PRODUCT_VERSION "([^"]+)"' -AllMatches | Select-Object -First 1
@@ -69,6 +73,7 @@ Write-Host "Verifying required files..." -ForegroundColor Yellow
 $requiredFiles = @(
     (Join-Path $projectRoot "launcher.ps1"),
     (Join-Path $projectRoot "launcher.config.json"),
+    $publishScript,
     $nsiScript,
     (Join-Path $installerDir "LICENSE.txt")
 )
@@ -87,6 +92,17 @@ if ($missingFiles.Count -gt 0) {
     Write-Host ""
     Write-Host "ERROR: Missing required files!" -ForegroundColor Red
     exit 1
+}
+
+Write-Host ""
+Write-Host "Publishing native WPF app..." -ForegroundColor Yellow
+& $publishScript -Configuration Release
+if ($LASTEXITCODE -ne 0) {
+    throw "Native app publish failed with exit code $LASTEXITCODE"
+}
+
+if (-not (Test-Path $nativeExecutable)) {
+    throw "Native executable was not found after publish: $nativeExecutable"
 }
 
 Write-Host ""

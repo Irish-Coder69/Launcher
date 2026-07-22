@@ -6,7 +6,7 @@
 ; Variables
 ;--------------------------------
 !define PRODUCT_NAME "Launcher"
-!define PRODUCT_VERSION "1.1.4"
+!define PRODUCT_VERSION "1.1.5"
 !define PRODUCT_PUBLISHER "Windsor Industries"
 !define PRODUCT_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
 !ifndef OUTDIR
@@ -77,7 +77,7 @@ VIAddVersionKey OriginalFilename "Launcher-${PRODUCT_VERSION}-Setup.exe"
 ;--------------------------------
 ; Section Description Strings
 ;--------------------------------
-LangString DESC_SEC01 ${LANG_ENGLISH} "Installs the Launcher script, configuration, and supporting files."
+LangString DESC_SEC01 ${LANG_ENGLISH} "Installs the Launcher native app, script bridge, configuration, and supporting files."
 LangString DESC_SEC02 ${LANG_ENGLISH} "Creates shortcuts in the Windows Start Menu."
 LangString DESC_SEC03 ${LANG_ENGLISH} "Creates a shortcut on the Desktop."
 
@@ -91,6 +91,7 @@ Section "!${PRODUCT_NAME} (required)" SEC01
   ; Core files
   File "..\launcher.ps1"
   File "..\launcher.config.json"
+  File /oname=Launcher.exe "..\native\publish\win-x64\Launcher.App.exe"
 
   ; Update subfolder
   SetOutPath "$INSTDIR\update"
@@ -105,35 +106,23 @@ Section "!${PRODUCT_NAME} (required)" SEC01
   FileWrite $0 "${PRODUCT_VERSION}"
   FileClose $0
 
-  ; Create Launcher.cmd wrapper: uses pwsh.exe (PowerShell 7) when available,
-  ; falls back to powershell.exe (Windows PowerShell 5) otherwise.
-  FileOpen $0 "$INSTDIR\Launcher.cmd" w
-  FileWrite $0 "@echo off$\r$\n"
-  FileWrite $0 "setlocal enabledelayedexpansion$\r$\n"
-  FileWrite $0 "where pwsh.exe >nul 2>&1$\r$\n"
-  FileWrite $0 "if !ERRORLEVEL! == 0 ($\r$\n"
-  FileWrite $0 "    start $\"$\" pwsh.exe -NoProfile -ExecutionPolicy Bypass -File $\"%~dp0launcher.ps1$\" -ConfigPath $\"%~dp0launcher.config.json$\"$\r$\n"
-  FileWrite $0 ") else ($\r$\n"
-  FileWrite $0 "    start $\"$\" powershell.exe -NoProfile -ExecutionPolicy Bypass -File $\"%~dp0launcher.ps1$\" -ConfigPath $\"%~dp0launcher.config.json$\"$\r$\n"
-  FileWrite $0 ")$\r$\n"
-  FileClose $0
 SectionEnd
 
 Section "Start Menu Shortcuts" SEC02
   CreateDirectory "$SMPROGRAMS\${PRODUCT_NAME}"
-  CreateShortcut "$SMPROGRAMS\${PRODUCT_NAME}\${PRODUCT_NAME}.lnk" "$INSTDIR\Launcher.cmd" "" "$WINDIR\System32\cmd.exe" 0
+  CreateShortcut "$SMPROGRAMS\${PRODUCT_NAME}\${PRODUCT_NAME}.lnk" "$INSTDIR\Launcher.exe" "" "$INSTDIR\Launcher.exe" 0
   CreateShortcut "$SMPROGRAMS\${PRODUCT_NAME}\Uninstall ${PRODUCT_NAME}.lnk" "$INSTDIR\Uninstall.exe"
 SectionEnd
 
 Section "Desktop Shortcut" SEC03
-  CreateShortcut "$DESKTOP\${PRODUCT_NAME}.lnk" "$INSTDIR\Launcher.cmd" "" "$WINDIR\System32\cmd.exe" 0
+  CreateShortcut "$DESKTOP\${PRODUCT_NAME}.lnk" "$INSTDIR\Launcher.exe" "" "$INSTDIR\Launcher.exe" 0
 SectionEnd
 
 Section -Post
   WriteUninstaller "$INSTDIR\Uninstall.exe"
   WriteRegStr HKCU "${PRODUCT_UNINST_KEY}" "DisplayName" "${PRODUCT_NAME}"
   WriteRegStr HKCU "${PRODUCT_UNINST_KEY}" "UninstallString" '"$INSTDIR\Uninstall.exe"'
-  WriteRegStr HKCU "${PRODUCT_UNINST_KEY}" "DisplayIcon" "$INSTDIR\Launcher.cmd"
+  WriteRegStr HKCU "${PRODUCT_UNINST_KEY}" "DisplayIcon" "$INSTDIR\Launcher.exe"
   WriteRegStr HKCU "${PRODUCT_UNINST_KEY}" "DisplayVersion" "${PRODUCT_VERSION}"
   WriteRegStr HKCU "${PRODUCT_UNINST_KEY}" "Publisher" "${PRODUCT_PUBLISHER}"
   WriteRegStr HKCU "${PRODUCT_UNINST_KEY}" "InstallLocation" "$INSTDIR"
@@ -157,7 +146,7 @@ Section Uninstall
   ; Core files
   Delete "$INSTDIR\launcher.ps1"
   Delete "$INSTDIR\launcher.config.json"
-  Delete "$INSTDIR\Launcher.cmd"
+  Delete "$INSTDIR\Launcher.exe"
   Delete "$INSTDIR\version.txt"
   Delete "$INSTDIR\launcher.last.log"
   Delete "$INSTDIR\Uninstall.exe"
@@ -203,8 +192,8 @@ Function .onInstSuccess
   Goto doneLaunching
 
 launchInstalledApp:
-  ; Launch using the .cmd wrapper which auto-detects pwsh or powershell
-  ExecShell "open" "$INSTDIR\Launcher.cmd"
+  ; Launch the native WPF app directly.
+  ExecShell "open" "$INSTDIR\Launcher.exe"
 doneLaunching:
 FunctionEnd
 
