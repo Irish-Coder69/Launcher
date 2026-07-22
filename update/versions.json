@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.1.12",
+    "releaseDate": "2026-07-22",
+    "description": "Test release for validating the update checker",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.1.12/Launcher-1.1.12-Setup.exe",
+    "checksum": "1EFCC861118D55F66073A70896E5DA17DED6E140F699B046EDA601275C1121FD",
+    "isRequired": false,
+    "notes": [
+      "Created a new tagged release so the update checker can detect a newer version",
+      "No functional code changes beyond release metadata",
+      "Rebuilt the installer for update-check validation"
+    ]
+  },
+  {
     "version": "1.1.11",
     "releaseDate": "2026-07-22",
     "description": "Fix native update check to use GitHub releases",

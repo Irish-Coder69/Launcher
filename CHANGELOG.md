@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.12 - 2026-07-22
+
+- Published a new tagged release so the update checker can be validated against a newer GitHub release.
+- No code changes beyond the release metadata bump.
+- Rebuilt the installer for the update-check test target.
+
 ## 1.1.11 - 2026-07-22
 
 - Fixed the native About dialog update check so it resolves GitHub releases instead of stopping at the raw manifest URL.
