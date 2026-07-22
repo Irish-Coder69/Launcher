@@ -140,13 +140,13 @@ When you have updates to release:
 Edit `launcher.ps1` or config to reflect the new version:
 
 ```powershell
-$Version = "1.1.0" # Update version
+$Version = "1.1.1" # Update version
 ```
 
 Edit `installer/Launcher.nsi`:
 
 ```nsis
-!define PRODUCT_VERSION "1.1.0"
+!define PRODUCT_VERSION "1.1.1"
 ```
 
 ### Step 2: Rebuild Installer
@@ -158,11 +158,11 @@ cd ".\installer"
 
 ### Step 3: Upload Installer
 
-- Upload `Launcher-1.1.0-Setup.exe` to your release hosting
+- Upload `Launcher-1.1.1-Setup.exe` to your release hosting
 - Generate the checksum:
 
 ```powershell
-(Get-FileHash "Launcher-1.1.0-Setup.exe" -Algorithm SHA256).Hash
+(Get-FileHash "Launcher-1.1.1-Setup.exe" -Algorithm SHA256).Hash
 ```
 
 ### Step 4: Update versions.json
@@ -170,10 +170,10 @@ cd ".\installer"
 ```json
 [
   {
-    "version": "1.1.0",
+    "version": "1.1.1",
     "releaseDate": "2026-06-20",
     "description": "New features and bug fixes",
-    "downloadUrl": "https://your-server.com/releases/Launcher-1.1.0-Setup.exe",
+    "downloadUrl": "https://your-server.com/releases/Launcher-1.1.1-Setup.exe",
     "checksum": "PASTE_SHA256_HERE",
     "isRequired": false,
     "notes": [

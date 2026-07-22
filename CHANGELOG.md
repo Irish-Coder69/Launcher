@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.1 - 2026-07-22
+
+- Fixed rerun detection so Access-backed launch steps now recognize already-open Visual Board and Stockroom Analytics sessions.
+- Added MSACCESS to the running-state process checks for `.accdb` and `.accde` targets.
+- Rebuilt the installer for the updated release line.
+
 ## 1.1.0 - 2026-07-17
 
 - Promoted the native migration baseline to the active version line to avoid false update prompts from older 1.0.x history.

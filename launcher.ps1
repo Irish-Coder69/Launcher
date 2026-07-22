@@ -3640,6 +3640,11 @@ function Test-LaunchStepAlreadyRunning {
         if (-not [string]::IsNullOrWhiteSpace($programLeaf)) {
             $processCandidates += $programLeaf
         }
+
+        $programExtension = [string]([System.IO.Path]::GetExtension([string]$programForProcessDetection)).ToLowerInvariant()
+        if (@('.accdb', '.accde') -contains $programExtension) {
+            $processCandidates += "MSACCESS"
+        }
     }
 
     $processCandidates = @($processCandidates | Where-Object { -not [string]::IsNullOrWhiteSpace($_) } | Select-Object -Unique)

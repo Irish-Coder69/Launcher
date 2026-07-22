@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.1.1",
+    "releaseDate": "2026-07-22",
+    "description": "Fix rerun detection for Access-backed launch steps",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.1.1/Launcher-1.1.1-Setup.exe",
+    "checksum": "9374ECE04C81253D730F9867487A009CC61D61AC22FA9983C77F1E3FD00767EE",
+    "isRequired": false,
+    "notes": [
+      "Access-backed launch steps now recognize MSACCESS as the running process",
+      "Visual Board and Stockroom Analytics reruns now skip when their Access session is already open",
+      "Rebuilt the installer for the 1.1.1 release line"
+    ]
+  },
+  {
     "version": "1.1.0",
     "releaseDate": "2026-07-17",
     "description": "Native migration baseline promoted to active version line",
