@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.9 - 2026-07-22
+
+- Resolved PowerShell analyzer warnings in the close/session helpers.
+- Renamed close helper functions to approved/singular naming and updated all call sites.
+- Kept runtime behavior the same while improving script health and diagnostics.
+
 ## 1.1.8 - 2026-07-22
 
 - Fixed desktop shortcut refresh so `Launcher.lnk` now stays pointed to the native `Launcher.exe` when available.

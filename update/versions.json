@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.1.9",
+    "releaseDate": "2026-07-22",
+    "description": "PowerShell analyzer cleanup and naming consistency",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.1.9/Launcher-1.1.9-Setup.exe",
+    "checksum": "C773412391B1BD7767D53F26C1B91CB029852D473877BFFDFC1033696783FBE1",
+    "isRequired": false,
+    "notes": [
+      "Resolved script analyzer warnings in close/session helper functions",
+      "Updated helper naming to approved verb and singular noun conventions",
+      "No functional behavior change expected"
+    ]
+  },
+  {
     "version": "1.1.8",
     "releaseDate": "2026-07-22",
     "description": "Keep native launcher as default shortcut target",

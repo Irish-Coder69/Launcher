@@ -204,7 +204,7 @@ function Save-LauncherSessionState {
     Write-LauncherLog "Saved launcher session state: $($entries.Count) launched step(s) recorded"
 }
 
-function Load-LauncherSessionState {
+function Get-LauncherSessionState {
     if (-not (Test-Path -Path $script:SessionStateFile)) {
         return $null
     }
@@ -333,10 +333,10 @@ function Get-StepCloseConfiguration {
     }
 }
 
-function Get-RunningProcessByWindowTitleCandidates {
+function Get-RunningProcessByWindowTitleCandidate {
     param([string[]]$TitleCandidates)
 
-    $matches = New-Object System.Collections.Generic.List[System.Diagnostics.Process]
+    $processMatches = New-Object System.Collections.Generic.List[System.Diagnostics.Process]
     if (-not $TitleCandidates -or $TitleCandidates.Count -eq 0) {
         return @()
     }
@@ -352,29 +352,29 @@ function Get-RunningProcessByWindowTitleCandidates {
 
         foreach ($proc in $windowedProcesses) {
             if ($proc.MainWindowTitle -eq $candidate -or $proc.MainWindowTitle -like "*$candidate*") {
-                $matches.Add($proc)
+                $processMatches.Add($proc)
             }
         }
     }
 
-    return @($matches | Sort-Object -Property Id -Unique)
+    return @($processMatches | Sort-Object -Property Id -Unique)
 }
 
-function Get-RunningProcessByNameCandidates {
+function Get-RunningProcessByNameCandidate {
     param([string[]]$ProcessCandidates)
 
-    $matches = New-Object System.Collections.Generic.List[System.Diagnostics.Process]
+    $processMatches = New-Object System.Collections.Generic.List[System.Diagnostics.Process]
     foreach ($processCandidate in @($ProcessCandidates)) {
         if ([string]::IsNullOrWhiteSpace([string]$processCandidate)) {
             continue
         }
 
         foreach ($proc in @(Get-Process -Name ([string]$processCandidate) -ErrorAction SilentlyContinue)) {
-            $matches.Add($proc)
+            $processMatches.Add($proc)
         }
     }
 
-    return @($matches | Sort-Object -Property Id -Unique)
+    return @($processMatches | Sort-Object -Property Id -Unique)
 }
 
 function Invoke-CloseStep {
@@ -437,13 +437,13 @@ function Invoke-CloseStep {
     }
 
     if ($targetProcesses.Count -eq 0) {
-        foreach ($proc in @(Get-RunningProcessByNameCandidates -ProcessCandidates $closeConfig.CloseProcessNames)) {
+        foreach ($proc in @(Get-RunningProcessByNameCandidate -ProcessCandidates $closeConfig.CloseProcessNames)) {
             $targetProcesses.Add($proc)
         }
     }
 
     if ($targetProcesses.Count -eq 0) {
-        foreach ($proc in @(Get-RunningProcessByWindowTitleCandidates -TitleCandidates $closeConfig.CloseWindowTitles)) {
+        foreach ($proc in @(Get-RunningProcessByWindowTitleCandidate -TitleCandidates $closeConfig.CloseWindowTitles)) {
             $targetProcesses.Add($proc)
         }
     }
@@ -546,7 +546,7 @@ function Invoke-CloseSequence {
         }
     }
 
-    $sessionState = Load-LauncherSessionState
+    $sessionState = Get-LauncherSessionState
     if ($closeOnlyTrackedApps -and -not $sessionState) {
         Write-LauncherLog "Close mode is set to tracked-only, but no recorded launcher session was found." -Level "WARN"
         return
@@ -4098,7 +4098,7 @@ try {
                         }
                         if ($closeConfigForTracking.CloseProcessNames.Count -gt 0) {
                             $beforeProcessIds = @(
-                                Get-RunningProcessByNameCandidates -ProcessCandidates $closeConfigForTracking.CloseProcessNames | ForEach-Object { [int]$_.Id }
+                                Get-RunningProcessByNameCandidate -ProcessCandidates $closeConfigForTracking.CloseProcessNames | ForEach-Object { [int]$_.Id }
                             )
                         }
 
@@ -4108,7 +4108,7 @@ try {
                             $afterProcessIds = @()
                             if ($closeConfigForTracking.CloseProcessNames.Count -gt 0) {
                                 $afterProcessIds = @(
-                                    Get-RunningProcessByNameCandidates -ProcessCandidates $closeConfigForTracking.CloseProcessNames | ForEach-Object { [int]$_.Id }
+                                    Get-RunningProcessByNameCandidate -ProcessCandidates $closeConfigForTracking.CloseProcessNames | ForEach-Object { [int]$_.Id }
                                 )
                             }
 
