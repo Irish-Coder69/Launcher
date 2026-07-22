@@ -20,7 +20,7 @@ public sealed class LauncherNativeDetectionService
 
         if (titles.Count > 0 && processNames.Count > 0)
         {
-            return windowMatch && processMatch;
+            return windowMatch || processMatch;
         }
 
         if (titles.Count > 0)

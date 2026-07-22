@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.1.3",
+    "releaseDate": "2026-07-22",
+    "description": "Fix launch rerun detection across all apps",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.1.3/Launcher-1.1.3-Setup.exe",
+    "checksum": "D27F20E78C2321E6D68D2DBCDFA81F959427CA72F1DADA7E43FA649960F8FEE2",
+    "isRequired": false,
+    "notes": [
+      "Launch-step title and process checks now behave as alternatives when both are configured",
+      "Native detection uses the same skip rule as the PowerShell launcher",
+      "Rebuilt the installer for the 1.1.3 release line"
+    ]
+  },
+  {
     "version": "1.1.2",
     "releaseDate": "2026-07-22",
     "description": "Improve Access rerun detection for Visual Board and Stockroom Analytics",

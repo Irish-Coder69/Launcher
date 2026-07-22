@@ -3673,7 +3673,7 @@ function Test-LaunchStepAlreadyRunning {
     }
 
     if ($windowTitleCandidates.Count -gt 0 -and $processCandidates.Count -gt 0) {
-        return ($windowMatch -and $processMatch)
+        return ($windowMatch -or $processMatch)
     }
 
     if ($windowTitleCandidates.Count -gt 0) {
