@@ -230,7 +230,9 @@
         "programPath": "\\\\INFOR-VMSERVER\\Visual1000$\\VMFG\\VM.EXE",
         "runningWindowTitles": [
           "Visual Manufacturing",
-          "VMFG"
+          "VMFG",
+          "Login",
+          "Logon"
         ],
         "closeEnabled": true,
         "closeMethod": "both",

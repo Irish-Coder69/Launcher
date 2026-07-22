@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.4 - 2026-07-22
+
+- Added Visual Mfg login titles to the running-state candidates so an already-open login window is recognized as already running.
+- Rebuilt the installer for the updated release line.
+
 ## 1.1.3 - 2026-07-22
 
 - Fixed launch-step reruns so configured title and process signals are treated as alternatives rather than required together.
