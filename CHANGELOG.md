@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.8 - 2026-07-22
+
+- Fixed desktop shortcut refresh so `Launcher.lnk` now stays pointed to the native `Launcher.exe` when available.
+- Prevented launcher script runs from overriding the native app as the default entrypoint.
+- Improved native menu readability with stronger contrast, larger text, and clearer highlight states.
+
 ## 1.1.7 - 2026-07-22
 
 - Added a native top menu bar with `File > Exit` and `Help > About`.

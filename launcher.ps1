@@ -744,14 +744,31 @@ function Update-DesktopLauncherLink {
         return
     }
 
-    $pwshPath = Get-LauncherHostPath
     $shell = New-Object -ComObject WScript.Shell
+    $nativeLauncherPath = Join-Path -Path $ScriptDirectory -ChildPath "Launcher.exe"
     $mainConfigPath = Join-Path -Path $ScriptDirectory -ChildPath "launcher.config.json"
+
+    $shortcutTargetPath = $null
+    $shortcutArguments = ""
+    $shortcutIcon = $null
+
+    if (Test-Path -Path $nativeLauncherPath) {
+        $shortcutTargetPath = $nativeLauncherPath
+        $shortcutIcon = "$nativeLauncherPath,0"
+    }
+    else {
+        $pwshPath = Get-LauncherHostPath
+        $shortcutTargetPath = $pwshPath
+        $shortcutArguments = "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`" -ConfigPath `"$mainConfigPath`""
+        $shortcutIcon = "$pwshPath,0"
+    }
 
     $shortcutSpecs = @(
         @{
             Name      = "Launcher.lnk"
-            Arguments = "-NoProfile -ExecutionPolicy Bypass -File `"$scriptPath`" -ConfigPath `"$mainConfigPath`""
+            TargetPath = $shortcutTargetPath
+            Arguments = $shortcutArguments
+            IconLocation = $shortcutIcon
         }
     )
 
@@ -764,10 +781,10 @@ function Update-DesktopLauncherLink {
         $shortcutPath = Join-Path -Path $desktopPath -ChildPath $spec.Name
         if ($PSCmdlet.ShouldProcess($shortcutPath, "Refresh desktop launcher shortcut")) {
             $shortcut = $shell.CreateShortcut($shortcutPath)
-            $shortcut.TargetPath = $pwshPath
+            $shortcut.TargetPath = [string]$spec.TargetPath
             $shortcut.Arguments = $spec.Arguments
             $shortcut.WorkingDirectory = $ScriptDirectory
-            $shortcut.IconLocation = "$pwshPath,0"
+            $shortcut.IconLocation = [string]$spec.IconLocation
             $shortcut.Save()
             Write-LauncherLog "Refreshed desktop shortcut '$($spec.Name)'"
         }

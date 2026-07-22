@@ -15,7 +15,34 @@
         </Grid.RowDefinitions>
 
         <Border Padding="0" Background="#101829" BorderBrush="#2A3652" BorderThickness="0,0,0,1">
-            <Menu Background="#101829" Foreground="#DCE6FF" BorderThickness="0" Padding="8,4">
+            <Border.Resources>
+                <Style TargetType="Menu">
+                    <Setter Property="Background" Value="#101829" />
+                    <Setter Property="Foreground" Value="#EAF1FF" />
+                    <Setter Property="FontSize" Value="14" />
+                    <Setter Property="FontWeight" Value="SemiBold" />
+                    <Setter Property="Padding" Value="10,6" />
+                </Style>
+                <Style TargetType="MenuItem">
+                    <Setter Property="Foreground" Value="#EAF1FF" />
+                    <Setter Property="Background" Value="#101829" />
+                    <Setter Property="Padding" Value="12,6" />
+                    <Setter Property="Margin" Value="1" />
+                    <Setter Property="FontSize" Value="14" />
+                    <Setter Property="FontWeight" Value="SemiBold" />
+                    <Style.Triggers>
+                        <Trigger Property="IsHighlighted" Value="True">
+                            <Setter Property="Background" Value="#1B2A47" />
+                            <Setter Property="Foreground" Value="#FFFFFF" />
+                        </Trigger>
+                        <Trigger Property="IsSubmenuOpen" Value="True">
+                            <Setter Property="Background" Value="#1B2A47" />
+                            <Setter Property="Foreground" Value="#FFFFFF" />
+                        </Trigger>
+                    </Style.Triggers>
+                </Style>
+            </Border.Resources>
+            <Menu BorderThickness="0">
                 <MenuItem Header="File">
                     <MenuItem Header="Exit" Click="ExitMenuItem_OnClick" />
                 </MenuItem>

@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.1.8",
+    "releaseDate": "2026-07-22",
+    "description": "Keep native launcher as default shortcut target",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.1.8/Launcher-1.1.8-Setup.exe",
+    "checksum": "D054E11260E753AACD509810A31C15E1CE0B3AE9024179A5122C5BDAED815CB0",
+    "isRequired": false,
+    "notes": [
+      "Desktop shortcut refresh now prefers Launcher.exe when present",
+      "Script runs no longer revert Launcher.lnk back to PowerShell by default",
+      "Improved native menu readability"
+    ]
+  },
+  {
     "version": "1.1.7",
     "releaseDate": "2026-07-22",
     "description": "Add native menu bar and About dialog with update check",
