@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.13 - 2026-07-22
+
+- Fixed native update behavior so choosing an available update now launches the installer flow.
+- Native updater now reads installer URL/checksum from both versions.json and GitHub latest-release payloads.
+- Launcher closes after starting the updater so installation can proceed.
+
 ## 1.1.12 - 2026-07-22
 
 - Published a new tagged release so the update checker can be validated against a newer GitHub release.

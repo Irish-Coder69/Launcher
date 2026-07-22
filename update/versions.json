@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.1.13",
+    "releaseDate": "2026-07-22",
+    "description": "Native update check now launches installer when update is accepted",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.1.13/Launcher-1.1.13-Setup.exe",
+    "checksum": "BA3444EB05CF9ADFF45FB1857B2C47E0858DB5FFC512DD27E428C6493C1BC611",
+    "isRequired": false,
+    "notes": [
+      "Check for Updates now starts installer flow instead of only showing availability",
+      "Supports installer metadata from both versions.json and GitHub latest-release payload",
+      "Launcher closes after launching updater so install can continue"
+    ]
+  },
+  {
     "version": "1.1.12",
     "releaseDate": "2026-07-22",
     "description": "Test release for validating the update checker",

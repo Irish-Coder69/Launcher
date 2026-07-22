@@ -1,4 +1,5 @@
 ﻿using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Net.Http;
@@ -140,7 +141,7 @@ public partial class MainWindow : Window
 
             var payload = await GetUpdatePayloadAsync(updateUrl);
             using var document = JsonDocument.Parse(payload);
-            if (!TryGetLatestVersion(document.RootElement, out var latestVersion))
+            if (!TryGetLatestUpdatePackage(document.RootElement, out var latestPackage) || latestPackage is null)
             {
                 throw new InvalidDataException("Update feed did not return a version entry.");
             }
@@ -156,11 +157,47 @@ public partial class MainWindow : Window
                 return;
             }
 
-            if (latestVersion > currentVersion)
+            if (latestPackage.Version > currentVersion)
             {
-                var message = "Update available.\n\nCurrent: " + currentVersion + "\nLatest: " + latestVersion;
-                AppendLog("Update available: " + latestVersion + " (current " + currentVersion + ")");
-                MessageBox.Show(this, message, "Launcher Native", MessageBoxButton.OK, MessageBoxImage.Information);
+                var message = "Update available.\n\nCurrent: " + currentVersion + "\nLatest: " + latestPackage.Version + "\n\nInstall now?";
+                AppendLog("Update available: " + latestPackage.Version + " (current " + currentVersion + ")");
+
+                if (string.IsNullOrWhiteSpace(latestPackage.DownloadUrl))
+                {
+                    MessageBox.Show(this,
+                        "Update is available, but no installer download URL was provided by the feed.",
+                        "Launcher Native",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Warning);
+                    return;
+                }
+
+                var choice = MessageBox.Show(this, message, "Launcher Native", MessageBoxButton.YesNo, MessageBoxImage.Information);
+                if (choice != MessageBoxResult.Yes)
+                {
+                    AppendLog("Update install was skipped by user.");
+                    return;
+                }
+
+                var launched = LaunchUpdateInstaller(latestPackage.DownloadUrl, latestPackage.Checksum, out var launchError);
+                if (!launched)
+                {
+                    AppendLog("Failed to start updater: " + launchError);
+                    MessageBox.Show(this,
+                        "Update installer could not be started.\n\n" + launchError,
+                        "Launcher Native",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Error);
+                    return;
+                }
+
+                AppendLog("Updater launched. Closing Launcher so installation can continue.");
+                MessageBox.Show(this,
+                    "Updater started. Launcher will close now to continue installation.",
+                    "Launcher Native",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+                Close();
             }
             else
             {
@@ -181,6 +218,88 @@ public partial class MainWindow : Window
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
         }
+    }
+
+    private bool LaunchUpdateInstaller(string downloadUrl, string? checksum, out string error)
+    {
+        error = string.Empty;
+
+        try
+        {
+            var updateScriptPath = Path.Combine(_launcherRoot, "update", "Install-LauncherUpdate.ps1");
+            if (!File.Exists(updateScriptPath))
+            {
+                error = "Install-LauncherUpdate.ps1 was not found: " + updateScriptPath;
+                return false;
+            }
+
+            var hostExecutable = ResolvePowerShellHost();
+            var arguments =
+                $"-NoProfile -ExecutionPolicy Bypass -File \"{updateScriptPath}\" -DownloadUrl \"{downloadUrl}\" -InstallDir \"{_launcherRoot}\"";
+
+            if (!string.IsNullOrWhiteSpace(checksum))
+            {
+                arguments += $" -Checksum \"{checksum}\"";
+            }
+
+            var startInfo = new ProcessStartInfo
+            {
+                FileName = hostExecutable,
+                Arguments = arguments,
+                UseShellExecute = true,
+                WorkingDirectory = _launcherRoot
+            };
+
+            Process.Start(startInfo);
+            return true;
+        }
+        catch (Exception ex)
+        {
+            error = ex.Message;
+            return false;
+        }
+    }
+
+    private static string ResolvePowerShellHost()
+    {
+        var pwshPath = FindExecutableInPath("pwsh.exe");
+        if (!string.IsNullOrWhiteSpace(pwshPath))
+        {
+            return pwshPath;
+        }
+
+        var powershellPath = FindExecutableInPath("powershell.exe");
+        if (!string.IsNullOrWhiteSpace(powershellPath))
+        {
+            return powershellPath;
+        }
+
+        throw new FileNotFoundException("PowerShell host was not found. Install PowerShell 7 or Windows PowerShell.");
+    }
+
+    private static string? FindExecutableInPath(string executable)
+    {
+        var pathValue = Environment.GetEnvironmentVariable("PATH");
+        if (string.IsNullOrWhiteSpace(pathValue))
+        {
+            return null;
+        }
+
+        foreach (var pathPart in pathValue.Split(Path.PathSeparator))
+        {
+            if (string.IsNullOrWhiteSpace(pathPart))
+            {
+                continue;
+            }
+
+            var candidate = Path.Combine(pathPart.Trim(), executable);
+            if (File.Exists(candidate))
+            {
+                return candidate;
+            }
+        }
+
+        return null;
     }
 
     private static async Task<string> GetUpdatePayloadAsync(string updateUrl)
@@ -244,13 +363,13 @@ public partial class MainWindow : Window
         return true;
     }
 
-    private static bool TryGetLatestVersion(JsonElement rootElement, out Version latestVersion)
+    private static bool TryGetLatestUpdatePackage(JsonElement rootElement, out UpdatePackage? package)
     {
-        latestVersion = new Version(0, 0);
+        package = null;
 
         if (rootElement.ValueKind == JsonValueKind.Array)
         {
-            Version? arrayLatestVersion = null;
+            UpdatePackage? arrayLatestPackage = null;
 
             foreach (var item in rootElement.EnumerateArray())
             {
@@ -264,28 +383,98 @@ public partial class MainWindow : Window
                     continue;
                 }
 
-                if (arrayLatestVersion is null || parsedVersion > arrayLatestVersion)
+                if (arrayLatestPackage is null || parsedVersion > arrayLatestPackage.Version)
                 {
-                    arrayLatestVersion = parsedVersion;
+                    package = new UpdatePackage(
+                        parsedVersion,
+                        TryGetStringProperty(item, "downloadUrl"),
+                        TryNormalizeSha256(TryGetStringProperty(item, "checksum")));
+                    arrayLatestPackage = package;
                 }
             }
 
-            if (arrayLatestVersion is null)
+            if (arrayLatestPackage is null)
             {
                 return false;
             }
 
-            latestVersion = arrayLatestVersion;
+            package = arrayLatestPackage;
             return true;
         }
 
         if (rootElement.ValueKind == JsonValueKind.Object && TryGetVersionText(rootElement, out var objectVersionText))
         {
-            return TryParseVersion(objectVersionText, out latestVersion);
+            if (!TryParseVersion(objectVersionText, out var parsedVersion))
+            {
+                return false;
+            }
+
+            var downloadUrl = TryGetStringProperty(rootElement, "downloadUrl");
+            string? checksum = TryNormalizeSha256(TryGetStringProperty(rootElement, "checksum"));
+
+            if (rootElement.TryGetProperty("assets", out var assets) && assets.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var asset in assets.EnumerateArray())
+                {
+                    var candidateUrl = TryGetStringProperty(asset, "browser_download_url");
+                    if (string.IsNullOrWhiteSpace(candidateUrl))
+                    {
+                        continue;
+                    }
+
+                    if (candidateUrl.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+                    {
+                        downloadUrl = candidateUrl;
+                        var digest = TryGetStringProperty(asset, "digest");
+                        if (!string.IsNullOrWhiteSpace(digest))
+                        {
+                            checksum = TryNormalizeSha256(digest);
+                        }
+                        break;
+                    }
+                }
+            }
+
+            package = new UpdatePackage(parsedVersion, downloadUrl, checksum);
+            return true;
         }
 
         return false;
     }
+
+    private static string? TryGetStringProperty(JsonElement element, string propertyName)
+    {
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            return null;
+        }
+
+        if (!element.TryGetProperty(propertyName, out var property) || property.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+
+        var value = property.GetString();
+        return string.IsNullOrWhiteSpace(value) ? null : value;
+    }
+
+    private static string? TryNormalizeSha256(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return null;
+        }
+
+        var trimmed = value.Trim();
+        if (trimmed.StartsWith("sha256:", StringComparison.OrdinalIgnoreCase))
+        {
+            return trimmed.Substring("sha256:".Length);
+        }
+
+        return trimmed;
+    }
+
+    private sealed record UpdatePackage(Version Version, string? DownloadUrl, string? Checksum);
 
     private static bool TryGetVersionText(JsonElement element, out string? versionText)
     {
