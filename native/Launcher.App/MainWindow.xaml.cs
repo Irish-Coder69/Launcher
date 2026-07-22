@@ -1,6 +1,9 @@
 ﻿using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Net.Http;
+using System.Text.Json;
+using System.Text.Json.Nodes;
 using System.Windows;
 using Microsoft.Win32;
 using Launcher.Core;
@@ -14,6 +17,9 @@ namespace Launcher.App;
 /// </summary>
 public partial class MainWindow : Window
 {
+    private const string DefaultUpdateUrl = "https://raw.githubusercontent.com/Irish-Coder69/Launcher/main/update/versions.json";
+    private static readonly HttpClient HttpClient = new();
+
     private readonly LauncherConfigStore _configStore = new();
     private readonly LauncherScriptBridge _scriptBridge = new();
     private readonly LauncherNativeDetectionService _nativeDetectionService = new();
@@ -33,6 +39,26 @@ public partial class MainWindow : Window
 
         DetectLauncherPaths();
         ReloadConfigView();
+    }
+
+    private void ExitMenuItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        Close();
+    }
+
+    private async void AboutMenuItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        var about = new AboutWindow(GetCurrentVersionText())
+        {
+            Owner = this
+        };
+
+        about.ShowDialog();
+
+        if (about.CheckForUpdatesRequested)
+        {
+            await CheckForUpdatesAsync();
+        }
     }
 
     private void DetectLauncherPaths()
@@ -101,6 +127,147 @@ public partial class MainWindow : Window
             StatusText.Text = "Config load failed";
             AppendLog("Config error: " + ex.Message);
         }
+    }
+
+    private async Task CheckForUpdatesAsync()
+    {
+        try
+        {
+            var updateUrl = GetUpdateUrl();
+            AppendLog("Checking for updates from: " + updateUrl);
+
+            var payload = await HttpClient.GetStringAsync(updateUrl);
+            using var document = JsonDocument.Parse(payload);
+            if (document.RootElement.ValueKind != JsonValueKind.Array)
+            {
+                throw new InvalidDataException("Update feed did not return a version list.");
+            }
+
+            Version? latestVersion = null;
+            foreach (var item in document.RootElement.EnumerateArray())
+            {
+                if (!item.TryGetProperty("version", out var versionProperty))
+                {
+                    continue;
+                }
+
+                var versionText = versionProperty.GetString();
+                if (!TryParseVersion(versionText, out var parsedVersion))
+                {
+                    continue;
+                }
+
+                if (latestVersion is null || parsedVersion > latestVersion)
+                {
+                    latestVersion = parsedVersion;
+                }
+            }
+
+            if (latestVersion is null)
+            {
+                throw new InvalidDataException("No valid versions were found in update feed.");
+            }
+
+            var currentVersionText = GetCurrentVersionText();
+            if (!TryParseVersion(currentVersionText, out var currentVersion))
+            {
+                MessageBox.Show(this,
+                    "Current version could not be parsed from version.txt.\nDetected: " + currentVersionText,
+                    "Launcher Native",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Warning);
+                return;
+            }
+
+            if (latestVersion > currentVersion)
+            {
+                var message = "Update available.\n\nCurrent: " + currentVersion + "\nLatest: " + latestVersion;
+                AppendLog("Update available: " + latestVersion + " (current " + currentVersion + ")");
+                MessageBox.Show(this, message, "Launcher Native", MessageBoxButton.OK, MessageBoxImage.Information);
+            }
+            else
+            {
+                AppendLog("No update available. Current version is up to date: " + currentVersion);
+                MessageBox.Show(this,
+                    "You are up to date.\n\nCurrent version: " + currentVersion,
+                    "Launcher Native",
+                    MessageBoxButton.OK,
+                    MessageBoxImage.Information);
+            }
+        }
+        catch (Exception ex)
+        {
+            AppendLog("Update check failed: " + ex.Message);
+            MessageBox.Show(this,
+                "Update check failed.\n\n" + ex.Message,
+                "Launcher Native",
+                MessageBoxButton.OK,
+                MessageBoxImage.Warning);
+        }
+    }
+
+    private string GetCurrentVersionText()
+    {
+        var versionPath = Path.Combine(_launcherRoot, "version.txt");
+        if (!File.Exists(versionPath))
+        {
+            return "unknown";
+        }
+
+        try
+        {
+            var text = File.ReadAllText(versionPath).Trim();
+            return string.IsNullOrWhiteSpace(text) ? "unknown" : text;
+        }
+        catch
+        {
+            return "unknown";
+        }
+    }
+
+    private string GetUpdateUrl()
+    {
+        try
+        {
+            var node = _configDocument?.Root?["updateCheckUrl"];
+            if (node is not null)
+            {
+                var text = node.GetValue<string>();
+                if (!string.IsNullOrWhiteSpace(text))
+                {
+                    return text;
+                }
+            }
+        }
+        catch
+        {
+            // Fall back to the default feed URL.
+        }
+
+        return DefaultUpdateUrl;
+    }
+
+    private static bool TryParseVersion(string? versionText, out Version version)
+    {
+        version = new Version(0, 0);
+        if (string.IsNullOrWhiteSpace(versionText))
+        {
+            return false;
+        }
+
+        var normalized = versionText.Trim();
+        if (normalized.StartsWith("v", StringComparison.OrdinalIgnoreCase))
+        {
+            normalized = normalized[1..];
+        }
+
+        if (!Version.TryParse(normalized, out var parsedVersion) || parsedVersion is null)
+        {
+            return false;
+        }
+
+        version = parsedVersion;
+        return true;
     }
 
     private void SetCloseMethodSelection(string? closeMethod)

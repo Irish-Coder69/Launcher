@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.7 - 2026-07-22
+
+- Added a native top menu bar with `File > Exit` and `Help > About`.
+- Added an About dialog with app description, creator credit, and copyright details.
+- Added `Check for Updates` action inside About that checks the configured update feed and compares versions.
+
 ## 1.1.6 - 2026-07-22
 
 - Native WPF app now starts with Dry Run disabled by default.

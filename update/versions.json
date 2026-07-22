@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.1.7",
+    "releaseDate": "2026-07-22",
+    "description": "Add native menu bar and About dialog with update check",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.1.7/Launcher-1.1.7-Setup.exe",
+    "checksum": "0BC243E47DFAA0A16F9E93087BEF1CF34DBEB67EFCFC1C4D7CC22D8964A4FFCE",
+    "isRequired": false,
+    "notes": [
+      "Added File and Help navigation menu in native app",
+      "Added About dialog with creator and copyright details",
+      "Added Check for Updates action inside About"
+    ]
+  },
+  {
     "version": "1.1.6",
     "releaseDate": "2026-07-22",
     "description": "Default native launcher runs are now live (Dry Run off)",
