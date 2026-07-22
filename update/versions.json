@@ -1,5 +1,31 @@
 [
   {
+    "version": "1.1.11",
+    "releaseDate": "2026-07-22",
+    "description": "Fix native update check to use GitHub releases",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.1.11/Launcher-1.1.11-Setup.exe",
+    "checksum": "2189F4829C66ABCFB4BDE9A9D7E83092E9F3775CD88AC2D47DCC386655F36E5C",
+    "isRequired": false,
+    "notes": [
+      "Native About dialog now resolves GitHub Releases for the launcher update feed",
+      "Update checking supports both versions.json and latest-release JSON payloads",
+      "Rebuilt the installer for the 1.1.11 release line"
+    ]
+  },
+  {
+    "version": "1.1.10",
+    "releaseDate": "2026-07-22",
+    "description": "Fix Stockroom Analytics Access detection to check each program independently",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.1.10/Launcher-1.1.10-Setup.exe",
+    "checksum": "D589C917220DE738D28B45EAFE86EA8CF9FA3DCB3AB6E50796F1F46802E1B143",
+    "isRequired": false,
+    "notes": [
+      "Stockroom Analytics no longer inherits another Access app's running state",
+      "Each Access-backed launch step is checked on its own database path and window titles",
+      "Rebuilt the installer for the 1.1.10 release line"
+    ]
+  },
+  {
     "version": "1.1.9",
     "releaseDate": "2026-07-22",
     "description": "PowerShell analyzer cleanup and naming consistency",

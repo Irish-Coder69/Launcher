@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.1.11 - 2026-07-22
+
+- Fixed the native About dialog update check so it resolves GitHub releases instead of stopping at the raw manifest URL.
+- Added support for both the existing versions.json feed and GitHub's latest-release payload.
+- Rebuilt the installer for the updated update-check behavior.
+
+## 1.1.10 - 2026-07-22
+
+- Fixed Access-backed launch detection so Stockroom Analytics no longer inherits another app's MSACCESS state.
+- Removed the generic Access process fallback for launch checks so each database is evaluated on its own path and titles.
+- Rebuilt the installer for the updated launch detection behavior.
+
 ## 1.1.9 - 2026-07-22
 
 - Resolved PowerShell analyzer warnings in the close/session helpers.

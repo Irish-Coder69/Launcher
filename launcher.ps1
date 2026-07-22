@@ -3632,7 +3632,8 @@ function Test-LaunchStepAlreadyRunning {
     }
 
     $programExtension = [string]([System.IO.Path]::GetExtension([string]$programForFolderDetection)).ToLowerInvariant()
-    if (@('.accdb', '.accde') -contains $programExtension) {
+    $isAccessDatabaseTarget = @('.accdb', '.accde') -contains $programExtension
+    if ($isAccessDatabaseTarget) {
         $databasePaths = @($RawProgramPath, $ResolvedProgramPath)
         if ($Step.PSObject.Properties.Name -contains "fallbackProgramPath") {
             $databasePaths += [string]$Step.fallbackProgramPath
@@ -3667,15 +3668,10 @@ function Test-LaunchStepAlreadyRunning {
     }
 
     $programForProcessDetection = if (-not [string]::IsNullOrWhiteSpace($ResolvedProgramPath)) { $ResolvedProgramPath } else { $RawProgramPath }
-    if (-not $isDirectoryTarget -and -not [string]::IsNullOrWhiteSpace($programForProcessDetection)) {
+    if (-not $isDirectoryTarget -and -not [string]::IsNullOrWhiteSpace($programForProcessDetection) -and -not $isAccessDatabaseTarget) {
         $programLeaf = [System.IO.Path]::GetFileNameWithoutExtension([string]$programForProcessDetection)
         if (-not [string]::IsNullOrWhiteSpace($programLeaf)) {
             $processCandidates += $programLeaf
-        }
-
-        $programExtension = [string]([System.IO.Path]::GetExtension([string]$programForProcessDetection)).ToLowerInvariant()
-        if (@('.accdb', '.accde') -contains $programExtension) {
-            $processCandidates += "MSACCESS"
         }
     }
 

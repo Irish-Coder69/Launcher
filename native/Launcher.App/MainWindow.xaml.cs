@@ -2,6 +2,7 @@
 using System.IO;
 using System.Linq;
 using System.Net.Http;
+using System.Net.Http.Headers;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Windows;
@@ -18,6 +19,7 @@ namespace Launcher.App;
 public partial class MainWindow : Window
 {
     private const string DefaultUpdateUrl = "https://raw.githubusercontent.com/Irish-Coder69/Launcher/main/update/versions.json";
+    private const string GitHubLatestReleaseUrl = "https://api.github.com/repos/Irish-Coder69/Launcher/releases/latest";
     private static readonly HttpClient HttpClient = new();
 
     private readonly LauncherConfigStore _configStore = new();
@@ -133,39 +135,14 @@ public partial class MainWindow : Window
     {
         try
         {
-            var updateUrl = GetUpdateUrl();
+            var updateUrl = ResolveUpdateUrl(GetUpdateUrl());
             AppendLog("Checking for updates from: " + updateUrl);
 
-            var payload = await HttpClient.GetStringAsync(updateUrl);
+            var payload = await GetUpdatePayloadAsync(updateUrl);
             using var document = JsonDocument.Parse(payload);
-            if (document.RootElement.ValueKind != JsonValueKind.Array)
+            if (!TryGetLatestVersion(document.RootElement, out var latestVersion))
             {
-                throw new InvalidDataException("Update feed did not return a version list.");
-            }
-
-            Version? latestVersion = null;
-            foreach (var item in document.RootElement.EnumerateArray())
-            {
-                if (!item.TryGetProperty("version", out var versionProperty))
-                {
-                    continue;
-                }
-
-                var versionText = versionProperty.GetString();
-                if (!TryParseVersion(versionText, out var parsedVersion))
-                {
-                    continue;
-                }
-
-                if (latestVersion is null || parsedVersion > latestVersion)
-                {
-                    latestVersion = parsedVersion;
-                }
-            }
-
-            if (latestVersion is null)
-            {
-                throw new InvalidDataException("No valid versions were found in update feed.");
+                throw new InvalidDataException("Update feed did not return a version entry.");
             }
 
             var currentVersionText = GetCurrentVersionText();
@@ -204,6 +181,137 @@ public partial class MainWindow : Window
                 MessageBoxButton.OK,
                 MessageBoxImage.Warning);
         }
+    }
+
+    private static async Task<string> GetUpdatePayloadAsync(string updateUrl)
+    {
+        using var request = new HttpRequestMessage(HttpMethod.Get, updateUrl);
+        request.Headers.UserAgent.ParseAdd("Launcher-Native");
+        request.Headers.Accept.Add(new MediaTypeWithQualityHeaderValue("application/vnd.github+json"));
+
+        using var response = await HttpClient.SendAsync(request).ConfigureAwait(false);
+        response.EnsureSuccessStatusCode();
+
+        return await response.Content.ReadAsStringAsync().ConfigureAwait(false);
+    }
+
+    private static string ResolveUpdateUrl(string updateUrl)
+    {
+        if (TryResolveGitHubVersionsFeed(updateUrl, out var resolvedUrl))
+        {
+            return resolvedUrl;
+        }
+
+        return updateUrl;
+    }
+
+    private static bool TryResolveGitHubVersionsFeed(string updateUrl, out string resolvedUrl)
+    {
+        resolvedUrl = updateUrl;
+
+        if (string.IsNullOrWhiteSpace(updateUrl))
+        {
+            return false;
+        }
+
+        if (!Uri.TryCreate(updateUrl, UriKind.Absolute, out var uri))
+        {
+            return false;
+        }
+
+        if (!string.Equals(uri.Host, "raw.githubusercontent.com", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        var segments = uri.AbsolutePath.Split('/', StringSplitOptions.RemoveEmptyEntries);
+        if (segments.Length < 4)
+        {
+            return false;
+        }
+
+        if (!string.Equals(segments[3], "update", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        if (!string.Equals(segments[^1], "versions.json", StringComparison.OrdinalIgnoreCase))
+        {
+            return false;
+        }
+
+        resolvedUrl = $"https://api.github.com/repos/{segments[0]}/{segments[1]}/releases/latest";
+        return true;
+    }
+
+    private static bool TryGetLatestVersion(JsonElement rootElement, out Version latestVersion)
+    {
+        latestVersion = new Version(0, 0);
+
+        if (rootElement.ValueKind == JsonValueKind.Array)
+        {
+            Version? arrayLatestVersion = null;
+
+            foreach (var item in rootElement.EnumerateArray())
+            {
+                if (!TryGetVersionText(item, out var versionText))
+                {
+                    continue;
+                }
+
+                if (!TryParseVersion(versionText, out var parsedVersion))
+                {
+                    continue;
+                }
+
+                if (arrayLatestVersion is null || parsedVersion > arrayLatestVersion)
+                {
+                    arrayLatestVersion = parsedVersion;
+                }
+            }
+
+            if (arrayLatestVersion is null)
+            {
+                return false;
+            }
+
+            latestVersion = arrayLatestVersion;
+            return true;
+        }
+
+        if (rootElement.ValueKind == JsonValueKind.Object && TryGetVersionText(rootElement, out var objectVersionText))
+        {
+            return TryParseVersion(objectVersionText, out latestVersion);
+        }
+
+        return false;
+    }
+
+    private static bool TryGetVersionText(JsonElement element, out string? versionText)
+    {
+        versionText = null;
+
+        if (element.ValueKind != JsonValueKind.Object)
+        {
+            return false;
+        }
+
+        foreach (var propertyName in new[] { "version", "tag_name", "tagName" })
+        {
+            if (!element.TryGetProperty(propertyName, out var property))
+            {
+                continue;
+            }
+
+            var candidate = property.GetString();
+            if (!string.IsNullOrWhiteSpace(candidate))
+            {
+                versionText = candidate;
+                return true;
+            }
+        }
+
+        return false;
     }
 
     private string GetCurrentVersionText()
