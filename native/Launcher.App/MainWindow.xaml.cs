@@ -26,6 +26,7 @@ public partial class MainWindow : Window
     private readonly LauncherConfigStore _configStore = new();
     private readonly LauncherScriptBridge _scriptBridge = new();
     private readonly LauncherNativeDetectionService _nativeDetectionService = new();
+    private readonly LauncherNativeStartRunner _nativeStartRunner = new();
     private readonly ObservableCollection<string> _logLines = new();
     private readonly ObservableCollection<StepRow> _stepRows = new();
     private bool _isBusy;
@@ -604,7 +605,7 @@ public partial class MainWindow : Window
         }
 
         var configPath = ConfigPathTextBox.Text.Trim();
-        if (!File.Exists(_launcherScriptPath))
+        if (mode != LauncherMode.Start && !File.Exists(_launcherScriptPath))
         {
             MessageBox.Show(this, "launcher.ps1 was not found. Verify launcher root detection.", "Launcher Native", MessageBoxButton.OK, MessageBoxImage.Error);
             return;
@@ -624,15 +625,33 @@ public partial class MainWindow : Window
 
         try
         {
-            var exitCode = await _scriptBridge.RunAsync(
-                _launcherScriptPath,
-                configPath,
-                mode,
-                dryRun,
-                line => Dispatcher.Invoke(() => AppendLog(line)));
+            if (mode == LauncherMode.Start)
+            {
+                if (_configDocument is null || !string.Equals(_configDocument.FilePath, configPath, StringComparison.OrdinalIgnoreCase))
+                {
+                    _configDocument = _configStore.Load(configPath);
+                }
 
-            StatusText.Text = exitCode == 0 ? "Completed" : "Completed with errors";
-            AppendLog("Exit code: " + exitCode);
+                await _nativeStartRunner.RunAsync(
+                    _configDocument,
+                    dryRun,
+                    line => Dispatcher.Invoke(() => AppendLog(line)));
+
+                StatusText.Text = "Completed";
+                AppendLog("Native start run completed.");
+            }
+            else
+            {
+                var exitCode = await _scriptBridge.RunAsync(
+                    _launcherScriptPath,
+                    configPath,
+                    mode,
+                    dryRun,
+                    line => Dispatcher.Invoke(() => AppendLog(line)));
+
+                StatusText.Text = exitCode == 0 ? "Completed" : "Completed with errors";
+                AppendLog("Exit code: " + exitCode);
+            }
         }
         catch (Exception ex)
         {

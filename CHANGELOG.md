@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.14 - 2026-07-29
+
+- Moved the main Start flow into the native app so launch execution no longer depends on the PowerShell bridge.
+- Preserved Visual Board login and update-table automation in the native start runner, including the password step and post-update wait.
+- Aligned the launch order so update-table runs only after login completion is confirmed, then rebuilt the installer for the native-start release line.
+
 ## 1.1.13 - 2026-07-22
 
 - Fixed native update behavior so choosing an available update now launches the installer flow.

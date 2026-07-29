@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.1.14",
+    "releaseDate": "2026-07-29",
+    "description": "Move the main launcher start flow into the native app",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.1.14/Launcher-1.1.14-Setup.exe",
+    "checksum": "8619B022103B00643D2AD9288245B77F744C3EDB08F91B6D40D1E42299EC007E",
+    "isRequired": false,
+    "notes": [
+      "Native Start now runs launch execution, login automation, and session tracking without the PowerShell bridge",
+      "Visual Board update-table automation is preserved in the native start flow with password entry and post-update wait",
+      "Launch ordering now confirms login completion before running the Visual Board update-table step"
+    ]
+  },
+  {
     "version": "1.1.13",
     "releaseDate": "2026-07-22",
     "description": "Native update check now launches installer when update is accepted",

@@ -6,8 +6,14 @@ This folder contains the first native desktop migration for Launcher.
 
 - WPF desktop app shell (`Launcher.App`)
 - Core services/models (`Launcher.Core`)
-- Bridge execution of existing `launcher.ps1` modes:
-  - `Start`
+- Native `Start` execution for current launch-step startup flow:
+  - launch/running detection
+  - updater wait window handling
+  - login key sequences and login-complete validation
+  - monitor movement, maximize/minimize handling
+  - Visual Board update-table automation
+  - launcher session-state recording for close tracking
+- Bridge execution of existing `launcher.ps1` modes that are not yet ported:
   - `Close`
   - `StartAndWaitForCloseCommand`
 - Native config editing and save workflow for global settings and step enabled states
@@ -16,7 +22,8 @@ This folder contains the first native desktop migration for Launcher.
 ## What Works Today
 
 - Load and preview steps from `launcher.config.json`
-- Run `Start` and `Close` from native UI
+- Run `Start` natively from the desktop UI
+- Run `Close` from native UI through the PowerShell bridge
 - Live output panel for non-interactive runs
 - Open an interactive PowerShell window for `StartAndWaitForCloseCommand`
 - Edit and save these settings back to `launcher.config.json`:
@@ -28,6 +35,12 @@ This folder contains the first native desktop migration for Launcher.
 - Test first native logic port from UI:
   - `Native Detect Running`
   - `Native Detect Close Targets`
+
+## Current Gaps
+
+- Native `Close` execution is not ported yet.
+- Native `StartAndWaitForCloseCommand` is not ported yet.
+- Native `access-sql` execution is not ported yet; the current app throws if an enabled `access-sql` step is encountered during native `Start`.
 
 ## Build
 
@@ -68,6 +81,6 @@ Output folder:
 ## Next Migration Steps
 
 1. Move run-state/session tracking from script into `Launcher.Core`.
-2. Expand native detection from discovery to full native open/close execution.
-3. Move login automation flows into native code.
-4. Keep script bridge as fallback until feature parity is complete.
+2. Expand native detection from discovery to full native close execution.
+3. Port `StartAndWaitForCloseCommand` into the WPF app instead of launching PowerShell.
+4. Port native `access-sql` execution for full step-type parity.

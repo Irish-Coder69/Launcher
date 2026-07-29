@@ -3917,7 +3917,6 @@ function Invoke-LaunchStep {
 
     Invoke-PreLoginWindowPreparation -Step $Step -Process $process -DryRun:$DryRun
     Send-LoginSequence -Step $Step -Process $process -DryRun:$DryRun
-    Invoke-UpdateTableFlow -Step $Step -Process $process -DryRun:$DryRun
 
     if ($Step.PSObject.Properties.Name -contains "waitForLoginCompleteSeconds") {
         $loginCompleteWait = [int]$Step.waitForLoginCompleteSeconds
@@ -3934,6 +3933,7 @@ function Invoke-LaunchStep {
 
     Confirm-LoginCompletion -Step $Step -Process $process -DryRun:$DryRun
     Invoke-MoveWindowToMonitor -Step $Step -Process $process -DryRun:$DryRun
+    Invoke-UpdateTableFlow -Step $Step -Process $process -DryRun:$DryRun
     Invoke-MinimizeLaunchedWindow -Step $Step -Process $process -AfterCompletion -DryRun:$DryRun
 
     if ($Step.PSObject.Properties.Name -contains "minimizeAdditionalWindowTitlesAfterCompletion") {
