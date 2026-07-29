@@ -260,25 +260,9 @@ public sealed class LauncherNativeStartRunner
             throw new InvalidOperationException($"Could not activate login window for '{step.Name}'.");
         }
 
-        var primedValue = false;
-        if (step.LoginSequence.Count > 0)
+        foreach (var entry in step.LoginSequence)
         {
-            var firstKeys = step.LoginSequence[0].Keys;
-            if (LooksLikePlainTextLoginValue(firstKeys))
-            {
-                primedValue = TryPrimeLoginInput(loginTitles, activationTitles, process?.Id, firstKeys, onOutput);
-            }
-        }
-
-        for (var i = 0; i < step.LoginSequence.Count; i++)
-        {
-            var entry = step.LoginSequence[i];
             if (string.IsNullOrWhiteSpace(entry.Keys))
-            {
-                continue;
-            }
-
-            if (primedValue && i == 0)
             {
                 continue;
             }
@@ -286,93 +270,6 @@ public sealed class LauncherNativeStartRunner
             SendKeys.SendWait(entry.Keys);
             await Task.Delay(entry.DelayMs ?? 700, cancellationToken);
         }
-    }
-
-    private static bool LooksLikePlainTextLoginValue(string? value)
-    {
-        if (string.IsNullOrWhiteSpace(value))
-        {
-            return false;
-        }
-
-        return !value.Contains('{') &&
-               !value.Contains('}') &&
-               !value.Contains('%') &&
-               !value.Contains('^') &&
-               !value.Contains('+');
-    }
-
-    private static bool TryPrimeLoginInput(
-        IReadOnlyList<string> loginTitles,
-        IReadOnlyList<string> activationTitles,
-        int? processId,
-        string loginValue,
-        Action<string>? onOutput)
-    {
-        var handle = TryFindFirstWindow(loginTitles, processId);
-        if (handle == IntPtr.Zero)
-        {
-            handle = TryFindFirstWindow(activationTitles, processId);
-        }
-
-        if (handle == IntPtr.Zero)
-        {
-            return false;
-        }
-
-        var window = AutomationElement.FromHandle(handle);
-        if (window is null)
-        {
-            return false;
-        }
-
-        var editControl = FindFirstEditControl(window);
-        if (editControl is null)
-        {
-            return false;
-        }
-
-        try
-        {
-            editControl.SetFocus();
-        }
-        catch
-        {
-            // Focus may fail on some Access forms; fallback send keys can still work.
-        }
-
-        if (editControl.TryGetCurrentPattern(ValuePattern.Pattern, out var patternObj) && patternObj is ValuePattern valuePattern && !valuePattern.Current.IsReadOnly)
-        {
-            try
-            {
-                valuePattern.SetValue(loginValue);
-                Log(onOutput, "Applied login value directly to login input field.");
-                return true;
-            }
-            catch (Exception ex)
-            {
-                Log(onOutput, $"Direct login field value set failed; falling back to SendKeys. {ex.Message}");
-            }
-        }
-
-        try
-        {
-            SendKeys.SendWait("^a{BACKSPACE}");
-            SendKeys.SendWait(loginValue);
-            Log(onOutput, "Applied login value via focused login input fallback.");
-            return true;
-        }
-        catch (Exception ex)
-        {
-            Log(onOutput, $"Focused login input fallback failed; sequence typing will continue. {ex.Message}");
-            return false;
-        }
-    }
-
-    private static AutomationElement? FindFirstEditControl(AutomationElement window)
-    {
-        var condition = new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit);
-        return window.FindFirst(TreeScope.Descendants, condition);
     }
 
     private static async Task ConfirmLoginCompletionAsync(

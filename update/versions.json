@@ -1,5 +1,17 @@
 [
   {
+    "version": "1.1.22",
+    "releaseDate": "2026-07-29",
+    "description": "Restore prior Visual Board login sequence behavior in native start flow",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.1.22/Launcher-1.1.22-Setup.exe",
+    "checksum": "7816714A8A05CD1FB00FDEE57BCA1CB636B52ED7AD3A69999C4DAA7D3C1BB68F",
+    "isRequired": false,
+    "notes": [
+      "Reverted login input priming and restored direct configured key-sequence login behavior for Visual Board",
+      "Preserved improved login-window activation fallback logic"
+    ]
+  },
+  {
     "version": "1.1.21",
     "releaseDate": "2026-07-29",
     "description": "Fix Stockroom false already-running detection for Access-hosted steps",

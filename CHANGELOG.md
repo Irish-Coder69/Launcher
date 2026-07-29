@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.22 - 2026-07-29
+
+- Reverted native login input priming for Visual Board and restored the prior key-sequence login behavior.
+- Keeps strict/fallback login window activation improvements while removing the priming path that changed login behavior.
+
 ## 1.1.21 - 2026-07-29
 
 - Fixed native Access running detection to ignore generic window-title matches ("Access", "Microsoft Access") for Access-hosted steps.
