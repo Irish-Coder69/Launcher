@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.1.17",
+    "releaseDate": "2026-07-29",
+    "description": "Improve Visual Board login verification reliability",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.1.17/Launcher-1.1.17-Setup.exe",
+    "checksum": "C52F2D6301668A18C317D6951189024C046C89495B4B038AE6F4BEDBEE6C79D1",
+    "isRequired": false,
+    "notes": [
+      "Visual Board login verification no longer requires the login window to close when main window readiness is confirmed",
+      "Preserved native start flow and update-table automation behavior",
+      "Rebuilt installer for the login-verification reliability release"
+    ]
+  },
+  {
     "version": "1.1.16",
     "releaseDate": "2026-07-29",
     "description": "Native launcher forces maximized startup",

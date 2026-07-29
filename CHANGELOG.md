@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.17 - 2026-07-29
+
+- Relaxed Visual Board login verification so startup no longer fails when the login form remains visible but the main window and controls are ready.
+- Kept native start flow behavior and Visual Board update-table automation unchanged.
+- Rebuilt the installer for the login-verification reliability release line.
+
 ## 1.1.16 - 2026-07-29
 
 - Forced the native Launcher window to maximize on load so it opens full screen consistently.

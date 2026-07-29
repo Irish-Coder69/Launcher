@@ -131,7 +131,7 @@
       ],
       "loginSuccessTimeoutSeconds": 60,
       "loginSuccessIntervalMs": 1000,
-      "loginSuccessRequireLoginWindowClosed": true,
+      "loginSuccessRequireLoginWindowClosed": false,
       "loginSuccessRequireMainWindowVisible": true,
       "moveToMonitorBeforeLogin": true,
       "moveToMonitorAfterLogin": false,
