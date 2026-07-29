@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.16 - 2026-07-29
+
+- Forced the native Launcher window to maximize on load so it opens full screen consistently.
+- Kept the native start flow and Visual Board automation intact.
+- Rebuilt the installer for the startup-maximized native launcher release line.
+
 ## 1.1.15 - 2026-07-29
 
 - Set the native Launcher window to open maximized by default.

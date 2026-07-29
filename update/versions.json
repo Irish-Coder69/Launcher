@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.1.16",
+    "releaseDate": "2026-07-29",
+    "description": "Native launcher forces maximized startup",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.1.16/Launcher-1.1.16-Setup.exe",
+    "checksum": "EE7FC701AFAB5F238E5736DF075DDB0C09DD3C678714EF320AA3731BAED0F7EC",
+    "isRequired": false,
+    "notes": [
+      "Native Launcher window now forces maximized on load",
+      "Preserved the native start flow and Visual Board automation",
+      "Rebuilt the installer for the startup-maximized native launcher release"
+    ]
+  },
+  {
     "version": "1.1.15",
     "releaseDate": "2026-07-29",
     "description": "Native launcher opens maximized by default",

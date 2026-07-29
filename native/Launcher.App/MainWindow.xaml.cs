@@ -38,11 +38,17 @@ public partial class MainWindow : Window
     public MainWindow()
     {
         InitializeComponent();
+        Loaded += MainWindow_OnLoaded;
         LogListBox.ItemsSource = _logLines;
         StepsGrid.ItemsSource = _stepRows;
 
         DetectLauncherPaths();
         ReloadConfigView();
+    }
+
+    private void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
+    {
+        WindowState = WindowState.Maximized;
     }
 
     private void ExitMenuItem_OnClick(object sender, RoutedEventArgs e)
