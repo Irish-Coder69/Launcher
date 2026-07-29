@@ -1088,6 +1088,17 @@ public sealed class LauncherNativeStartRunner
 
     private static IntPtr TryFindFirstWindow(IReadOnlyList<string> titles, int? processId)
     {
+        var found = TryFindFirstWindowCore(titles, processId);
+        if (found != IntPtr.Zero || !processId.HasValue || processId.Value <= 0)
+        {
+            return found;
+        }
+
+        return TryFindFirstWindowCore(titles, null);
+    }
+
+    private static IntPtr TryFindFirstWindowCore(IReadOnlyList<string> titles, int? processId)
+    {
         foreach (var window in EnumerateWindows())
         {
             if (processId.HasValue && processId.Value > 0 && window.ProcessId != processId.Value)

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.15 - 2026-07-29
+
+- Set the native Launcher window to open maximized by default.
+- Kept the native start flow and Visual Board automation changes in place.
+- Rebuilt the installer for the maximized native launcher release line.
+
 ## 1.1.14 - 2026-07-29
 
 - Moved the main Start flow into the native app so launch execution no longer depends on the PowerShell bridge.

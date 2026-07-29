@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.1.15",
+    "releaseDate": "2026-07-29",
+    "description": "Native launcher opens maximized by default",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.1.15/Launcher-1.1.15-Setup.exe",
+    "checksum": "1E7ED34A68CD46B0347D739C504AF703B443F5531797C30828E6B6A30D22604C",
+    "isRequired": false,
+    "notes": [
+      "Native Launcher window now starts maximized",
+      "Preserved the native start flow and Visual Board automation",
+      "Rebuilt the installer for the maximized native launcher release"
+    ]
+  },
+  {
     "version": "1.1.14",
     "releaseDate": "2026-07-29",
     "description": "Move the main launcher start flow into the native app",
