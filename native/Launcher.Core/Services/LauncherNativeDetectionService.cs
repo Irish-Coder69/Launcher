@@ -15,9 +15,17 @@ public sealed class LauncherNativeDetectionService
 
         var titles = BuildWindowTitleCandidates(step);
         var processNames = BuildProcessCandidates(step);
+        var isAccessHosted = IsAccessHostedStep(step, processNames);
 
         var windowMatch = titles.Count > 0 && WindowTitleMatches(titles);
         var processMatch = processNames.Count > 0 && ProcessMatches(processNames);
+
+        // Access-backed apps share MSACCESS.EXE, so process-only checks can
+        // incorrectly mark one app as running when a different Access app is open.
+        if (isAccessHosted && titles.Count > 0)
+        {
+            return windowMatch;
+        }
 
         if (titles.Count > 0 && processNames.Count > 0)
         {
@@ -35,6 +43,18 @@ public sealed class LauncherNativeDetectionService
         }
 
         return false;
+    }
+
+    private static bool IsAccessHostedStep(LauncherStep step, IReadOnlyCollection<string> processNames)
+    {
+        if (processNames.Any(name => string.Equals(name, "MSACCESS", StringComparison.OrdinalIgnoreCase)))
+        {
+            return true;
+        }
+
+        var extension = Path.GetExtension(step.ProgramPath ?? string.Empty);
+        return string.Equals(extension, ".accdb", StringComparison.OrdinalIgnoreCase) ||
+               string.Equals(extension, ".accde", StringComparison.OrdinalIgnoreCase);
     }
 
     public IReadOnlyList<Process> FindCloseTargets(LauncherStep step)

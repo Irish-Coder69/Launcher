@@ -690,17 +690,27 @@ public sealed class LauncherNativeStartRunner
                     await Task.Delay(TimeSpan.FromSeconds(postLoginWait), cancellationToken);
                 }
 
-                if (!TryActivateWindowAsync(DistinctTitles(new[] { mainWindowTitle }, step.FallbackWindowTitles), process?.Id, 30, 500, cancellationToken).Result)
+                var mainWindowTitles = DistinctTitles(new[] { mainWindowTitle }, step.FallbackWindowTitles);
+                if (!await TryActivateWindowAsync(mainWindowTitles, process?.Id, 30, 500, cancellationToken))
                 {
                     throw new InvalidOperationException($"Could not activate '{mainWindowTitle}' before update table flow.");
                 }
 
+                var buttonTimeoutSeconds = flow.UpdateTableButtonTimeoutSeconds ?? 30;
                 var clicked = false;
                 foreach (var candidate in buttonCandidates)
                 {
-                    if (TryClickNamedControl(mainWindowTitle, DistinctTitles(new[] { mainWindowTitle }, step.FallbackWindowTitles), process?.Id, candidate))
+                    if (await TryClickNamedControlWithRetryAsync(mainWindowTitles, process?.Id, candidate, buttonTimeoutSeconds, 400, cancellationToken))
                     {
                         Log(onOutput, $"Clicked button '{candidate}' in '{mainWindowTitle}'");
+                        clicked = true;
+                        break;
+                    }
+
+                    // Some Access dialogs are not tied to the launched process handle scope.
+                    if (await TryClickNamedControlWithRetryAsync(mainWindowTitles, null, candidate, 3, 250, cancellationToken))
+                    {
+                        Log(onOutput, $"Clicked button '{candidate}' in '{mainWindowTitle}' using desktop-wide window search");
                         clicked = true;
                         break;
                     }
@@ -1136,13 +1146,53 @@ public sealed class LauncherNativeStartRunner
             return false;
         }
 
-        if (control.TryGetCurrentPattern(InvokePattern.Pattern, out var invokePatternObj) && invokePatternObj is InvokePattern invokePattern)
+        if (TryInvokeControlOrAncestor(control))
         {
-            invokePattern.Invoke();
             return true;
         }
 
         return ClickControlCenter(control);
+    }
+
+    private static async Task<bool> TryClickNamedControlWithRetryAsync(
+        IReadOnlyList<string> titles,
+        int? processId,
+        string candidateName,
+        int timeoutSeconds,
+        int intervalMs,
+        CancellationToken cancellationToken)
+    {
+        var attempts = Math.Max(1, (int)Math.Ceiling(timeoutSeconds * 1000d / Math.Max(1, intervalMs)));
+        for (var attempt = 0; attempt < attempts; attempt++)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+            if (TryClickNamedControl(null, titles, processId, candidateName))
+            {
+                return true;
+            }
+
+            await Task.Delay(intervalMs, cancellationToken);
+        }
+
+        return false;
+    }
+
+    private static bool TryInvokeControlOrAncestor(AutomationElement control)
+    {
+        AutomationElement? current = control;
+        while (current is not null)
+        {
+            if (current.TryGetCurrentPattern(InvokePattern.Pattern, out var invokePatternObj) &&
+                invokePatternObj is InvokePattern invokePattern)
+            {
+                invokePattern.Invoke();
+                return true;
+            }
+
+            current = TreeWalker.ControlViewWalker.GetParent(current);
+        }
+
+        return false;
     }
 
     private static AutomationElement? FindControlByCandidateName(AutomationElement window, IEnumerable<string> candidateNames)
@@ -1172,12 +1222,15 @@ public sealed class LauncherNativeStartRunner
             }
 
             var normalizedName = NormalizeName(control.Current.Name);
-            if (string.IsNullOrWhiteSpace(normalizedName))
+            var normalizedAutomationId = NormalizeName(control.Current.AutomationId);
+            if (string.IsNullOrWhiteSpace(normalizedName) && string.IsNullOrWhiteSpace(normalizedAutomationId))
             {
                 continue;
             }
 
-            if (candidates.Any(candidate => normalizedName.Contains(candidate, StringComparison.Ordinal)))
+            if (candidates.Any(candidate =>
+                    (!string.IsNullOrWhiteSpace(normalizedName) && normalizedName.Contains(candidate, StringComparison.Ordinal)) ||
+                    (!string.IsNullOrWhiteSpace(normalizedAutomationId) && normalizedAutomationId.Contains(candidate, StringComparison.Ordinal))))
             {
                 return control;
             }

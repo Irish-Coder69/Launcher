@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.20 - 2026-07-29
+
+- Fixed native Access running-detection so Stockroom Analytics is no longer skipped just because another Access session is open.
+- Improved update-table button activation in native start flow with retry timing, wider window-scope fallback, and parent-control invoke support.
+- Added optional `updateTableButtonTimeoutSeconds` in `updateTableFlow` for slow UI readiness cases.
+
 ## 1.1.19 - 2026-07-29
 
 - Hardened native Visual Board login priming so login input write failures no longer abort startup flow with "Operation cannot be performed".

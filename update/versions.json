@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.1.20",
+    "releaseDate": "2026-07-29",
+    "description": "Fix Stockroom false running-skip and harden native update-table click flow",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.1.20/Launcher-1.1.20-Setup.exe",
+    "checksum": "23DB5A2AC162F79E8C197F0CA4EE186023C1A5ECE9228D9EF989A43AA1BE9839",
+    "isRequired": false,
+    "notes": [
+      "Native Access running detection now requires window-title evidence for Access-hosted steps so Stockroom is not skipped by unrelated MSACCESS sessions",
+      "Update-table click now retries and can invoke parent controls when button text is hosted on nested elements",
+      "Added optional updateTableButtonTimeoutSeconds tuning for slower Visual Board UI readiness"
+    ]
+  },
+  {
     "version": "1.1.19",
     "releaseDate": "2026-07-29",
     "description": "Harden native Visual Board login priming and add branded app icon",

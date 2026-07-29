@@ -259,6 +259,9 @@ public sealed class LauncherUpdateTableFlow
     [JsonPropertyName("updateTableButtonNames")]
     public List<string> UpdateTableButtonNames { get; set; } = new();
 
+    [JsonPropertyName("updateTableButtonTimeoutSeconds")]
+    public int? UpdateTableButtonTimeoutSeconds { get; set; }
+
     [JsonPropertyName("updateTableFallbackKeys")]
     public List<string> UpdateTableFallbackKeys { get; set; } = new();
 
