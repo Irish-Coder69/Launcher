@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.21 - 2026-07-29
+
+- Fixed native Access running detection to ignore generic window-title matches ("Access", "Microsoft Access") for Access-hosted steps.
+- Prevents Stockroom Analytics from being skipped when Visual Board (or another Access app) is open.
+
 ## 1.1.20 - 2026-07-29
 
 - Fixed native Access running-detection so Stockroom Analytics is no longer skipped just because another Access session is open.

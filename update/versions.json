@@ -1,5 +1,17 @@
 [
   {
+    "version": "1.1.21",
+    "releaseDate": "2026-07-29",
+    "description": "Fix Stockroom false already-running detection for Access-hosted steps",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.1.21/Launcher-1.1.21-Setup.exe",
+    "checksum": "943D7534C722430E7E5A1E18F050B0B11F079783E3050803FE00EFACC5E10362",
+    "isRequired": false,
+    "notes": [
+      "Native running detection now ignores generic Access titles for Access-hosted steps",
+      "Stockroom Analytics no longer gets skipped due to another Access app window"
+    ]
+  },
+  {
     "version": "1.1.20",
     "releaseDate": "2026-07-29",
     "description": "Fix Stockroom false running-skip and harden native update-table click flow",

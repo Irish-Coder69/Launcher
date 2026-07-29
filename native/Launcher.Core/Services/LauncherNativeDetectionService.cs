@@ -13,9 +13,9 @@ public sealed class LauncherNativeDetectionService
             return false;
         }
 
-        var titles = BuildWindowTitleCandidates(step);
         var processNames = BuildProcessCandidates(step);
         var isAccessHosted = IsAccessHostedStep(step, processNames);
+        var titles = BuildWindowTitleCandidates(step, isAccessHosted);
 
         var windowMatch = titles.Count > 0 && WindowTitleMatches(titles);
         var processMatch = processNames.Count > 0 && ProcessMatches(processNames);
@@ -96,7 +96,7 @@ public sealed class LauncherNativeDetectionService
              .ToList();
     }
 
-    private static List<string> BuildWindowTitleCandidates(LauncherStep step)
+    private static List<string> BuildWindowTitleCandidates(LauncherStep step, bool isAccessHosted)
     {
         var titles = new List<string>();
         titles.AddRange(step.RunningWindowTitles);
@@ -107,6 +107,13 @@ public sealed class LauncherNativeDetectionService
         }
 
         titles.AddRange(step.FallbackWindowTitles);
+
+        if (isAccessHosted)
+        {
+            titles = titles
+                .Where(title => !IsGenericAccessTitle(title))
+                .ToList();
+        }
 
         return titles
             .Where(s => !string.IsNullOrWhiteSpace(s))
@@ -147,7 +154,7 @@ public sealed class LauncherNativeDetectionService
 
         if (titles.Count == 0)
         {
-            titles.AddRange(BuildWindowTitleCandidates(step));
+            titles.AddRange(BuildWindowTitleCandidates(step, false));
         }
 
         return titles
@@ -231,5 +238,17 @@ public sealed class LauncherNativeDetectionService
     {
         return title.Equals(candidate, StringComparison.OrdinalIgnoreCase) ||
                title.Contains(candidate, StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static bool IsGenericAccessTitle(string? title)
+    {
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            return true;
+        }
+
+        var normalized = title.Trim();
+        return normalized.Equals("Access", StringComparison.OrdinalIgnoreCase) ||
+               normalized.Equals("Microsoft Access", StringComparison.OrdinalIgnoreCase);
     }
 }
