@@ -5,6 +5,7 @@
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
         mc:Ignorable="d"
         Title="Launcher Native" Height="780" Width="1180" MinHeight="660" MinWidth="1020" WindowState="Maximized"
+        Icon="Assets/LauncherIcon.ico"
         WindowStartupLocation="CenterScreen">
     <Grid Background="#0C0F17">
         <Grid.RowDefinitions>

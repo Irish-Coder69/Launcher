@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.19 - 2026-07-29
+
+- Hardened native Visual Board login priming so login input write failures no longer abort startup flow with "Operation cannot be performed".
+- Added safe fallback behavior when direct UI Automation input setting fails, allowing sequence typing to continue.
+- Added a branded native application icon used by the app window and desktop shortcut target.
+
 ## 1.1.18 - 2026-07-29
 
 - Improved native Visual Board login targeting by prioritizing the login window and priming the login input field before key-sequence submission.

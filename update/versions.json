@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.1.19",
+    "releaseDate": "2026-07-29",
+    "description": "Harden native Visual Board login priming and add branded app icon",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.1.19/Launcher-1.1.19-Setup.exe",
+    "checksum": "77935BB8035139A59FD156726FBDADD37C3C4E9C3840493907BE9F56BB41E605",
+    "isRequired": false,
+    "notes": [
+      "Native login priming now handles UI Automation input errors without aborting startup",
+      "Fallback typing path continues safely when direct login field set fails",
+      "Added a branded native app icon reflected in executable and desktop shortcut icon"
+    ]
+  },
+  {
     "version": "1.1.18",
     "releaseDate": "2026-07-29",
     "description": "Improve native Visual Board login input targeting",

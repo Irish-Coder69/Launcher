@@ -343,15 +343,30 @@ public sealed class LauncherNativeStartRunner
 
         if (editControl.TryGetCurrentPattern(ValuePattern.Pattern, out var patternObj) && patternObj is ValuePattern valuePattern && !valuePattern.Current.IsReadOnly)
         {
-            valuePattern.SetValue(loginValue);
-            Log(onOutput, "Applied login value directly to login input field.");
-            return true;
+            try
+            {
+                valuePattern.SetValue(loginValue);
+                Log(onOutput, "Applied login value directly to login input field.");
+                return true;
+            }
+            catch (Exception ex)
+            {
+                Log(onOutput, $"Direct login field value set failed; falling back to SendKeys. {ex.Message}");
+            }
         }
 
-        SendKeys.SendWait("^a{BACKSPACE}");
-        SendKeys.SendWait(loginValue);
-        Log(onOutput, "Applied login value via focused login input fallback.");
-        return true;
+        try
+        {
+            SendKeys.SendWait("^a{BACKSPACE}");
+            SendKeys.SendWait(loginValue);
+            Log(onOutput, "Applied login value via focused login input fallback.");
+            return true;
+        }
+        catch (Exception ex)
+        {
+            Log(onOutput, $"Focused login input fallback failed; sequence typing will continue. {ex.Message}");
+            return false;
+        }
     }
 
     private static AutomationElement? FindFirstEditControl(AutomationElement window)
