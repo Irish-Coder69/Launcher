@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.1.18",
+    "releaseDate": "2026-07-29",
+    "description": "Improve native Visual Board login input targeting",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.1.18/Launcher-1.1.18-Setup.exe",
+    "checksum": "03433A1BFD3E971CDAF9D6A1AAAE5A6611EEF094246E6A9D9A4CA4424F76FF85",
+    "isRequired": false,
+    "notes": [
+      "Native login flow now prioritizes login-window activation and primes the login input field",
+      "Added fallback activation path when strict login-window matching fails",
+      "Rebuilt installer for the native login-targeting reliability release"
+    ]
+  },
+  {
     "version": "1.1.17",
     "releaseDate": "2026-07-29",
     "description": "Improve Visual Board login verification reliability",

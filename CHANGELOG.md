@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.18 - 2026-07-29
+
+- Improved native Visual Board login targeting by prioritizing the login window and priming the login input field before key-sequence submission.
+- Added fallback activation behavior so startup can continue when strict login-window matching is unavailable.
+- Rebuilt the installer for the native login-targeting reliability release line.
+
 ## 1.1.17 - 2026-07-29
 
 - Relaxed Visual Board login verification so startup no longer fails when the login form remains visible but the main window and controls are ready.
