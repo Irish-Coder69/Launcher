@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.28 - 2026-07-30
+
+- Fixed the update table flow starting before Visual Board actually finished logging in. The main Access window title ("Access - Visual Board") appears as soon as the app launches, even while the login form is still processing, so the previous window-title-only check passed instantly and let the update table step race ahead.
+- The update table flow now waits (up to a configurable `loginReadyTimeoutSeconds`, default 60s) for the real post-login control (the Update Table button, or an explicit `loginReadyControlNames` list) to actually appear in the window before clicking, matching the legacy PowerShell behavior.
+- Rebuilt the installer for the login-readiness fix.
+
 ## 1.1.27 - 2026-07-30
 
 - Root-caused the Visual Board login failure by comparing against the working 1.1.0 behavior: the native flow was auto-deriving a login value from the sequence and injecting it via UI Automation `ValuePattern.SetValue`, then skipping the real keystroke for that value. Access forms don't always register that synthetic write, leaving the field empty when Enter was sent.

@@ -772,6 +772,31 @@ public sealed class LauncherNativeStartRunner
                     throw new InvalidOperationException($"Could not activate '{mainWindowTitle}' before update table flow.");
                 }
 
+                // The main window title appears as soon as Access launches, even while the login form
+                // is still being processed, so wait for the actual post-login control (defaults to the
+                // update table button itself) to show up before clicking, matching the legacy PowerShell flow.
+                var readyControlNames = flow.LoginReadyControlNames.Count > 0
+                    ? DistinctTitles(flow.LoginReadyControlNames)
+                    : buttonCandidates;
+                var readyTimeoutSeconds = flow.LoginReadyTimeoutSeconds ?? 60;
+                var ready = false;
+                for (var i = 0; i < readyTimeoutSeconds; i++)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (WindowContainsCandidateControl(mainWindowTitles, readyControlNames, process?.Id))
+                    {
+                        ready = true;
+                        break;
+                    }
+
+                    await Task.Delay(1000, cancellationToken);
+                }
+
+                if (!ready)
+                {
+                    Log(onOutput, $"Login-ready controls were not detected within {readyTimeoutSeconds} second(s); continuing with fallback attempts");
+                }
+
                 var buttonTimeoutSeconds = flow.UpdateTableButtonTimeoutSeconds ?? 30;
                 var clicked = false;
                 foreach (var candidate in buttonCandidates)
