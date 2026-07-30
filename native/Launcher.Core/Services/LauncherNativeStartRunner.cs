@@ -330,9 +330,19 @@ public sealed class LauncherNativeStartRunner
                 await Task.Delay(150, cancellationToken);
             }
 
-            if (loginWindowHandle != IntPtr.Zero && TryGetAutomationElement(loginWindowHandle, out var windowElement) &&
-                windowElement is not null &&
-                TrySetPreferredEditValue(windowElement, inputValue, preferredNames, excludedNames))
+            AutomationElement? focusedControl = null;
+            var candidateHandles = new List<IntPtr>();
+            if (loginWindowHandle != IntPtr.Zero)
+            {
+                candidateHandles.Add(loginWindowHandle);
+            }
+
+            if (process?.MainWindowHandle != IntPtr.Zero)
+            {
+                candidateHandles.Add(process.MainWindowHandle);
+            }
+
+            if (candidateHandles.Count > 0 && TrySetPreferredEditValueFromHandles(candidateHandles, inputValue, preferredNames, excludedNames, out focusedControl))
             {
                 valueAppliedDirectly = true;
                 Log(onOutput, "Entered login value directly into the preferred edit control using UI Automation");
@@ -340,6 +350,15 @@ public sealed class LauncherNativeStartRunner
 
             if (!valueAppliedDirectly)
             {
+                if (focusedControl is not null)
+                {
+                    focusedControl.SetFocus();
+                }
+                else if (loginWindowHandle != IntPtr.Zero)
+                {
+                    NativeMethods.SetForegroundWindow(loginWindowHandle);
+                }
+
                 SendKeys.SendWait(inputValue);
             }
 
@@ -1336,6 +1355,33 @@ public sealed class LauncherNativeStartRunner
         return false;
     }
 
+    private static bool TrySetPreferredEditValueFromHandles(IEnumerable<IntPtr> handles, string value, IReadOnlyList<string> preferredNames, IReadOnlyList<string> excludedNames, out AutomationElement? focusedControl)
+    {
+        focusedControl = null;
+        foreach (var handle in handles.Where(handle => handle != IntPtr.Zero))
+        {
+            if (!TryGetAutomationElement(handle, out var windowElement) || windowElement is null)
+            {
+                continue;
+            }
+
+            if (TryFocusLoginField(windowElement, preferredNames, excludedNames, out focusedControl))
+            {
+                if (TrySetPreferredEditValue(windowElement, value, preferredNames, excludedNames))
+                {
+                    return true;
+                }
+            }
+
+            if (TrySetPreferredEditValue(windowElement, value, preferredNames, excludedNames))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
     private static bool TrySetPreferredEditValue(AutomationElement window, string value, IReadOnlyList<string> preferredNames, IReadOnlyList<string> excludedNames)
     {
         if (window is null || string.IsNullOrWhiteSpace(value))
@@ -1407,6 +1453,11 @@ public sealed class LauncherNativeStartRunner
         return !string.IsNullOrWhiteSpace(normalizedValue) &&
                !string.IsNullOrWhiteSpace(normalizedCandidate) &&
                normalizedValue.Contains(normalizedCandidate, StringComparison.Ordinal);
+    }
+
+    public static string? TryGetFirstTextLoginValueForTests(IEnumerable<LauncherKeySequenceEntry> entries)
+    {
+        return TryGetFirstTextLoginValue(entries);
     }
 
     private static string? TryGetFirstTextLoginValue(IEnumerable<LauncherKeySequenceEntry> entries)
