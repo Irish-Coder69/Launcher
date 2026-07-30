@@ -106,8 +106,50 @@ public sealed class LauncherStep
     [JsonPropertyName("loginFallbackWindowTitles")]
     public List<string> LoginFallbackWindowTitles { get; set; } = new();
 
+    [JsonPropertyName("loginFieldRequireConfirmation")]
+    public bool? LoginFieldRequireConfirmation { get; set; }
+
+    [JsonPropertyName("loginFieldPreferredNames")]
+    public List<string> LoginFieldPreferredNames { get; set; } = new();
+
+    [JsonPropertyName("loginFieldExcludeNames")]
+    public List<string> LoginFieldExcludeNames { get; set; } = new();
+
+    [JsonPropertyName("loginFieldValue")]
+    public string? LoginFieldValue { get; set; }
+
+    [JsonPropertyName("loginFieldFallbackPreKeys")]
+    public List<string> LoginFieldFallbackPreKeys { get; set; } = new();
+
+    [JsonPropertyName("loginFieldFallbackClearKeys")]
+    public string? LoginFieldFallbackClearKeys { get; set; }
+
+    [JsonPropertyName("loginFieldFallbackValueDelayMs")]
+    public int? LoginFieldFallbackValueDelayMs { get; set; }
+
+    [JsonPropertyName("loginFieldReadyTimeoutSeconds")]
+    public int? LoginFieldReadyTimeoutSeconds { get; set; }
+
     [JsonPropertyName("loginSequence")]
     public List<LauncherKeySequenceEntry> LoginSequence { get; set; } = new();
+
+    [JsonPropertyName("loginEnterRetryCount")]
+    public int? LoginEnterRetryCount { get; set; }
+
+    [JsonPropertyName("loginEnterRetryDelayMs")]
+    public int? LoginEnterRetryDelayMs { get; set; }
+
+    [JsonPropertyName("loginReattemptCount")]
+    public int? LoginReattemptCount { get; set; }
+
+    [JsonPropertyName("loginSubmitButtonNames")]
+    public List<string> LoginSubmitButtonNames { get; set; } = new();
+
+    [JsonPropertyName("loginSubmitButtonRetryCount")]
+    public int? LoginSubmitButtonRetryCount { get; set; }
+
+    [JsonPropertyName("loginFailIfWindowStillActive")]
+    public bool? LoginFailIfWindowStillActive { get; set; }
 
     [JsonPropertyName("waitForLoginCompleteSeconds")]
     public int? WaitForLoginCompleteSeconds { get; set; }

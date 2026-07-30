@@ -260,15 +260,163 @@ public sealed class LauncherNativeStartRunner
             throw new InvalidOperationException($"Could not activate login window for '{step.Name}'.");
         }
 
-        foreach (var entry in step.LoginSequence)
+        var loginWindowHandle = TryFindFirstWindow(loginTitles, process?.Id);
+        if (loginWindowHandle == IntPtr.Zero)
+        {
+            loginWindowHandle = TryFindFirstWindow(activationTitles, process?.Id);
+        }
+
+        var preferredNames = step.LoginFieldPreferredNames.Count > 0
+            ? step.LoginFieldPreferredNames
+            : new List<string> { "Enter employeeID", "Enter employee ID", "Employee ID", "Employee", "EmployeeId", "Employee Id", "Login" };
+        var excludedNames = step.LoginFieldExcludeNames.Count > 0
+            ? step.LoginFieldExcludeNames
+            : new List<string> { "Help", "Search", "Tell me", "Find" };
+        var requireFieldConfirmation = step.LoginFieldRequireConfirmation ?? false;
+        var readyTimeoutSeconds = step.LoginFieldReadyTimeoutSeconds ?? 10;
+        var fieldReady = false;
+        var clearKeys = string.IsNullOrWhiteSpace(step.LoginFieldFallbackClearKeys)
+            ? "^a{BACKSPACE}"
+            : step.LoginFieldFallbackClearKeys;
+
+        if (loginWindowHandle != IntPtr.Zero)
+        {
+            NativeMethods.ShowWindowAsync(loginWindowHandle, NativeMethods.SW_RESTORE);
+            NativeMethods.SetForegroundWindow(loginWindowHandle);
+            await Task.Delay(250, cancellationToken);
+
+            for (var attempt = 0; attempt < Math.Max(1, readyTimeoutSeconds * 2); attempt++)
+            {
+                if (TryGetAutomationElement(loginWindowHandle, out var windowElement) &&
+                    windowElement is not null &&
+                    TryFocusLoginField(windowElement, preferredNames, excludedNames, out _))
+                {
+                    fieldReady = true;
+                    break;
+                }
+
+                await Task.Delay(500, cancellationToken);
+            }
+        }
+
+        if (!fieldReady && requireFieldConfirmation)
+        {
+            throw new InvalidOperationException($"Could not confirm login field readiness for '{step.Name}'.");
+        }
+
+        var inputValue = !string.IsNullOrWhiteSpace(step.LoginFieldValue)
+            ? step.LoginFieldValue
+            : TryGetFirstTextLoginValue(step.LoginSequence);
+
+        if (!string.IsNullOrWhiteSpace(inputValue))
+        {
+            var preKeys = step.LoginFieldFallbackPreKeys;
+            foreach (var preKey in preKeys.Where(k => !string.IsNullOrWhiteSpace(k)))
+            {
+                SendKeys.SendWait(preKey);
+                await Task.Delay(300, cancellationToken);
+            }
+
+            if (!string.IsNullOrWhiteSpace(clearKeys))
+            {
+                SendKeys.SendWait(clearKeys);
+                await Task.Delay(250, cancellationToken);
+            }
+
+            if (loginWindowHandle != IntPtr.Zero)
+            {
+                NativeMethods.SetForegroundWindow(loginWindowHandle);
+                await Task.Delay(150, cancellationToken);
+            }
+
+            SendKeys.SendWait(inputValue);
+            await Task.Delay(step.LoginFieldFallbackValueDelayMs ?? 700, cancellationToken);
+        }
+
+        var entriesToSend = step.LoginSequence.ToList();
+        if (!string.IsNullOrWhiteSpace(inputValue) && entriesToSend.Count > 0)
+        {
+            var firstEntry = entriesToSend[0];
+            if (IsSimpleTextInput(firstEntry.Keys) && string.Equals(firstEntry.Keys, inputValue, StringComparison.Ordinal))
+            {
+                entriesToSend = entriesToSend.Skip(1).ToList();
+            }
+        }
+
+        foreach (var entry in entriesToSend)
         {
             if (string.IsNullOrWhiteSpace(entry.Keys))
             {
                 continue;
             }
 
+            if (loginWindowHandle != IntPtr.Zero)
+            {
+                NativeMethods.SetForegroundWindow(loginWindowHandle);
+            }
+
             SendKeys.SendWait(entry.Keys);
             await Task.Delay(entry.DelayMs ?? 700, cancellationToken);
+        }
+
+        if (step.LoginSequence.Any(entry => !string.IsNullOrWhiteSpace(entry.Keys) && entry.Keys.ToUpperInvariant().Contains("ENTER")))
+        {
+            var retryCount = step.LoginEnterRetryCount ?? 3;
+            var retryDelayMs = step.LoginEnterRetryDelayMs ?? 800;
+            var reattemptCount = step.LoginReattemptCount ?? 1;
+            var failIfWindowStillActive = step.LoginFailIfWindowStillActive ?? true;
+            var loginSucceeded = false;
+
+            for (var retry = 0; retry < retryCount; retry++)
+            {
+                await Task.Delay(retryDelayMs, cancellationToken);
+                if (!HasAnyWindow(loginTitles, process?.Id))
+                {
+                    loginSucceeded = true;
+                    break;
+                }
+
+                if (loginWindowHandle != IntPtr.Zero)
+                {
+                    NativeMethods.SetForegroundWindow(loginWindowHandle);
+                }
+
+                SendKeys.SendWait("{ENTER}");
+            }
+
+            if (!loginSucceeded && !string.IsNullOrWhiteSpace(inputValue))
+            {
+                for (var attempt = 0; attempt < reattemptCount; attempt++)
+                {
+                    await Task.Delay(retryDelayMs, cancellationToken);
+                    if (!HasAnyWindow(loginTitles, process?.Id))
+                    {
+                        loginSucceeded = true;
+                        break;
+                    }
+
+                    if (loginWindowHandle != IntPtr.Zero)
+                    {
+                        NativeMethods.SetForegroundWindow(loginWindowHandle);
+                    }
+
+                    if (loginWindowHandle != IntPtr.Zero && TryGetAutomationElement(loginWindowHandle, out var windowElement) &&
+                        windowElement is not null &&
+                        TryFocusLoginField(windowElement, preferredNames, excludedNames, out _))
+                    {
+                        SendKeys.SendWait(clearKeys);
+                    }
+
+                    SendKeys.SendWait(inputValue);
+                    await Task.Delay(step.LoginFieldFallbackValueDelayMs ?? 700, cancellationToken);
+                    SendKeys.SendWait("{ENTER}");
+                }
+            }
+
+            if (!loginSucceeded && failIfWindowStillActive)
+            {
+                throw new InvalidOperationException($"Login did not complete for '{step.Name}': login window remained active.");
+            }
         }
     }
 
@@ -1090,6 +1238,124 @@ public sealed class LauncherNativeStartRunner
         }
 
         return false;
+    }
+
+    private static bool TryGetAutomationElement(IntPtr handle, out AutomationElement? element)
+    {
+        element = null;
+        if (handle == IntPtr.Zero)
+        {
+            return false;
+        }
+
+        try
+        {
+            element = AutomationElement.FromHandle(handle);
+            return element is not null;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    private static bool TryFocusLoginField(AutomationElement window, IReadOnlyList<string> preferredNames, IReadOnlyList<string> excludedNames, out AutomationElement? focusedControl)
+    {
+        focusedControl = null;
+        if (window is null)
+        {
+            return false;
+        }
+
+        foreach (AutomationElement control in window.FindAll(TreeScope.Descendants, Condition.TrueCondition))
+        {
+            if (control.Current.ControlType != ControlType.Edit)
+            {
+                continue;
+            }
+
+            var controlName = control.Current.Name;
+            var automationId = control.Current.AutomationId;
+            var matchesPreferred = preferredNames.Any(candidate => NameMatchesCandidate(controlName, candidate) || NameMatchesCandidate(automationId, candidate));
+            var matchesExcluded = excludedNames.Any(candidate => NameMatchesCandidate(controlName, candidate) || NameMatchesCandidate(automationId, candidate));
+            if ((preferredNames.Count == 0 || matchesPreferred) && !matchesExcluded)
+            {
+                try
+                {
+                    control.SetFocus();
+                    focusedControl = control;
+                    return true;
+                }
+                catch
+                {
+                    continue;
+                }
+            }
+        }
+
+        foreach (AutomationElement control in window.FindAll(TreeScope.Descendants, Condition.TrueCondition))
+        {
+            if (control.Current.ControlType != ControlType.Edit)
+            {
+                continue;
+            }
+
+            try
+            {
+                control.SetFocus();
+                focusedControl = control;
+                return true;
+            }
+            catch
+            {
+                continue;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool NameMatchesCandidate(string? value, string candidate)
+    {
+        if (string.IsNullOrWhiteSpace(candidate))
+        {
+            return false;
+        }
+
+        var normalizedValue = NormalizeName(value);
+        var normalizedCandidate = NormalizeName(candidate);
+        return !string.IsNullOrWhiteSpace(normalizedValue) &&
+               !string.IsNullOrWhiteSpace(normalizedCandidate) &&
+               normalizedValue.Contains(normalizedCandidate, StringComparison.Ordinal);
+    }
+
+    private static string? TryGetFirstTextLoginValue(IEnumerable<LauncherKeySequenceEntry> entries)
+    {
+        foreach (var entry in entries)
+        {
+            var keys = entry.Keys ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(keys))
+            {
+                continue;
+            }
+
+            if (IsSimpleTextInput(keys))
+            {
+                return keys;
+            }
+        }
+
+        return null;
+    }
+
+    private static bool IsSimpleTextInput(string? value)
+    {
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        return value.All(ch => char.IsLetterOrDigit(ch) || char.IsWhiteSpace(ch) || ch == '-' || ch == '_' || ch == '.');
     }
 
     private static AutomationElement? FindControlByCandidateName(AutomationElement window, IEnumerable<string> candidateNames)

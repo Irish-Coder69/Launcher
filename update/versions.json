@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.1.23",
+    "releaseDate": "2026-07-30",
+    "description": "Target Visual Board login field directly in native start flow",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.1.23/Launcher-1.1.23-Setup.exe",
+    "checksum": "",
+    "isRequired": false,
+    "notes": [
+      "Native Visual Board login flow now focuses the employee-ID input field before sending the configured key sequence",
+      "Added fallback clear/type/retry behavior so login retries work more reliably when the field is not immediately ready",
+      "Rebuilt the installer for the 1.1.23 release line"
+    ]
+  },
+  {
     "version": "1.1.22",
     "releaseDate": "2026-07-29",
     "description": "Restore prior Visual Board login sequence behavior in native start flow",

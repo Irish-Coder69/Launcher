@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.23 - 2026-07-30
+
+- Targeted the native Visual Board employee-ID login field directly before sending the configured key sequence.
+- Added fallback clear/type/retry handling so login retries work more reliably when the field is not immediately ready.
+- Rebuilt the installer for the native Visual Board login reliability release line.
+
 ## 1.1.22 - 2026-07-29
 
 - Reverted native login input priming for Visual Board and restored the prior key-sequence login behavior.
