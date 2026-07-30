@@ -366,11 +366,17 @@ public sealed class LauncherNativeStartRunner
             var reattemptCount = step.LoginReattemptCount ?? 1;
             var failIfWindowStillActive = step.LoginFailIfWindowStillActive ?? true;
             var loginSucceeded = false;
+            var mainTitles = DistinctTitles(
+                new[] { string.IsNullOrWhiteSpace(step.LoginSuccessWindowTitle) ? step.WindowTitle : step.LoginSuccessWindowTitle },
+                step.LoginSuccessFallbackWindowTitles,
+                step.FallbackWindowTitles);
 
             for (var retry = 0; retry < retryCount; retry++)
             {
                 await Task.Delay(retryDelayMs, cancellationToken);
-                if (!HasAnyWindow(loginTitles, process?.Id))
+                var loginWindowStillActive = HasAnyWindow(loginTitles, process?.Id);
+                var mainWindowVisible = HasAnyWindow(mainTitles, process?.Id);
+                if (!loginWindowStillActive || mainWindowVisible)
                 {
                     loginSucceeded = true;
                     break;
@@ -389,7 +395,9 @@ public sealed class LauncherNativeStartRunner
                 for (var attempt = 0; attempt < reattemptCount; attempt++)
                 {
                     await Task.Delay(retryDelayMs, cancellationToken);
-                    if (!HasAnyWindow(loginTitles, process?.Id))
+                    var loginWindowStillActive = HasAnyWindow(loginTitles, process?.Id);
+                    var mainWindowVisible = HasAnyWindow(mainTitles, process?.Id);
+                    if (!loginWindowStillActive || mainWindowVisible)
                     {
                         loginSucceeded = true;
                         break;
@@ -413,7 +421,7 @@ public sealed class LauncherNativeStartRunner
                 }
             }
 
-            if (!loginSucceeded && failIfWindowStillActive)
+            if (!loginSucceeded && failIfWindowStillActive && !HasAnyWindow(mainTitles, process?.Id))
             {
                 throw new InvalidOperationException($"Login did not complete for '{step.Name}': login window remained active.");
             }

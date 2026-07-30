@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.1.24",
+    "releaseDate": "2026-07-30",
+    "description": "Relax Visual Board login completion handling in native start flow",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.1.24/Launcher-1.1.24-Setup.exe",
+    "checksum": "",
+    "isRequired": false,
+    "notes": [
+      "Native Visual Board login flow now continues when the main window is already ready even if the login form remains visible",
+      "Preserved the direct employee-ID field targeting and fallback retry logic from 1.1.23",
+      "Rebuilt the installer for the 1.1.24 release line"
+    ]
+  },
+  {
     "version": "1.1.23",
     "releaseDate": "2026-07-30",
     "description": "Target Visual Board login field directly in native start flow",
