@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.27 - 2026-07-30
+
+- Root-caused the Visual Board login failure by comparing against the working 1.1.0 behavior: the native flow was auto-deriving a login value from the sequence and injecting it via UI Automation `ValuePattern.SetValue`, then skipping the real keystroke for that value. Access forms don't always register that synthetic write, leaving the field empty when Enter was sent.
+- Direct UI-Automation value injection is now only used when a step explicitly configures `loginFieldValue` (matching the legacy PowerShell contract). Visual Board never configured this, so it now always types the full login sequence with real keystrokes, exactly like 1.1.0.
+- Added a real mouse click on the login field's center before focusing it, matching the legacy click-then-focus behavior that reliably places the Access cursor.
+- Rebuilt the installer for the login-behavior regression fix.
+
 ## 1.1.26 - 2026-07-30
 
 - Fixed a Visual Board login regression by targeting the login field across both the login window and the app's main window before falling back to keyboard input.

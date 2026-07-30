@@ -304,9 +304,10 @@ public sealed class LauncherNativeStartRunner
             throw new InvalidOperationException($"Could not confirm login field readiness for '{step.Name}'.");
         }
 
-        var inputValue = !string.IsNullOrWhiteSpace(step.LoginFieldValue)
-            ? step.LoginFieldValue
-            : TryGetFirstTextLoginValue(step.LoginSequence);
+        // Only derive a direct-entry value when the step explicitly configures loginFieldValue.
+        // Deriving it from the loginSequence and skipping the real keystrokes broke Access forms
+        // that don't register UI Automation ValuePattern writes the same way as real typing.
+        var inputValue = step.LoginFieldValue;
 
         if (!string.IsNullOrWhiteSpace(inputValue))
         {
@@ -365,17 +366,7 @@ public sealed class LauncherNativeStartRunner
             await Task.Delay(step.LoginFieldFallbackValueDelayMs ?? 700, cancellationToken);
         }
 
-        var entriesToSend = step.LoginSequence.ToList();
-        if (!string.IsNullOrWhiteSpace(inputValue) && entriesToSend.Count > 0)
-        {
-            var firstEntry = entriesToSend[0];
-            if (IsSimpleTextInput(firstEntry.Keys) && string.Equals(firstEntry.Keys, inputValue, StringComparison.Ordinal))
-            {
-                entriesToSend = entriesToSend.Skip(1).ToList();
-            }
-        }
-
-        foreach (var entry in entriesToSend)
+        foreach (var entry in step.LoginSequence)
         {
             if (string.IsNullOrWhiteSpace(entry.Keys))
             {
@@ -1322,6 +1313,7 @@ public sealed class LauncherNativeStartRunner
             {
                 try
                 {
+                    ClickControlCenter(control);
                     control.SetFocus();
                     focusedControl = control;
                     return true;
@@ -1342,6 +1334,7 @@ public sealed class LauncherNativeStartRunner
 
             try
             {
+                ClickControlCenter(control);
                 control.SetFocus();
                 focusedControl = control;
                 return true;
