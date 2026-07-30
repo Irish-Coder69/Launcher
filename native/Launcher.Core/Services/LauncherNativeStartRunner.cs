@@ -389,17 +389,16 @@ public sealed class LauncherNativeStartRunner
             var reattemptCount = step.LoginReattemptCount ?? 1;
             var failIfWindowStillActive = step.LoginFailIfWindowStillActive ?? true;
             var loginSucceeded = false;
-            var mainTitles = DistinctTitles(
-                new[] { string.IsNullOrWhiteSpace(step.LoginSuccessWindowTitle) ? step.WindowTitle : step.LoginSuccessWindowTitle },
-                step.LoginSuccessFallbackWindowTitles,
-                step.FallbackWindowTitles);
 
+            // Success is judged solely by the login window itself closing, matching the legacy
+            // PowerShell contract. The Access main window title exists the whole time the app is
+            // running (even while the login form is still up), so treating it as visible/success
+            // here let the flow declare login "done" instantly and skip retries and failure checks.
             for (var retry = 0; retry < retryCount; retry++)
             {
                 await Task.Delay(retryDelayMs, cancellationToken);
                 var loginWindowStillActive = HasAnyWindow(loginTitles, process?.Id);
-                var mainWindowVisible = HasAnyWindow(mainTitles, process?.Id);
-                if (!loginWindowStillActive || mainWindowVisible)
+                if (!loginWindowStillActive)
                 {
                     loginSucceeded = true;
                     break;
@@ -419,8 +418,7 @@ public sealed class LauncherNativeStartRunner
                 {
                     await Task.Delay(retryDelayMs, cancellationToken);
                     var loginWindowStillActive = HasAnyWindow(loginTitles, process?.Id);
-                    var mainWindowVisible = HasAnyWindow(mainTitles, process?.Id);
-                    if (!loginWindowStillActive || mainWindowVisible)
+                    if (!loginWindowStillActive)
                     {
                         loginSucceeded = true;
                         break;
@@ -444,7 +442,7 @@ public sealed class LauncherNativeStartRunner
                 }
             }
 
-            if (!loginSucceeded && failIfWindowStillActive && !HasAnyWindow(mainTitles, process?.Id))
+            if (!loginSucceeded && failIfWindowStillActive && HasAnyWindow(loginTitles, process?.Id))
             {
                 throw new InvalidOperationException($"Login did not complete for '{step.Name}': login window remained active.");
             }

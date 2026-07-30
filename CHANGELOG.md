@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.29 - 2026-07-30
+
+- Fixed the real reason login could silently fail to complete: the Enter-retry logic in the native login flow treated the main Access window being visible as proof of login success, but that window title is present the entire time Access is running, even while the login form is still open on top of it. This let the flow declare login "done" after the very first attempt, skip all retries, and skip the failure check entirely — leaving the app stuck on the login form while later steps (like update table) proceeded anyway.
+- Login success is now judged solely by the login window itself closing, matching the legacy PowerShell contract, so Enter retries and the final failure check actually run when login hasn't completed.
+- Rebuilt the installer for the login-success-detection fix.
+
 ## 1.1.28 - 2026-07-30
 
 - Fixed the update table flow starting before Visual Board actually finished logging in. The main Access window title ("Access - Visual Board") appears as soon as the app launches, even while the login form is still processing, so the previous window-title-only check passed instantly and let the update table step race ahead.

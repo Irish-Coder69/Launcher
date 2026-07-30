@@ -1,5 +1,19 @@
 [
   {
+    "version": "1.1.29",
+    "releaseDate": "2026-07-30",
+    "description": "Fix login-success detection falsely declaring Visual Board login complete",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.1.29/Launcher-1.1.29-Setup.exe",
+    "checksum": "",
+    "isRequired": false,
+    "notes": [
+      "The Enter-retry logic in the native login flow treated the main Access window being visible as proof of login success, but that window title is present the entire time Access is running, even during the login form",
+      "This let the flow declare login done after the very first attempt, skipping retries and the failure check, leaving the app stuck on the login form while later steps proceeded anyway",
+      "Login success is now judged solely by the login window itself closing, matching the legacy PowerShell contract",
+      "Rebuilt the installer for the login-success-detection fix"
+    ]
+  },
+  {
     "version": "1.1.28",
     "releaseDate": "2026-07-30",
     "description": "Fix update table flow racing ahead of Visual Board login",
