@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.1.25",
+    "releaseDate": "2026-07-30",
+    "description": "Bump native launcher build for the latest Visual Board login fix",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.1.25/Launcher-1.1.25-Setup.exe",
+    "checksum": "",
+    "isRequired": false,
+    "notes": [
+      "Native Visual Board login flow now uses direct UI Automation entry for the preferred edit control",
+      "The update-table automation remains part of the native startup path after login completion",
+      "Rebuilt the installer for the 1.1.25 release line"
+    ]
+  },
+  {
     "version": "1.1.24",
     "releaseDate": "2026-07-30",
     "description": "Relax Visual Board login completion handling in native start flow",
