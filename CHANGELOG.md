@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.26 - 2026-07-30
+
+- Fixed a Visual Board login regression by targeting the login field across both the login window and the app's main window before falling back to keyboard input.
+- Login field focus is now reused for the keyboard fallback path so the value lands in the correct control.
+- Added a regression test project covering the login-value extraction logic.
+- Rebuilt the installer for the login-targeting regression fix.
+
 ## 1.1.24 - 2026-07-30
 
 - Restored direct UI Automation entry into the Visual Board employee-ID field in the native launcher, matching the earlier PowerShell flow more closely.

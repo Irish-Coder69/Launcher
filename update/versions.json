@@ -1,5 +1,19 @@
 [
   {
+    "version": "1.1.26",
+    "releaseDate": "2026-07-30",
+    "description": "Fix Visual Board login targeting regression in native start flow",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.1.26/Launcher-1.1.26-Setup.exe",
+    "checksum": "",
+    "isRequired": false,
+    "notes": [
+      "Native Visual Board login now targets the login field across the login window and the app's main window before falling back to keyboard input",
+      "Keyboard fallback reuses the focused login field so the value lands in the correct control",
+      "Added a regression test project covering the login-value extraction logic",
+      "Rebuilt the installer for the 1.1.26 release line"
+    ]
+  },
+  {
     "version": "1.1.25",
     "releaseDate": "2026-07-30",
     "description": "Bump native launcher build for the latest Visual Board login fix",
