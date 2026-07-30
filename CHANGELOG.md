@@ -2,8 +2,9 @@
 
 ## 1.1.24 - 2026-07-30
 
+- Restored direct UI Automation entry into the Visual Board employee-ID field in the native launcher, matching the earlier PowerShell flow more closely.
+- Kept the login-sequence submission and update-table automation in the native start flow intact after login completion.
 - Relaxed native Visual Board login completion handling so the launcher no longer aborts when the main window is already ready even if the login form remains visible.
-- Preserved the direct employee-ID field targeting and fallback retry logic from 1.1.23.
 - Rebuilt the installer for the native Visual Board login verification hotfix.
 
 ## 1.1.23 - 2026-07-30

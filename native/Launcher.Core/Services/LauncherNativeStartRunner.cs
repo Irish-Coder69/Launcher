@@ -310,6 +310,7 @@ public sealed class LauncherNativeStartRunner
 
         if (!string.IsNullOrWhiteSpace(inputValue))
         {
+            var valueAppliedDirectly = false;
             var preKeys = step.LoginFieldFallbackPreKeys;
             foreach (var preKey in preKeys.Where(k => !string.IsNullOrWhiteSpace(k)))
             {
@@ -329,7 +330,19 @@ public sealed class LauncherNativeStartRunner
                 await Task.Delay(150, cancellationToken);
             }
 
-            SendKeys.SendWait(inputValue);
+            if (loginWindowHandle != IntPtr.Zero && TryGetAutomationElement(loginWindowHandle, out var windowElement) &&
+                windowElement is not null &&
+                TrySetPreferredEditValue(windowElement, inputValue, preferredNames, excludedNames))
+            {
+                valueAppliedDirectly = true;
+                Log(onOutput, "Entered login value directly into the preferred edit control using UI Automation");
+            }
+
+            if (!valueAppliedDirectly)
+            {
+                SendKeys.SendWait(inputValue);
+            }
+
             await Task.Delay(step.LoginFieldFallbackValueDelayMs ?? 700, cancellationToken);
         }
 
@@ -1318,6 +1331,65 @@ public sealed class LauncherNativeStartRunner
             {
                 continue;
             }
+        }
+
+        return false;
+    }
+
+    private static bool TrySetPreferredEditValue(AutomationElement window, string value, IReadOnlyList<string> preferredNames, IReadOnlyList<string> excludedNames)
+    {
+        if (window is null || string.IsNullOrWhiteSpace(value))
+        {
+            return false;
+        }
+
+        foreach (AutomationElement control in window.FindAll(TreeScope.Descendants, Condition.TrueCondition))
+        {
+            if (control.Current.ControlType != ControlType.Edit)
+            {
+                continue;
+            }
+
+            var controlName = control.Current.Name;
+            var automationId = control.Current.AutomationId;
+            var matchesPreferred = preferredNames.Any(candidate => NameMatchesCandidate(controlName, candidate) || NameMatchesCandidate(automationId, candidate));
+            var matchesExcluded = excludedNames.Any(candidate => NameMatchesCandidate(controlName, candidate) || NameMatchesCandidate(automationId, candidate));
+            if ((preferredNames.Count == 0 || matchesPreferred) && !matchesExcluded && TrySetEditValue(control, value))
+            {
+                return true;
+            }
+        }
+
+        foreach (AutomationElement control in window.FindAll(TreeScope.Descendants, Condition.TrueCondition))
+        {
+            if (control.Current.ControlType != ControlType.Edit)
+            {
+                continue;
+            }
+
+            if (TrySetEditValue(control, value))
+            {
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private static bool TrySetEditValue(AutomationElement control, string value)
+    {
+        try
+        {
+            control.SetFocus();
+            if (control.TryGetCurrentPattern(ValuePattern.Pattern, out var valuePatternObject) && valuePatternObject is ValuePattern valuePattern)
+            {
+                valuePattern.SetValue(value);
+                return true;
+            }
+        }
+        catch
+        {
+            return false;
         }
 
         return false;
