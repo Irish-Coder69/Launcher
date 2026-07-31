@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.35 - 2026-07-31
+
+- Fixed a silent-install hang: the installer's "already installed, remove first?" and "launch now?" prompts used MessageBox, which NSIS does not auto-dismiss during silent (/S) installs. A silent install (including the app's own self-update flow) could sit forever waiting for a click that would never come.
+- The installer now detects silent mode and skips those prompts entirely (auto-removing the previous version, and not auto-launching), so /S installs always complete on their own.
+
 ## 1.1.34 - 2026-07-31
 
 - Help > About and Help > Check for Updates now open two completely separate windows instead of sharing one tabbed window. Clicking About only shows the about info; clicking Check for Updates only shows update checking/download.

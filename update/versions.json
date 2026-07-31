@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.1.35",
+    "releaseDate": "2026-07-31",
+    "description": "Fix installer hanging during silent installs/updates",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.1.35/Launcher-1.1.35-Setup.exe",
+    "checksum": "",
+    "isRequired": false,
+    "notes": [
+      "The installer's \"already installed, remove first?\" and \"launch now?\" prompts used MessageBox, which NSIS does not auto-dismiss during silent (/S) installs, so a silent install could hang forever waiting for a click",
+      "The installer now detects silent mode and skips those prompts entirely (auto-removing the previous version, and not auto-launching), so /S installs always complete on their own",
+      "This directly affects the app's own self-update flow, which installs updates with /S"
+    ]
+  },
+  {
     "version": "1.1.34",
     "releaseDate": "2026-07-31",
     "description": "Split About and Check for Updates into separate windows",
