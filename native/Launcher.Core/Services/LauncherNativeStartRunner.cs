@@ -866,6 +866,18 @@ public sealed class LauncherNativeStartRunner
                             continue;
                         }
 
+                        // Access commonly shows an intermediate "You are about to update N record(s)"
+                        // confirmation before the SQL Server login box - it has no edit/password field
+                        // and needs a Yes/OK click to proceed. Only a window with an edit field is
+                        // treated as the actual login prompt.
+                        if (!WindowHasEditControl(passwordWindowHandle))
+                        {
+                            Log(onOutput, "Dismissing an intermediate confirmation dialog before the SQL Server login prompt");
+                            TryDismissConfirmationDialog(passwordWindowHandle);
+                            passwordWindowHandle = IntPtr.Zero;
+                            continue;
+                        }
+
                         break;
                     }
 
@@ -1616,6 +1628,7 @@ public sealed class LauncherNativeStartRunner
         var y = (int)((rect.Top + rect.Bottom) / 2);
         NativeMethods.SetCursorPos(x, y);
         NativeMethods.mouse_event(NativeMethods.MOUSEEVENTF_LEFTDOWN, 0, 0, 0, UIntPtr.Zero);
+        Thread.Sleep(30);
         NativeMethods.mouse_event(NativeMethods.MOUSEEVENTF_LEFTUP, 0, 0, 0, UIntPtr.Zero);
         return true;
     }
@@ -1704,6 +1717,63 @@ public sealed class LauncherNativeStartRunner
         }
 
         return IntPtr.Zero;
+    }
+
+    private static bool WindowHasEditControl(IntPtr handle)
+    {
+        if (!TryGetAutomationElement(handle, out var element) || element is null)
+        {
+            return false;
+        }
+
+        try
+        {
+            var editCondition = new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Edit);
+            return element.FindFirst(TreeScope.Descendants, editCondition) is not null;
+        }
+        catch
+        {
+            return false;
+        }
+    }
+
+    // Dismisses an Access confirmation dialog (e.g. "You are about to update N record(s)") that has
+    // no edit field, so the automation can keep waiting for the real SQL Server login prompt.
+    private static bool TryDismissConfirmationDialog(IntPtr handle)
+    {
+        if (!TryGetAutomationElement(handle, out var element) || element is null)
+        {
+            return false;
+        }
+
+        try
+        {
+            var buttonCondition = new PropertyCondition(AutomationElement.ControlTypeProperty, ControlType.Button);
+            var buttons = element.FindAll(TreeScope.Descendants, buttonCondition);
+            if (buttons.Count == 0)
+            {
+                return false;
+            }
+
+            AutomationElement? target = null;
+            var preferredNames = new[] { "yes", "ok", "continue" };
+            foreach (AutomationElement button in buttons)
+            {
+                var name = NormalizeName(button.Current.Name);
+                if (preferredNames.Any(preferred => name.Contains(preferred, StringComparison.Ordinal)))
+                {
+                    target = button;
+                    break;
+                }
+            }
+
+            target ??= buttons[0];
+            return TryInvokeControlOrAncestor(target) || ClickControlCenter(target);
+        }
+        catch
+        {
+            return false;
+        }
     }
 
     // Same as TryFindFirstWindow but requires the match to be a window that did not exist in

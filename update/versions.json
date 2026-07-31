@@ -1,5 +1,19 @@
 [
   {
+    "version": "1.1.39",
+    "releaseDate": "2026-07-31",
+    "description": "Fix update table flow stuck on Access confirmation dialog; show install progress",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.1.39/Launcher-1.1.39-Setup.exe",
+    "checksum": "",
+    "isRequired": false,
+    "notes": [
+      "Access shows an intermediate 'You are about to update N record(s)' confirmation dialog before the real SQL Server login box, which has no password field and needs a Yes/OK click",
+      "The update table flow now recognizes a detected window without an edit field as this confirmation, dismisses it automatically, and keeps waiting for the real login prompt before typing the password",
+      "Added a small delay between simulated mouse-down and mouse-up in the button-click fallback for extra reliability",
+      "After downloading an update, the app now shows an 'Installing update...' message instead of closing silently, and the installer auto-relaunches Launcher when a silent self-update finishes so the app reappearing signals completion"
+    ]
+  },
+  {
     "version": "1.1.38",
     "releaseDate": "2026-07-31",
     "description": "Fix password sometimes going into a transient message box instead of the SQL Server login box",

@@ -6,7 +6,7 @@
 ; Variables
 ;--------------------------------
 !define PRODUCT_NAME "Launcher"
-!define PRODUCT_VERSION "1.1.38"
+!define PRODUCT_VERSION "1.1.39"
 !define PRODUCT_PUBLISHER "Windsor Industries"
 !define PRODUCT_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
 !ifndef OUTDIR
@@ -188,8 +188,9 @@ removePreviousVersion:
 FunctionEnd
 
 Function .onInstSuccess
-  ; Silent installs (e.g. the app's own self-update flow) must never wait on a prompt.
-  IfSilent doneLaunching 0
+  ; Silent installs (e.g. the app's own self-update flow) skip the prompt but still auto-launch,
+  ; since the app reappearing is the only visible signal the user gets that the update finished.
+  IfSilent launchInstalledApp 0
   MessageBox MB_YESNO|MB_ICONQUESTION \
     "Installation complete!$\n$\nWould you like to launch ${PRODUCT_NAME} now?" \
     IDYES launchInstalledApp

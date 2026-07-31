@@ -114,7 +114,7 @@ public partial class UpdatesWindow : Window
                 return;
             }
 
-            DownloadProgressTextBlock.Text = "Download complete. Starting installation...";
+            DownloadProgressTextBlock.Text = "Download complete. Installing update...";
 
             var startInfo = new ProcessStartInfo
             {
@@ -126,7 +126,11 @@ public partial class UpdatesWindow : Window
 
             Process.Start(startInfo);
 
-            // The installer needs to replace this running executable, so close immediately without prompting.
+            // The installer needs to replace this running executable, so this app must close for the
+            // install to complete. The installer relaunches Launcher automatically when done, so the
+            // app reappearing is the visible signal that installation finished.
+            DownloadProgressTextBlock.Text = "Installing update. Launcher will reopen automatically when finished...";
+            await Task.Delay(1500);
             Application.Current.Shutdown();
         }
         catch (Exception ex)

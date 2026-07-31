@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.1.39 - 2026-07-31
+
+- Fixed the update table flow still not waiting for the real SQL Server login box: Access shows an intermediate "You are about to update N record(s)" confirmation dialog first, which has no password field and needs a Yes/OK click to proceed. The flow now recognizes that a detected window without an edit field is this confirmation, automatically dismisses it, and keeps waiting for the actual login prompt (which does have a password field) before typing the password.
+- Added a small delay between the simulated mouse-down and mouse-up in the button-click fallback for extra reliability.
+- After downloading an update, the app now shows "Installing update. Launcher will reopen automatically when finished..." instead of just closing silently. The installer now auto-launches Launcher again after a silent self-update completes, so the app reappearing is a visible sign the update finished.
+
 ## 1.1.38 - 2026-07-31
 
 - Fixed the update table flow occasionally grabbing a brief transient message box (e.g. an Access security/loading notice) that flashes before the real SQL Server login box appears, then typing the password after that box had already closed on its own.
