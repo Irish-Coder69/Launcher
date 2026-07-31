@@ -1,5 +1,19 @@
 [
   {
+    "version": "1.1.31",
+    "releaseDate": "2026-07-31",
+    "description": "Add a dedicated Updates tab with real download progress; close automatically instead of asking",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.1.31/Launcher-1.1.31-Setup.exe",
+    "checksum": "",
+    "isRequired": false,
+    "notes": [
+      "Added a dedicated Updates tab to the About window, separate from the general About info",
+      "Download & Install now shows a real in-app progress bar (percentage and MB downloaded/total) instead of an external PowerShell console window",
+      "Removed the confirmation dialog that asked to close Launcher before installing; it now closes automatically once the download is verified and the installer is launched",
+      "Update checking, downloading, and checksum verification now run in-process via a new LauncherUpdateService"
+    ]
+  },
+  {
     "version": "1.1.30",
     "releaseDate": "2026-07-31",
     "description": "Fix update table sending password before SQL Server login box appears; add Stop button",

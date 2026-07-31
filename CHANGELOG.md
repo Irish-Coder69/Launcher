@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.31 - 2026-07-31
+
+- Added a dedicated "Updates" tab to the About window (About Launcher Native), separate from the general About info, with its own Check for Updates button and status area.
+- The Download & Install flow now shows a real, in-app download progress bar (percentage and MB downloaded/total) instead of shelling out to an external PowerShell console window.
+- Removed the "Updater started. Launcher will close now..." confirmation dialog. Once the downloaded installer is verified and launched, Launcher now closes immediately and automatically so the installer can replace the running files, without asking the user to click OK first.
+- Update checking, downloading, and checksum verification now run in-process (new `LauncherUpdateService` in Launcher.Core) rather than relying on `Install-LauncherUpdate.ps1`.
+
 ## 1.1.30 - 2026-07-31
 
 - Fixed the update table flow sending the password before the SQL Server login box actually appeared. Generic fallback titles like "Access"/"Microsoft Access" matched the main Access window instantly, so the flow assumed the password prompt was up and typed into whatever had focus.
