@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.1.30 - 2026-07-31
+
+- Fixed the update table flow sending the password before the SQL Server login box actually appeared. Generic fallback titles like "Access"/"Microsoft Access" matched the main Access window instantly, so the flow assumed the password prompt was up and typed into whatever had focus.
+- The update table flow now genuinely watches for the SQL Server login/password window: it first checks the specific configured password titles, then falls back to detecting any window that is genuinely new since the Update Table button was clicked, before typing the password.
+- Added a Stop button to the Launcher UI so a running Start/Close automation can be halted immediately if something isn't right, instead of having to wait for it to finish or kill the app.
+- Rebuilt the installer for these fixes.
+
 ## 1.1.29 - 2026-07-30
 
 - Fixed the real reason login could silently fail to complete: the Enter-retry logic in the native login flow treated the main Access window being visible as proof of login success, but that window title is present the entire time Access is running, even while the login form is still open on top of it. This let the flow declare login "done" after the very first attempt, skip all retries, and skip the failure check entirely — leaving the app stuck on the login form while later steps (like update table) proceeded anyway.

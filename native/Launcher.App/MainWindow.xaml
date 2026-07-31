@@ -92,7 +92,8 @@
             <StackPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Top">
                 <Button x:Name="StartButton" Width="220" Height="36" Margin="0,0,0,8" Content="Run Start" Click="StartButton_OnClick" />
                 <Button x:Name="CloseButton" Width="220" Height="36" Margin="0,0,0,8" Content="Run Close" Click="CloseButton_OnClick" />
-                <Button x:Name="StartAndWaitButton" Width="220" Height="36" Content="Start + Wait For CLOSEAPPS" Click="StartAndWaitButton_OnClick" />
+                <Button x:Name="StartAndWaitButton" Width="220" Height="36" Margin="0,0,0,8" Content="Start + Wait For CLOSEAPPS" Click="StartAndWaitButton_OnClick" />
+                <Button x:Name="StopButton" Width="220" Height="36" Content="Stop" Background="#5A1F26" Foreground="#FFDCE0" IsEnabled="False" Click="StopButton_OnClick" />
             </StackPanel>
         </Grid>
 

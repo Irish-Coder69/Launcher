@@ -748,6 +748,7 @@ public sealed class LauncherNativeStartRunner
         var buttonCandidates = flow.UpdateTableButtonNames.Count > 0
             ? DistinctTitles(flow.UpdateTableButtonNames)
             : DistinctTitles(new string?[] { flow.UpdateTableButtonName });
+        var passwordWindowHandle = IntPtr.Zero;
 
         if (buttonCandidates.Count > 0)
         {
@@ -796,6 +797,7 @@ public sealed class LauncherNativeStartRunner
                 }
 
                 var buttonTimeoutSeconds = flow.UpdateTableButtonTimeoutSeconds ?? 30;
+                var preClickWindowHandles = SnapshotWindowHandles();
                 var clicked = false;
                 foreach (var candidate in buttonCandidates)
                 {
@@ -830,12 +832,45 @@ public sealed class LauncherNativeStartRunner
                     }
                 }
 
-                var passwordTitles = DistinctTitles(
-                    new[] { flow.PasswordWindowTitle, mainWindowTitle },
-                    flow.PasswordWindowTitles,
-                    flow.PasswordWindowFallbackTitles,
-                    step.FallbackWindowTitles);
-                await TryActivateWindowAsync(passwordTitles, null, flow.PasswordWindowTimeoutSeconds ?? 45, 1000, cancellationToken);
+                // Watch for the SQL Server login/password box to actually appear instead of assuming
+                // it's up already. Generic titles like "Access"/"Microsoft Access" match the main
+                // window instantly, so try the specific configured titles first, then fall back to
+                // detecting any genuinely new window that wasn't present before the button was clicked.
+                var passwordWaitTitles = DistinctTitles(new[] { flow.PasswordWindowTitle }, flow.PasswordWindowTitles);
+                var passwordExcludeTitles = DistinctTitles(new[] { mainWindowTitle, "Launcher Native" }, step.FallbackWindowTitles, flow.PasswordWindowFallbackTitles);
+                var passwordTimeoutSeconds = flow.PasswordWindowTimeoutSeconds ?? 45;
+                for (var i = 0; i < passwordTimeoutSeconds; i++)
+                {
+                    cancellationToken.ThrowIfCancellationRequested();
+                    if (passwordWaitTitles.Count > 0)
+                    {
+                        passwordWindowHandle = TryFindFirstWindow(passwordWaitTitles, null);
+                    }
+
+                    if (passwordWindowHandle == IntPtr.Zero)
+                    {
+                        passwordWindowHandle = TryFindNewWindow(preClickWindowHandles, passwordExcludeTitles);
+                    }
+
+                    if (passwordWindowHandle != IntPtr.Zero)
+                    {
+                        break;
+                    }
+
+                    await Task.Delay(1000, cancellationToken);
+                }
+
+                if (passwordWindowHandle != IntPtr.Zero)
+                {
+                    NativeMethods.ShowWindowAsync(passwordWindowHandle, NativeMethods.SW_RESTORE);
+                    NativeMethods.SetForegroundWindow(passwordWindowHandle);
+                    Log(onOutput, "Detected SQL Server login/password window");
+                }
+                else
+                {
+                    Log(onOutput, $"SQL Server login/password window was not detected within {passwordTimeoutSeconds} second(s); continuing with fallback activation");
+                }
+
                 await Task.Delay(actionDelayMs, cancellationToken);
             }
         }
@@ -851,15 +886,23 @@ public sealed class LauncherNativeStartRunner
             }
             else
             {
-                var passwordTitles = DistinctTitles(
-                    new[] { flow.PasswordWindowTitle, passwordWindowTitle, mainWindowTitle },
-                    flow.PasswordWindowTitles,
-                    flow.PasswordWindowFallbackTitles,
-                    step.FallbackWindowTitles);
-                var activated = await TryActivateWindowAsync(passwordTitles, null, 5, 250, cancellationToken);
-                if (!activated)
+                if (passwordWindowHandle != IntPtr.Zero)
                 {
-                    Log(onOutput, $"Could not activate password window '{passwordWindowTitle}'; typing into current focus");
+                    NativeMethods.SetForegroundWindow(passwordWindowHandle);
+                    await Task.Delay(150, cancellationToken);
+                }
+                else
+                {
+                    var passwordTitles = DistinctTitles(
+                        new[] { flow.PasswordWindowTitle, passwordWindowTitle, mainWindowTitle },
+                        flow.PasswordWindowTitles,
+                        flow.PasswordWindowFallbackTitles,
+                        step.FallbackWindowTitles);
+                    var activated = await TryActivateWindowAsync(passwordTitles, null, 5, 250, cancellationToken);
+                    if (!activated)
+                    {
+                        Log(onOutput, $"Could not activate password window '{passwordWindowTitle}'; typing into current focus");
+                    }
                 }
 
                 SendKeys.SendWait(flow.Password);
@@ -1624,6 +1667,31 @@ public sealed class LauncherNativeStartRunner
         }, IntPtr.Zero);
 
         return windows;
+    }
+
+    private static HashSet<IntPtr> SnapshotWindowHandles()
+    {
+        return EnumerateWindows().Select(window => window.Handle).ToHashSet();
+    }
+
+    private static IntPtr TryFindNewWindow(IReadOnlyCollection<IntPtr> knownHandles, IReadOnlyList<string> excludeTitles)
+    {
+        foreach (var window in EnumerateWindows())
+        {
+            if (knownHandles.Contains(window.Handle))
+            {
+                continue;
+            }
+
+            if (excludeTitles.Any(title => TitleEqualsOrContains(window.Title, title)))
+            {
+                continue;
+            }
+
+            return window.Handle;
+        }
+
+        return IntPtr.Zero;
     }
 
     private static string NormalizeName(string? value)

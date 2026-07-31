@@ -1,5 +1,19 @@
 [
   {
+    "version": "1.1.30",
+    "releaseDate": "2026-07-31",
+    "description": "Fix update table sending password before SQL Server login box appears; add Stop button",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.1.30/Launcher-1.1.30-Setup.exe",
+    "checksum": "",
+    "isRequired": false,
+    "notes": [
+      "Generic fallback titles like Access/Microsoft Access matched the main Access window instantly, so the update table flow assumed the SQL Server password prompt was up and typed into whatever had focus",
+      "The update table flow now genuinely watches for the SQL Server login/password window (specific configured titles, then any window newly appeared since the Update Table button was clicked) before typing the password",
+      "Added a Stop button to the Launcher UI to halt a running Start/Close automation immediately",
+      "Rebuilt the installer for these fixes"
+    ]
+  },
+  {
     "version": "1.1.29",
     "releaseDate": "2026-07-30",
     "description": "Fix login-success detection falsely declaring Visual Board login complete",

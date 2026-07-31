@@ -30,6 +30,7 @@ public partial class MainWindow : Window
     private readonly ObservableCollection<string> _logLines = new();
     private readonly ObservableCollection<StepRow> _stepRows = new();
     private bool _isBusy;
+    private CancellationTokenSource? _runCancellationSource;
 
     private string _launcherRoot = string.Empty;
     private string _launcherScriptPath = string.Empty;
@@ -629,6 +630,9 @@ public partial class MainWindow : Window
         AppendLog($"Running mode {mode} (DryRun={dryRun})");
         StatusText.Text = "Running...";
 
+        _runCancellationSource = new CancellationTokenSource();
+        var cancellationToken = _runCancellationSource.Token;
+
         try
         {
             if (mode == LauncherMode.Start)
@@ -641,7 +645,8 @@ public partial class MainWindow : Window
                 await _nativeStartRunner.RunAsync(
                     _configDocument,
                     dryRun,
-                    line => Dispatcher.Invoke(() => AppendLog(line)));
+                    line => Dispatcher.Invoke(() => AppendLog(line)),
+                    cancellationToken);
 
                 StatusText.Text = "Completed";
                 AppendLog("Native start run completed.");
@@ -653,11 +658,17 @@ public partial class MainWindow : Window
                     configPath,
                     mode,
                     dryRun,
-                    line => Dispatcher.Invoke(() => AppendLog(line)));
+                    line => Dispatcher.Invoke(() => AppendLog(line)),
+                    cancellationToken);
 
                 StatusText.Text = exitCode == 0 ? "Completed" : "Completed with errors";
                 AppendLog("Exit code: " + exitCode);
             }
+        }
+        catch (OperationCanceledException)
+        {
+            StatusText.Text = "Stopped";
+            AppendLog("Run stopped by user.");
         }
         catch (Exception ex)
         {
@@ -667,6 +678,8 @@ public partial class MainWindow : Window
         }
         finally
         {
+            _runCancellationSource?.Dispose();
+            _runCancellationSource = null;
             SetBusyState(false);
         }
     }
@@ -684,6 +697,7 @@ public partial class MainWindow : Window
         SaveSettingsButton.IsEnabled = !isBusy;
         ResetSettingsButton.IsEnabled = !isBusy;
         StepsGrid.IsEnabled = !isBusy;
+        StopButton.IsEnabled = isBusy;
     }
 
     private void AppendLog(string message)
@@ -709,6 +723,19 @@ public partial class MainWindow : Window
     private async void CloseButton_OnClick(object sender, RoutedEventArgs e)
     {
         await RunLauncherModeAsync(LauncherMode.Close);
+    }
+
+    private void StopButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (_runCancellationSource is null || _runCancellationSource.IsCancellationRequested)
+        {
+            return;
+        }
+
+        StatusText.Text = "Stopping...";
+        AppendLog("Stop requested; finishing current action and halting.");
+        _runCancellationSource.Cancel();
+        StopButton.IsEnabled = false;
     }
 
     private void StartAndWaitButton_OnClick(object sender, RoutedEventArgs e)
