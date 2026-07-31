@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.1.40",
+    "releaseDate": "2026-07-31",
+    "description": "Fix early SQL login timeout and restore visible install progress on self-update",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.1.40/Launcher-1.1.40-Setup.exe",
+    "checksum": "",
+    "isRequired": false,
+    "notes": [
+      "The SQL Server login/password wait was counting loop iterations as whole seconds, but iterations that dismissed an Access confirmation dialog only took 400-1000ms, so the configured timeout could be exhausted in far less real time than intended right before the real login box appeared",
+      "The wait now tracks real elapsed time with a stopwatch instead of iteration count, and won't repeatedly re-process the same confirmation dialog it already tried to dismiss",
+      "Self-update installs now run the installer non-silently so its own wizard can ask to confirm, show real install progress, and offer to relaunch Launcher when the update finishes"
+    ]
+  },
+  {
     "version": "1.1.39",
     "releaseDate": "2026-07-31",
     "description": "Fix update table flow stuck on Access confirmation dialog; show install progress",

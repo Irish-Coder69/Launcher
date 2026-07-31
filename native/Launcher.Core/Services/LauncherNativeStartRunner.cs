@@ -839,7 +839,13 @@ public sealed class LauncherNativeStartRunner
                 var passwordWaitTitles = DistinctTitles(new[] { flow.PasswordWindowTitle }, flow.PasswordWindowTitles);
                 var passwordExcludeTitles = DistinctTitles(new[] { mainWindowTitle, "Launcher Native" }, step.FallbackWindowTitles, flow.PasswordWindowFallbackTitles);
                 var passwordTimeoutSeconds = flow.PasswordWindowTimeoutSeconds ?? 45;
-                for (var i = 0; i < passwordTimeoutSeconds; i++)
+                // Use elapsed real time rather than a loop-iteration count: iterations that dismiss a
+                // confirmation dialog only sleep ~400-1000ms instead of the usual 1000ms, so counting
+                // iterations as if each was a full second could exhaust the "timeout" in far less than
+                // the configured number of real seconds while the real login prompt is still on its way.
+                var dismissedPasswordWindowHandles = new HashSet<IntPtr>();
+                var passwordWaitStopwatch = Stopwatch.StartNew();
+                while (passwordWaitStopwatch.Elapsed.TotalSeconds < passwordTimeoutSeconds)
                 {
                     cancellationToken.ThrowIfCancellationRequested();
                     if (passwordWaitTitles.Count > 0)
@@ -850,6 +856,13 @@ public sealed class LauncherNativeStartRunner
                     if (passwordWindowHandle == IntPtr.Zero)
                     {
                         passwordWindowHandle = TryFindNewWindow(preClickWindowHandles, passwordExcludeTitles);
+                    }
+
+                    // A confirmation dialog we already tried to dismiss may still be closing; don't
+                    // re-process the same handle on every poll, just wait for it to actually go away.
+                    if (passwordWindowHandle != IntPtr.Zero && dismissedPasswordWindowHandles.Contains(passwordWindowHandle))
+                    {
+                        passwordWindowHandle = IntPtr.Zero;
                     }
 
                     if (passwordWindowHandle != IntPtr.Zero)
@@ -874,7 +887,10 @@ public sealed class LauncherNativeStartRunner
                         {
                             Log(onOutput, "Dismissing an intermediate confirmation dialog before the SQL Server login prompt");
                             TryDismissConfirmationDialog(passwordWindowHandle);
+                            dismissedPasswordWindowHandles.Add(passwordWindowHandle);
                             passwordWindowHandle = IntPtr.Zero;
+                            // Give the dismiss click time to register and the dialog time to close.
+                            await Task.Delay(600, cancellationToken);
                             continue;
                         }
 

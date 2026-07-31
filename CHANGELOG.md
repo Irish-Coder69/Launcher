@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.40 - 2026-07-31
+
+- Fixed the SQL Server login/password wait timing out early: the wait loop counted iterations as if each took a full second, but iterations that dismissed the Access confirmation dialog only slept 400-1000ms, so a run of dismiss iterations could burn through the whole configured timeout in far less real time than intended, reporting "not detected" right before the real login box actually appeared. The wait now tracks real elapsed time instead of iteration count, and no longer re-processes a confirmation dialog it already tried to dismiss on every poll.
+- Self-update installs no longer run fully silent. The installer's own wizard now shows so it can ask to confirm, show real install progress, and offer to relaunch Launcher when finished, instead of the app just closing without any visible install feedback.
+
 ## 1.1.39 - 2026-07-31
 
 - Fixed the update table flow still not waiting for the real SQL Server login box: Access shows an intermediate "You are about to update N record(s)" confirmation dialog first, which has no password field and needs a Yes/OK click to proceed. The flow now recognizes that a detected window without an edit field is this confirmation, automatically dismisses it, and keeps waiting for the actual login prompt (which does have a password field) before typing the password.

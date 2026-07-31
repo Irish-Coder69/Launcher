@@ -114,23 +114,26 @@ public partial class UpdatesWindow : Window
                 return;
             }
 
-            DownloadProgressTextBlock.Text = "Download complete. Installing update...";
+            DownloadProgressTextBlock.Text = "Download complete. Launching installer...";
 
             var startInfo = new ProcessStartInfo
             {
                 FileName = installerPath,
-                Arguments = $"/S /D=\"{_launcherRoot}\"",
+                // Deliberately not silent (no /S): the installer's own wizard asks to confirm, shows
+                // real install progress, and asks to launch Launcher again when it finishes - the
+                // visible feedback that a fully silent install cannot provide.
+                Arguments = $"/D=\"{_launcherRoot}\"",
                 UseShellExecute = false,
                 WorkingDirectory = updateDir
             };
 
             Process.Start(startInfo);
 
-            // The installer needs to replace this running executable, so this app must close for the
-            // install to complete. The installer relaunches Launcher automatically when done, so the
-            // app reappearing is the visible signal that installation finished.
-            DownloadProgressTextBlock.Text = "Installing update. Launcher will reopen automatically when finished...";
-            await Task.Delay(1500);
+            // The installer needs to replace this running executable, so this app must close before
+            // the wizard reaches its install step. The installer's finish page offers to relaunch
+            // Launcher once the install completes.
+            DownloadProgressTextBlock.Text = "Follow the installer window to finish updating...";
+            await Task.Delay(1000);
             Application.Current.Shutdown();
         }
         catch (Exception ex)
