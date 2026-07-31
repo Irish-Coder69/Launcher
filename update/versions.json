@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.1.34",
+    "releaseDate": "2026-07-31",
+    "description": "Split About and Check for Updates into separate windows",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.1.34/Launcher-1.1.34-Setup.exe",
+    "checksum": "",
+    "isRequired": false,
+    "notes": [
+      "Help > About and Help > Check for Updates now open two completely separate windows instead of sharing one tabbed window",
+      "Clicking About only shows the about info; clicking Check for Updates only shows update checking/download",
+      "Reordered the Help menu so Check for Updates is listed first and About is last"
+    ]
+  },
+  {
     "version": "1.1.33",
     "releaseDate": "2026-07-31",
     "description": "Make the Stop button clearly visible even when disabled",

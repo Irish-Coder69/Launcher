@@ -48,8 +48,8 @@
                     <MenuItem Header="Exit" Click="ExitMenuItem_OnClick" />
                 </MenuItem>
                 <MenuItem Header="Help">
-                    <MenuItem Header="About" Click="AboutMenuItem_OnClick" />
                     <MenuItem Header="Check for Updates" Click="CheckForUpdatesMenuItem_OnClick" />
+                    <MenuItem Header="About" Click="AboutMenuItem_OnClick" />
                 </MenuItem>
             </Menu>
         </Border>

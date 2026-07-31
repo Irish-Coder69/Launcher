@@ -1,0 +1,89 @@
+<Window x:Class="Launcher.App.UpdatesWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Check for Updates"
+        Height="420"
+        Width="560"
+        MinHeight="380"
+        MinWidth="520"
+        WindowStartupLocation="CenterOwner"
+        ResizeMode="NoResize"
+        Background="#0C0F17">
+    <Grid Margin="16">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto" />
+            <RowDefinition Height="*" />
+            <RowDefinition Height="Auto" />
+        </Grid.RowDefinitions>
+
+        <TextBlock Text="Check for Updates"
+                   FontSize="24"
+                   FontWeight="SemiBold"
+                   Foreground="#DCE6FF" />
+
+        <Border Grid.Row="1"
+                Margin="0,14,0,0"
+                Padding="12"
+                CornerRadius="10"
+                BorderBrush="#2A3652"
+                BorderThickness="1"
+                Background="#101829">
+            <StackPanel>
+                <TextBlock x:Name="UpdatesCurrentVersionTextBlock"
+                           Foreground="#8FA8D8"
+                           FontSize="13"
+                           Text="Current version" />
+
+                <Button x:Name="CheckUpdatesButton"
+                        Width="160"
+                        Height="34"
+                        Margin="0,14,0,0"
+                        HorizontalAlignment="Left"
+                        Content="Check for Updates"
+                        Click="CheckUpdatesButton_OnClick" />
+
+                <TextBlock x:Name="UpdateStatusTextBlock"
+                           Margin="0,14,0,0"
+                           Foreground="#BFD2F7"
+                           TextWrapping="Wrap"
+                           Text="" />
+
+                <StackPanel x:Name="UpdateAvailablePanel"
+                            Margin="0,14,0,0"
+                            Visibility="Collapsed">
+                    <Button x:Name="DownloadInstallButton"
+                            Width="160"
+                            Height="34"
+                            HorizontalAlignment="Left"
+                            Content="Download &amp; Install"
+                            Click="DownloadInstallButton_OnClick" />
+                </StackPanel>
+
+                <StackPanel x:Name="DownloadProgressPanel"
+                            Margin="0,16,0,0"
+                            Visibility="Collapsed">
+                    <ProgressBar x:Name="DownloadProgressBar"
+                                 Height="18"
+                                 Minimum="0"
+                                 Maximum="100" />
+                    <TextBlock x:Name="DownloadProgressTextBlock"
+                               Margin="0,6,0,0"
+                               Foreground="#8FA8D8"
+                               FontSize="12"
+                               Text="" />
+                </StackPanel>
+            </StackPanel>
+        </Border>
+
+        <DockPanel Grid.Row="2"
+                   Margin="0,16,0,0"
+                   LastChildFill="False">
+            <Button x:Name="CloseButton"
+                    Width="90"
+                    Height="34"
+                    Content="Close"
+                    Click="CloseButton_OnClick"
+                    DockPanel.Dock="Right" />
+        </DockPanel>
+    </Grid>
+</Window>

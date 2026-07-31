@@ -53,7 +53,7 @@ public partial class MainWindow : Window
 
     private void AboutMenuItem_OnClick(object sender, RoutedEventArgs e)
     {
-        var about = new AboutWindow(GetCurrentVersionText(), _launcherRoot, GetUpdateUrl())
+        var about = new AboutWindow(GetCurrentVersionText())
         {
             Owner = this
         };
@@ -63,12 +63,12 @@ public partial class MainWindow : Window
 
     private void CheckForUpdatesMenuItem_OnClick(object sender, RoutedEventArgs e)
     {
-        var about = new AboutWindow(GetCurrentVersionText(), _launcherRoot, GetUpdateUrl(), startOnUpdatesTab: true)
+        var updates = new UpdatesWindow(GetCurrentVersionText(), _launcherRoot, GetUpdateUrl())
         {
             Owner = this
         };
 
-        about.ShowDialog();
+        updates.ShowDialog();
     }
 
     private void DetectLauncherPaths()

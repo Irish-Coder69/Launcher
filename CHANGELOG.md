@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.34 - 2026-07-31
+
+- Help > About and Help > Check for Updates now open two completely separate windows instead of sharing one tabbed window. Clicking About only shows the about info; clicking Check for Updates only shows update checking/download.
+- Reordered the Help menu so Check for Updates is listed first and About is last.
+
 ## 1.1.33 - 2026-07-31
 
 - The Stop button was present and working (confirmed via UI Automation against the running app), but its disabled appearance relied on the OS default button theme, which washed its custom red coloring out to a barely-visible gray against the app's dark background.
