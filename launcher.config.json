@@ -167,11 +167,11 @@
         ],
         "passwordWindowTitles": [
           "Password",
-          "Enter Password",
-          "Microsoft Access"
+          "Enter Password"
         ],
         "passwordWindowFallbackTitles": [
-          "Access"
+          "Access",
+          "Microsoft Access"
         ],
         "passwordWindowTimeoutSeconds": 45,
         "password": "wstockrline2",

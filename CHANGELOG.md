@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.37 - 2026-07-31
+
+- Fixed the update table flow still sometimes entering the password before the SQL Server login box actually appeared. `"Microsoft Access"` was configured as a password-window title to match, but that title is also used by Access's own background frame window, which is already open before the button is even clicked - so it could be grabbed immediately instead of waiting for the real prompt.
+- The password-window detection now requires every candidate match (not just the fallback path) to be a window that is genuinely new since the Update Table button was clicked, and `"Microsoft Access"` was moved out of the match list and into the exclude list.
+
 ## 1.1.36 - 2026-07-31
 
 - Increased the update-table flow's post-password wait from 180 to 240 seconds, giving the Visual Board table update more time to finish before the launcher moves on to the next step.

@@ -834,8 +834,8 @@ public sealed class LauncherNativeStartRunner
 
                 // Watch for the SQL Server login/password box to actually appear instead of assuming
                 // it's up already. Generic titles like "Access"/"Microsoft Access" match the main
-                // window instantly, so try the specific configured titles first, then fall back to
-                // detecting any genuinely new window that wasn't present before the button was clicked.
+                // window instantly, so both checks below require the window to be genuinely new
+                // since the Update Table button was clicked, not just present somewhere on screen.
                 var passwordWaitTitles = DistinctTitles(new[] { flow.PasswordWindowTitle }, flow.PasswordWindowTitles);
                 var passwordExcludeTitles = DistinctTitles(new[] { mainWindowTitle, "Launcher Native" }, step.FallbackWindowTitles, flow.PasswordWindowFallbackTitles);
                 var passwordTimeoutSeconds = flow.PasswordWindowTimeoutSeconds ?? 45;
@@ -844,7 +844,7 @@ public sealed class LauncherNativeStartRunner
                     cancellationToken.ThrowIfCancellationRequested();
                     if (passwordWaitTitles.Count > 0)
                     {
-                        passwordWindowHandle = TryFindFirstWindow(passwordWaitTitles, null);
+                        passwordWindowHandle = TryFindFirstNewWindow(passwordWaitTitles, preClickWindowHandles);
                     }
 
                     if (passwordWindowHandle == IntPtr.Zero)
@@ -1689,6 +1689,27 @@ public sealed class LauncherNativeStartRunner
             }
 
             return window.Handle;
+        }
+
+        return IntPtr.Zero;
+    }
+
+    // Same as TryFindFirstWindow but requires the match to be a window that did not exist in
+    // knownHandles, so a generic title (e.g. "Microsoft Access") already open before the click
+    // can't be mistaken for the password prompt that has not appeared yet.
+    private static IntPtr TryFindFirstNewWindow(IReadOnlyList<string> titles, IReadOnlyCollection<IntPtr> knownHandles)
+    {
+        foreach (var window in EnumerateWindows())
+        {
+            if (knownHandles.Contains(window.Handle))
+            {
+                continue;
+            }
+
+            if (titles.Any(title => TitleEqualsOrContains(window.Title, title)))
+            {
+                return window.Handle;
+            }
         }
 
         return IntPtr.Zero;
