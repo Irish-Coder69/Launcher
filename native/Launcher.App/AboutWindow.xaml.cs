@@ -14,7 +14,7 @@ public partial class AboutWindow : Window
     private LauncherUpdatePackage? _pendingUpdatePackage;
     private bool _isBusy;
 
-    public AboutWindow(string appVersion, string launcherRoot, string updateUrl)
+    public AboutWindow(string appVersion, string launcherRoot, string updateUrl, bool startOnUpdatesTab = false)
     {
         InitializeComponent();
 
@@ -24,9 +24,20 @@ public partial class AboutWindow : Window
 
         VersionTextBlock.Text = "Version " + appVersion;
         UpdatesCurrentVersionTextBlock.Text = "Current version " + appVersion;
+
+        if (startOnUpdatesTab)
+        {
+            UpdatesTabItem.IsSelected = true;
+            Loaded += async (_, _) => await CheckForUpdatesAsync();
+        }
     }
 
     private async void CheckUpdatesButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        await CheckForUpdatesAsync();
+    }
+
+    private async Task CheckForUpdatesAsync()
     {
         if (_isBusy)
         {

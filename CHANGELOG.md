@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.32 - 2026-07-31
+
+- "Check for Updates" is now its own item in the Help menu (alongside About), instead of only being reachable as a tab inside the About window. Clicking it opens directly to the Updates tab and immediately starts checking.
+- The Stop button (added in 1.1.30) remains available on the main window whenever a Start/Close run is in progress, so the automation can be halted immediately if something isn't right.
+
 ## 1.1.31 - 2026-07-31
 
 - Added a dedicated "Updates" tab to the About window (About Launcher Native), separate from the general About info, with its own Check for Updates button and status area.

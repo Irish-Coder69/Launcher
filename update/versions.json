@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.1.32",
+    "releaseDate": "2026-07-31",
+    "description": "Move Check for Updates to its own Help menu item",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.1.32/Launcher-1.1.32-Setup.exe",
+    "checksum": "",
+    "isRequired": false,
+    "notes": [
+      "Check for Updates is now its own item in the Help menu (alongside About), instead of only being reachable as a tab inside the About window",
+      "Clicking Help > Check for Updates opens directly to the Updates tab and immediately starts checking",
+      "The Stop button (added in 1.1.30) remains available on the main window whenever a Start/Close run is in progress"
+    ]
+  },
+  {
     "version": "1.1.31",
     "releaseDate": "2026-07-31",
     "description": "Add a dedicated Updates tab with real download progress; close automatically instead of asking",

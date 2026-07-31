@@ -61,6 +61,16 @@ public partial class MainWindow : Window
         about.ShowDialog();
     }
 
+    private void CheckForUpdatesMenuItem_OnClick(object sender, RoutedEventArgs e)
+    {
+        var about = new AboutWindow(GetCurrentVersionText(), _launcherRoot, GetUpdateUrl(), startOnUpdatesTab: true)
+        {
+            Owner = this
+        };
+
+        about.ShowDialog();
+    }
+
     private void DetectLauncherPaths()
     {
         var current = new DirectoryInfo(AppContext.BaseDirectory);

@@ -49,6 +49,7 @@
                 </MenuItem>
                 <MenuItem Header="Help">
                     <MenuItem Header="About" Click="AboutMenuItem_OnClick" />
+                    <MenuItem Header="Check for Updates" Click="CheckForUpdatesMenuItem_OnClick" />
                 </MenuItem>
             </Menu>
         </Border>
