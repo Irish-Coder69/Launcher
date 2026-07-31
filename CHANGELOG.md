@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.33 - 2026-07-31
+
+- The Stop button was present and working (confirmed via UI Automation against the running app), but its disabled appearance relied on the OS default button theme, which washed its custom red coloring out to a barely-visible gray against the app's dark background.
+- The Stop button now uses its own always-visible red styling (bright red "STOP" when a run is active, a clearly muted dark red when idle) instead of the default disabled theme, so it can no longer be mistaken for missing.
+
 ## 1.1.32 - 2026-07-31
 
 - "Check for Updates" is now its own item in the Help menu (alongside About), instead of only being reachable as a tab inside the About window. Clicking it opens directly to the Updates tab and immediately starts checking.

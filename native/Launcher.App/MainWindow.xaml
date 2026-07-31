@@ -94,7 +94,38 @@
                 <Button x:Name="StartButton" Width="220" Height="36" Margin="0,0,0,8" Content="Run Start" Click="StartButton_OnClick" />
                 <Button x:Name="CloseButton" Width="220" Height="36" Margin="0,0,0,8" Content="Run Close" Click="CloseButton_OnClick" />
                 <Button x:Name="StartAndWaitButton" Width="220" Height="36" Margin="0,0,0,8" Content="Start + Wait For CLOSEAPPS" Click="StartAndWaitButton_OnClick" />
-                <Button x:Name="StopButton" Width="220" Height="36" Content="Stop" Background="#5A1F26" Foreground="#FFDCE0" IsEnabled="False" Click="StopButton_OnClick" />
+                <Button x:Name="StopButton" Width="220" Height="36" Content="STOP" FontWeight="Bold" IsEnabled="False" Click="StopButton_OnClick">
+                    <Button.Style>
+                        <Style TargetType="Button">
+                            <Setter Property="Background" Value="#C0392B" />
+                            <Setter Property="Foreground" Value="#FFFFFF" />
+                            <Setter Property="BorderBrush" Value="#E74C3C" />
+                            <Setter Property="BorderThickness" Value="1" />
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="Button">
+                                        <Border Background="{TemplateBinding Background}"
+                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                BorderThickness="{TemplateBinding BorderThickness}"
+                                                CornerRadius="6">
+                                            <ContentPresenter HorizontalAlignment="Center" VerticalAlignment="Center" />
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
+                            <Style.Triggers>
+                                <Trigger Property="IsEnabled" Value="False">
+                                    <Setter Property="Background" Value="#4A2126" />
+                                    <Setter Property="Foreground" Value="#C79197" />
+                                    <Setter Property="BorderBrush" Value="#6B2A31" />
+                                </Trigger>
+                                <Trigger Property="IsMouseOver" Value="True">
+                                    <Setter Property="Background" Value="#D9483A" />
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </Button.Style>
+                </Button>
             </StackPanel>
         </Grid>
 

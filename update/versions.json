@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.1.33",
+    "releaseDate": "2026-07-31",
+    "description": "Make the Stop button clearly visible even when disabled",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.1.33/Launcher-1.1.33-Setup.exe",
+    "checksum": "",
+    "isRequired": false,
+    "notes": [
+      "Confirmed via UI Automation that the Stop button was always present and correctly positioned in the running app",
+      "The button's disabled appearance previously fell back to the OS default theme, which washed its custom red coloring out to a near-invisible gray against the app's dark background",
+      "The Stop button now uses its own custom styling at all times: a clearly muted dark red when idle/disabled, and a bright red when a run is active and it can be clicked"
+    ]
+  },
+  {
     "version": "1.1.32",
     "releaseDate": "2026-07-31",
     "description": "Move Check for Updates to its own Help menu item",
