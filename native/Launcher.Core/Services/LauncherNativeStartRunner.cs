@@ -854,6 +854,18 @@ public sealed class LauncherNativeStartRunner
 
                     if (passwordWindowHandle != IntPtr.Zero)
                     {
+                        // Access can flash a brief transient message box (e.g. a security/loading
+                        // notice) before the real SQL Server login box appears. Re-check after a short
+                        // settle delay so a window that has already closed by itself isn't mistaken
+                        // for the login prompt.
+                        await Task.Delay(400, cancellationToken);
+                        if (!NativeMethods.IsWindowVisible(passwordWindowHandle))
+                        {
+                            Log(onOutput, "Ignored a transient window that closed before it could be the SQL Server login prompt");
+                            passwordWindowHandle = IntPtr.Zero;
+                            continue;
+                        }
+
                         break;
                     }
 

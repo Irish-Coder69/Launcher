@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.1.38",
+    "releaseDate": "2026-07-31",
+    "description": "Fix password sometimes going into a transient message box instead of the SQL Server login box",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.1.38/Launcher-1.1.38-Setup.exe",
+    "checksum": "",
+    "isRequired": false,
+    "notes": [
+      "Access can briefly flash a transient message box (e.g. a security/loading notice) before the real SQL Server login box appears",
+      "The password-window detection previously grabbed the first new window it saw, which could be that transient box; if it closed on its own before the password was typed, the real login box was missed",
+      "Detection now re-checks a candidate window after a short settle delay and keeps waiting if it already closed, instead of typing into a window that's gone"
+    ]
+  },
+  {
     "version": "1.1.37",
     "releaseDate": "2026-07-31",
     "description": "Fix password sometimes entered before the SQL Server login box appears",

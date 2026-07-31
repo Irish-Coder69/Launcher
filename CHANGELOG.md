@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.1.38 - 2026-07-31
+
+- Fixed the update table flow occasionally grabbing a brief transient message box (e.g. an Access security/loading notice) that flashes before the real SQL Server login box appears, then typing the password after that box had already closed on its own.
+- The password-window detection now re-checks a detected window after a short settle delay and ignores it if it already closed, continuing to wait for the real SQL Server login prompt instead.
+
 ## 1.1.37 - 2026-07-31
 
 - Fixed the update table flow still sometimes entering the password before the SQL Server login box actually appeared. `"Microsoft Access"` was configured as a password-window title to match, but that title is also used by Access's own background frame window, which is already open before the button is even clicked - so it could be grabbed immediately instead of waiting for the real prompt.
