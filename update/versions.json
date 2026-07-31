@@ -1,5 +1,17 @@
 [
   {
+    "version": "1.1.36",
+    "releaseDate": "2026-07-31",
+    "description": "Give the update-table step more time to finish",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.1.36/Launcher-1.1.36-Setup.exe",
+    "checksum": "",
+    "isRequired": false,
+    "notes": [
+      "Increased the update-table flow's post-password wait from 180 to 240 seconds",
+      "Ensures the Visual Board table update has finished before the launcher proceeds to the next step"
+    ]
+  },
+  {
     "version": "1.1.35",
     "releaseDate": "2026-07-31",
     "description": "Fix installer hanging during silent installs/updates",

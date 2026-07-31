@@ -176,7 +176,7 @@
         "passwordWindowTimeoutSeconds": 45,
         "password": "wstockrline2",
         "passwordEnterKeys": "{ENTER}",
-        "waitAfterPasswordSeconds": 180
+        "waitAfterPasswordSeconds": 240
       },
       "waitForLoginCompleteSeconds": 10,
       "waitAfterStepSeconds": 2

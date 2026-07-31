@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.1.36 - 2026-07-31
+
+- Increased the update-table flow's post-password wait from 180 to 240 seconds, giving the Visual Board table update more time to finish before the launcher moves on to the next step.
+
 ## 1.1.35 - 2026-07-31
 
 - Fixed a silent-install hang: the installer's "already installed, remove first?" and "launch now?" prompts used MessageBox, which NSIS does not auto-dismiss during silent (/S) installs. A silent install (including the app's own self-update flow) could sit forever waiting for a click that would never come.
