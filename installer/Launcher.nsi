@@ -6,7 +6,7 @@
 ; Variables
 ;--------------------------------
 !define PRODUCT_NAME "Launcher"
-!define PRODUCT_VERSION "1.2.0"
+!define PRODUCT_VERSION "1.2.1"
 !define PRODUCT_PUBLISHER "Windsor Industries"
 !define PRODUCT_UNINST_KEY "Software\Microsoft\Windows\CurrentVersion\Uninstall\${PRODUCT_NAME}"
 !ifndef OUTDIR
@@ -176,7 +176,7 @@ SectionEnd
 Function .onInit
   ReadRegStr $0 HKCU "${PRODUCT_UNINST_KEY}" "UninstallString"
   ${If} $0 != ""
-    ; Silent installs (e.g. the app's own self-update flow) must never wait on a prompt.
+    ; Silent installs must never wait on a prompt.
     IfSilent removePreviousVersion 0
     MessageBox MB_OKCANCEL|MB_ICONEXCLAMATION \
       "${PRODUCT_NAME} is already installed.$\n$\nClick OK to remove the previous version first, or CANCEL to abort." \
@@ -188,8 +188,7 @@ removePreviousVersion:
 FunctionEnd
 
 Function .onInstSuccess
-  ; Silent installs (e.g. the app's own self-update flow) skip the prompt but still auto-launch,
-  ; since the app reappearing is the only visible signal the user gets that the update finished.
+  ; Silent installs skip the prompt but still auto-launch.
   IfSilent launchInstalledApp 0
   MessageBox MB_YESNO|MB_ICONQUESTION \
     "Installation complete!$\n$\nWould you like to launch ${PRODUCT_NAME} now?" \
@@ -206,7 +205,7 @@ FunctionEnd
 ; Uninstaller Functions
 ;--------------------------------
 Function un.onInit
-  ; Silent uninstalls (e.g. removing the previous version during an in-place update) must never wait on a prompt.
+  ; Silent uninstalls must never wait on a prompt.
   IfSilent skipConfirm 0
   MessageBox MB_ICONQUESTION|MB_YESNO|MB_DEFBUTTON2 \
     "Are you sure you want to completely remove $(^Name) and all of its components?" \

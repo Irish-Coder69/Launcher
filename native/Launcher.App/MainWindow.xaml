@@ -64,6 +64,7 @@
                     <TextBlock Text="Launcher Native Desktop" FontSize="22" FontWeight="SemiBold" Foreground="#DCE6FF" />
                     <TextBlock Margin="0,4,0,0" Text="Phase 1 bridge: run existing launcher.ps1 with Start/Close modes while native migration is underway." Foreground="#8FA8D8" TextWrapping="Wrap" />
                     <TextBlock x:Name="StatusText" Margin="0,8,0,0" Text="Ready" Foreground="#8CE0A1" FontWeight="SemiBold" />
+                    <TextBlock x:Name="CurrentUserTextBlock" Margin="0,4,0,0" Foreground="#BFD2F7" Text="Signed in user" />
                 </StackPanel>
                 <CheckBox x:Name="DryRunCheckBox" Grid.Column="1" Margin="12,4,0,0" Content="Dry Run" IsChecked="False" Foreground="#DCE6FF" VerticalAlignment="Top" />
             </Grid>
@@ -151,6 +152,7 @@
                             <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,8,0,8">
                                 <Button x:Name="DetectRunningButton" Content="Native Detect Running" Width="160" Height="30" Click="DetectRunningButton_OnClick" />
                                 <Button x:Name="DetectCloseTargetsButton" Content="Native Detect Close Targets" Width="190" Height="30" Margin="8,0,0,0" Click="DetectCloseTargetsButton_OnClick" />
+                                <Button x:Name="LearnOpenAppsButton" Content="Learn Open Apps" Width="140" Height="30" Margin="8,0,0,0" Click="LearnOpenAppsButton_OnClick" />
                             </StackPanel>
 
                             <DataGrid x:Name="StepsGrid" Grid.Row="2" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
@@ -303,6 +305,7 @@
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
 
                                 <Grid.ColumnDefinitions>
@@ -349,15 +352,32 @@
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
                                     <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
                                     <RowDefinition Height="*" />
                                     <RowDefinition Height="Auto" />
                                 </Grid.RowDefinitions>
 
-                                <TextBlock Text="Login Sequence" Foreground="#DCE6FF" />
-                                <TextBlock Grid.Row="1" Margin="0,4,0,8" Text="One key command per line. Optional delay format: keys|delayMs. For secrets use tokens like {{secret:MyPassword}}" Foreground="#8FA8D8" TextWrapping="Wrap" />
-                                <TextBox x:Name="ProgramLoginKeysTextBox" Grid.Row="2" Height="120" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" TextWrapping="Wrap" />
+                                <TextBlock Text="Program Search" Foreground="#DCE6FF" />
+                                <Grid Grid.Row="1" Margin="0,6,0,8">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="*" />
+                                        <ColumnDefinition Width="100" />
+                                        <ColumnDefinition Width="130" />
+                                        <ColumnDefinition Width="140" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBox x:Name="ProgramSearchQueryTextBox" Height="28" Margin="0,0,8,0" ToolTip="Type a program name to search" />
+                                    <Button x:Name="SearchProgramsButton" Grid.Column="1" Height="28" Margin="0,0,8,0" Content="Search" Click="SearchProgramsButton_OnClick" />
+                                    <Button x:Name="ApplyProgramSearchResultButton" Grid.Column="2" Height="28" Margin="0,0,8,0" Content="Use Selected" Click="ApplyProgramSearchResultButton_OnClick" />
+                                    <Button x:Name="LearnProgramsIntoSearchButton" Grid.Column="3" Height="28" Content="Learn Open Apps" Click="LearnOpenAppsButton_OnClick" />
+                                </Grid>
+                                <ListBox x:Name="ProgramSearchResultsListBox" Grid.Row="2" Height="110" Background="#0D1422" Foreground="#DCE6FF" BorderBrush="#2A3652" BorderThickness="1" DisplayMemberPath="DisplayText" />
 
-                                <StackPanel Grid.Row="3" Margin="0,12,0,0">
+                                <TextBlock Grid.Row="3" Text="Login Sequence" Foreground="#DCE6FF" Margin="0,12,0,0" />
+                                <TextBlock Grid.Row="4" Margin="0,4,0,8" Text="One key command per line. Optional delay format: keys|delayMs. For secrets use tokens like {{secret:MyPassword}}" Foreground="#8FA8D8" TextWrapping="Wrap" />
+                                <TextBox x:Name="ProgramLoginKeysTextBox" Grid.Row="5" Height="120" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" TextWrapping="Wrap" />
+
+                                <StackPanel Grid.Row="6" Margin="0,12,0,0">
                                     <TextBlock Text="Secure Secret Vault" Foreground="#DCE6FF" />
                                     <Grid Margin="0,6,0,10">
                                         <Grid.ColumnDefinitions>
@@ -391,7 +411,7 @@
                                     <TextBox x:Name="ProgramProductivityNotesTextBox" Margin="0,6,0,0" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" TextWrapping="Wrap" MinHeight="130" />
                                 </StackPanel>
 
-                                <WrapPanel Grid.Row="4" Margin="0,12,0,0">
+                                <WrapPanel Grid.Row="7" Margin="0,12,0,0">
                                     <Button x:Name="AddOrUpdateProgramStepButton" Width="200" Height="34" Content="Add / Update Program Step" Click="AddOrUpdateProgramStepButton_OnClick" />
                                     <Button x:Name="PopulateBuilderFromSelectedStepButton" Width="210" Height="34" Margin="8,0,0,0" Content="Load Selected Step Into Builder" Click="PopulateBuilderFromSelectedStepButton_OnClick" />
                                     <Button x:Name="ClearProgramBuilderButton" Width="150" Height="34" Margin="8,0,0,0" Content="Clear Form" Click="ClearProgramBuilderButton_OnClick" />

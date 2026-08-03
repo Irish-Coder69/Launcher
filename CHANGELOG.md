@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.1 - 2026-08-03
+
+- Removed in-app self-update execution. The updater now only checks version availability and opens the installer download page, then instructs users to do a normal Windows uninstall/install workflow.
+- Enforced login at every app launch through the startup login dialog flow.
+- Added editable user account management from the login window so users can update login credentials and profile details (including password changes).
+- Added test coverage for user profile edit and credential update behavior.
+
 ## 1.2.0 - 2026-08-03
 
 - Added behavior learning for launch flow with a recommended order model based on prior runs, including optional auto-apply and per-run override controls.

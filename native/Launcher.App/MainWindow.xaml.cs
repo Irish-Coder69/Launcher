@@ -1,4 +1,5 @@
 ﻿using System.Collections.ObjectModel;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
@@ -28,21 +29,25 @@ public partial class MainWindow : Window
     private readonly ObservableCollection<StepRow> _stepRows = new();
     private readonly ObservableCollection<string> _recommendedOrderLines = new();
     private readonly ObservableCollection<string> _secretNames = new();
+    private readonly ObservableCollection<ProgramSearchResult> _programSearchResults = new();
     private bool _isBusy;
     private CancellationTokenSource? _runCancellationSource;
+    private readonly LauncherUserProfile? _currentUser;
 
     private string _launcherRoot = string.Empty;
     private string _launcherScriptPath = string.Empty;
     private LauncherConfigDocument? _configDocument;
 
-    public MainWindow()
+    public MainWindow(LauncherUserProfile? currentUser = null)
     {
         InitializeComponent();
+        _currentUser = currentUser;
         Loaded += MainWindow_OnLoaded;
         LogListBox.ItemsSource = _logLines;
         StepsGrid.ItemsSource = _stepRows;
         RecommendedOrderListBox.ItemsSource = _recommendedOrderLines;
         SecretsListBox.ItemsSource = _secretNames;
+        ProgramSearchResultsListBox.ItemsSource = _programSearchResults;
 
         DetectLauncherPaths();
         ReloadConfigView();
@@ -51,6 +56,9 @@ public partial class MainWindow : Window
     private void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
     {
         WindowState = WindowState.Maximized;
+        CurrentUserTextBlock.Text = _currentUser is null
+            ? "Signed in user: none"
+            : $"Signed in user: {_currentUser.DisplayName} ({_currentUser.UserName})";
     }
 
     private void ExitMenuItem_OnClick(object sender, RoutedEventArgs e)
@@ -70,7 +78,7 @@ public partial class MainWindow : Window
 
     private void CheckForUpdatesMenuItem_OnClick(object sender, RoutedEventArgs e)
     {
-        var updates = new UpdatesWindow(GetCurrentVersionText(), _launcherRoot, GetUpdateUrl())
+        var updates = new UpdatesWindow(GetCurrentVersionText(), GetUpdateUrl())
         {
             Owner = this
         };
@@ -326,6 +334,12 @@ public partial class MainWindow : Window
         AddOrUpdateProgramStepButton.IsEnabled = !isBusy;
         PopulateBuilderFromSelectedStepButton.IsEnabled = !isBusy;
         ClearProgramBuilderButton.IsEnabled = !isBusy;
+        SearchProgramsButton.IsEnabled = !isBusy;
+        ApplyProgramSearchResultButton.IsEnabled = !isBusy;
+        LearnProgramsIntoSearchButton.IsEnabled = !isBusy;
+        LearnOpenAppsButton.IsEnabled = !isBusy;
+        ProgramSearchQueryTextBox.IsEnabled = !isBusy;
+        ProgramSearchResultsListBox.IsEnabled = !isBusy;
         SaveProgramSecretButton.IsEnabled = !isBusy;
         InsertSecretTokenButton.IsEnabled = !isBusy;
         RefreshSecretsButton.IsEnabled = !isBusy;
@@ -345,6 +359,18 @@ public partial class MainWindow : Window
         foreach (var name in _secretStore.GetSecretNames())
         {
             _secretNames.Add(name);
+        }
+    }
+
+    private void RefreshProgramSearchResults(IEnumerable<ProgramSearchResult> results)
+    {
+        _programSearchResults.Clear();
+        foreach (var result in results
+                     .GroupBy(item => (item.ProgramPath ?? string.Empty) + "|" + (item.WindowTitle ?? string.Empty), StringComparer.OrdinalIgnoreCase)
+                     .Select(group => group.First())
+                     .OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase))
+        {
+            _programSearchResults.Add(result);
         }
     }
 
@@ -534,6 +560,46 @@ public partial class MainWindow : Window
         var summary = string.Join(", ", targets.Select(t => t.ProcessName + "#" + t.Id));
         AppendLog($"Close targets for '{step.Name}': {summary}");
         StatusText.Text = $"Found {targets.Count} close target(s)";
+    }
+
+    private void SearchProgramsButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        var query = NormalizeText(ProgramSearchQueryTextBox.Text);
+        if (string.IsNullOrWhiteSpace(query))
+        {
+            MessageBox.Show(this, "Enter a program name to search for.", "Launcher Native", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        RefreshProgramSearchResults(SearchProgramSuggestions(query));
+        StatusText.Text = $"Found {_programSearchResults.Count} program match(es)";
+    }
+
+    private void LearnOpenAppsButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        RefreshProgramSearchResults(GetOpenApplicationSuggestions());
+        StatusText.Text = $"Learned {_programSearchResults.Count} currently open app(s)";
+        AppendLog($"Learned {_programSearchResults.Count} currently open app(s) into program search.");
+    }
+
+    private void ApplyProgramSearchResultButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (ProgramSearchResultsListBox.SelectedItem is not ProgramSearchResult selected)
+        {
+            MessageBox.Show(this, "Select a program search result first.", "Launcher Native", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        ProgramStepNameTextBox.Text = selected.DisplayName;
+        ProgramPathTextBox.Text = selected.ProgramPath ?? string.Empty;
+        ProgramWindowTitleTextBox.Text = selected.WindowTitle ?? string.Empty;
+        ProgramArgumentsTextBox.Text = selected.Arguments ?? string.Empty;
+        if (string.IsNullOrWhiteSpace(ProgramWorkingDirectoryTextBox.Text) && !string.IsNullOrWhiteSpace(selected.ProgramPath))
+        {
+            ProgramWorkingDirectoryTextBox.Text = Path.GetDirectoryName(selected.ProgramPath) ?? string.Empty;
+        }
+
+        StatusText.Text = $"Loaded program '{selected.DisplayName}' into builder";
     }
 
     private void SaveSettingsButton_OnClick(object sender, RoutedEventArgs e)
@@ -784,6 +850,156 @@ public partial class MainWindow : Window
         StatusText.Text = $"Inserted token for secret '{secretName}'";
     }
 
+    private IEnumerable<ProgramSearchResult> SearchProgramSuggestions(string query)
+    {
+        var results = new List<ProgramSearchResult>();
+        results.AddRange(GetOpenApplicationSuggestions(query));
+        results.AddRange(GetStartMenuSuggestions(query));
+        results.AddRange(GetPathExecutableSuggestions(query));
+        return results;
+    }
+
+    private IEnumerable<ProgramSearchResult> GetOpenApplicationSuggestions(string? query = null)
+    {
+        var normalizedQuery = NormalizeText(query);
+        foreach (var process in Process.GetProcesses())
+        {
+            string processName;
+            string windowTitle;
+            string? path;
+            try
+            {
+                processName = process.ProcessName;
+                windowTitle = process.MainWindowTitle;
+                path = process.MainModule?.FileName;
+            }
+            catch
+            {
+                continue;
+            }
+
+            if (string.Equals(processName, "Launcher", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(windowTitle) && string.IsNullOrWhiteSpace(path))
+            {
+                continue;
+            }
+
+            if (!string.IsNullOrWhiteSpace(normalizedQuery) &&
+                !processName.Contains(normalizedQuery, StringComparison.OrdinalIgnoreCase) &&
+                !windowTitle.Contains(normalizedQuery, StringComparison.OrdinalIgnoreCase) &&
+                !(path?.Contains(normalizedQuery, StringComparison.OrdinalIgnoreCase) ?? false))
+            {
+                continue;
+            }
+
+            yield return new ProgramSearchResult
+            {
+                DisplayName = string.IsNullOrWhiteSpace(windowTitle) ? processName : windowTitle,
+                ProgramPath = path,
+                WindowTitle = windowTitle,
+                Source = "Open App"
+            };
+        }
+    }
+
+    private IEnumerable<ProgramSearchResult> GetStartMenuSuggestions(string query)
+    {
+        var directories = new[]
+        {
+            Environment.GetFolderPath(Environment.SpecialFolder.StartMenu),
+            Environment.GetFolderPath(Environment.SpecialFolder.CommonStartMenu)
+        }
+        .Where(directory => !string.IsNullOrWhiteSpace(directory) && Directory.Exists(directory));
+
+        var shellType = Type.GetTypeFromProgID("WScript.Shell");
+        dynamic? shell = shellType is null ? null : Activator.CreateInstance(shellType);
+
+        foreach (var directory in directories)
+        {
+            IEnumerable<string> files;
+            try
+            {
+                files = Directory.EnumerateFiles(directory, "*.*", SearchOption.AllDirectories)
+                    .Where(path => path.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase) || path.EndsWith(".exe", StringComparison.OrdinalIgnoreCase));
+            }
+            catch
+            {
+                continue;
+            }
+
+            foreach (var filePath in files)
+            {
+                var displayName = Path.GetFileNameWithoutExtension(filePath);
+                if (!displayName.Contains(query, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                var programPath = filePath;
+                if (shell is not null && filePath.EndsWith(".lnk", StringComparison.OrdinalIgnoreCase))
+                {
+                    try
+                    {
+                        dynamic shortcut = shell.CreateShortcut(filePath);
+                        programPath = (string)shortcut.TargetPath;
+                    }
+                    catch
+                    {
+                        continue;
+                    }
+                }
+
+                yield return new ProgramSearchResult
+                {
+                    DisplayName = displayName,
+                    ProgramPath = programPath,
+                    Source = "Start Menu"
+                };
+            }
+        }
+    }
+
+    private IEnumerable<ProgramSearchResult> GetPathExecutableSuggestions(string query)
+    {
+        var pathValue = Environment.GetEnvironmentVariable("PATH") ?? string.Empty;
+        var directories = pathValue.Split(';', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries)
+            .Where(Directory.Exists)
+            .Distinct(StringComparer.OrdinalIgnoreCase);
+
+        foreach (var directory in directories)
+        {
+            IEnumerable<string> files;
+            try
+            {
+                files = Directory.EnumerateFiles(directory, "*.exe", SearchOption.TopDirectoryOnly);
+            }
+            catch
+            {
+                continue;
+            }
+
+            foreach (var filePath in files)
+            {
+                var displayName = Path.GetFileNameWithoutExtension(filePath);
+                if (!displayName.Contains(query, StringComparison.OrdinalIgnoreCase))
+                {
+                    continue;
+                }
+
+                yield return new ProgramSearchResult
+                {
+                    DisplayName = displayName,
+                    ProgramPath = filePath,
+                    Source = "PATH"
+                };
+            }
+        }
+    }
+
     private void RefreshSecretsButton_OnClick(object sender, RoutedEventArgs e)
     {
         RefreshSecretList();
@@ -986,5 +1202,22 @@ public partial class MainWindow : Window
         public bool Enabled { get; set; }
 
         public string ProgramPath { get; set; } = string.Empty;
+    }
+
+    private sealed class ProgramSearchResult
+    {
+        public string DisplayName { get; set; } = string.Empty;
+
+        public string? ProgramPath { get; set; }
+
+        public string? WindowTitle { get; set; }
+
+        public string? Arguments { get; set; }
+
+        public string Source { get; set; } = string.Empty;
+
+        public string DisplayText => string.IsNullOrWhiteSpace(ProgramPath)
+            ? $"{DisplayName} [{Source}]"
+            : $"{DisplayName} [{Source}] - {ProgramPath}";
     }
 }

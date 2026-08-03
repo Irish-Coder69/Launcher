@@ -1,5 +1,4 @@
 using System.Diagnostics;
-using System.IO;
 using System.Windows;
 using Launcher.Core.Services;
 
@@ -7,18 +6,16 @@ namespace Launcher.App;
 
 public partial class UpdatesWindow : Window
 {
-    private readonly string _launcherRoot;
     private readonly string _updateUrl;
     private readonly string _currentVersionText;
     private readonly LauncherUpdateService _updateService = new();
     private LauncherUpdatePackage? _pendingUpdatePackage;
     private bool _isBusy;
 
-    public UpdatesWindow(string appVersion, string launcherRoot, string updateUrl)
+    public UpdatesWindow(string appVersion, string updateUrl)
     {
         InitializeComponent();
 
-        _launcherRoot = launcherRoot;
         _updateUrl = updateUrl;
         _currentVersionText = appVersion;
 
@@ -41,7 +38,6 @@ public partial class UpdatesWindow : Window
 
         SetBusy(true);
         UpdateAvailablePanel.Visibility = Visibility.Collapsed;
-        DownloadProgressPanel.Visibility = Visibility.Collapsed;
         UpdateStatusTextBlock.Text = "Checking for updates...";
         _pendingUpdatePackage = null;
 
@@ -66,7 +62,8 @@ public partial class UpdatesWindow : Window
                 return;
             }
 
-            UpdateStatusTextBlock.Text = "Update available: " + result.LatestPackage.Version + " (current " + result.CurrentVersion + ")";
+            UpdateStatusTextBlock.Text = "Update available: " + result.LatestPackage.Version + " (current " + result.CurrentVersion + ")\n"
+                + "This app does not self-update. Use the button below to download the installer, uninstall the old version from Windows, then run the new installer.";
             UpdateAvailablePanel.Visibility = Visibility.Visible;
         }
         else
@@ -77,90 +74,28 @@ public partial class UpdatesWindow : Window
         SetBusy(false);
     }
 
-    private async void DownloadInstallButton_OnClick(object sender, RoutedEventArgs e)
+    private void OpenDownloadPageButton_OnClick(object sender, RoutedEventArgs e)
     {
         if (_isBusy || _pendingUpdatePackage is null || string.IsNullOrWhiteSpace(_pendingUpdatePackage.DownloadUrl))
         {
             return;
         }
 
-        var package = _pendingUpdatePackage;
-        SetBusy(true);
-        UpdateAvailablePanel.Visibility = Visibility.Collapsed;
-        DownloadProgressPanel.Visibility = Visibility.Visible;
-        DownloadProgressBar.Value = 0;
-        DownloadProgressTextBlock.Text = "Starting download...";
-
         try
         {
-            var fileName = Path.GetFileName(new Uri(package.DownloadUrl!).LocalPath);
-            if (string.IsNullOrWhiteSpace(fileName))
-            {
-                fileName = "Launcher-" + package.Version + "-Setup.exe";
-            }
-
-            var updateDir = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "Launcher", "updates");
-            var installerPath = Path.Combine(updateDir, fileName);
-
-            var progress = new Progress<LauncherUpdateDownloadProgress>(ReportDownloadProgress);
-            await _updateService.DownloadFileAsync(package.DownloadUrl!, installerPath, progress);
-
-            if (!LauncherUpdateService.VerifyChecksum(installerPath, package.Checksum))
-            {
-                UpdateStatusTextBlock.Text = "Downloaded installer failed checksum verification. Update was not installed.";
-                DownloadProgressPanel.Visibility = Visibility.Collapsed;
-                UpdateAvailablePanel.Visibility = Visibility.Visible;
-                SetBusy(false);
-                return;
-            }
-
-            DownloadProgressTextBlock.Text = "Download complete. Launching installer...";
-
             var startInfo = new ProcessStartInfo
             {
-                FileName = installerPath,
-                // Deliberately not silent (no /S): the installer's own wizard asks to confirm, shows
-                // real install progress, and asks to launch Launcher again when it finishes - the
-                // visible feedback that a fully silent install cannot provide.
-                Arguments = $"/D=\"{_launcherRoot}\"",
-                UseShellExecute = false,
-                WorkingDirectory = updateDir
+                FileName = _pendingUpdatePackage.DownloadUrl!,
+                UseShellExecute = true
             };
 
             Process.Start(startInfo);
 
-            // The installer needs to replace this running executable, so this app must close before
-            // the wizard reaches its install step. The installer's finish page offers to relaunch
-            // Launcher once the install completes.
-            DownloadProgressTextBlock.Text = "Follow the installer window to finish updating...";
-            await Task.Delay(1000);
-            Application.Current.Shutdown();
+            UpdateStatusTextBlock.Text = "Installer page opened. Uninstall the current Launcher from Windows Apps, then run the downloaded installer.";
         }
         catch (Exception ex)
         {
-            UpdateStatusTextBlock.Text = "Update download failed.\n" + ex.Message;
-            DownloadProgressPanel.Visibility = Visibility.Collapsed;
-            UpdateAvailablePanel.Visibility = Visibility.Visible;
-            SetBusy(false);
-        }
-    }
-
-    private void ReportDownloadProgress(LauncherUpdateDownloadProgress progress)
-    {
-        var receivedMb = progress.BytesReceived / 1024d / 1024d;
-
-        if (progress.TotalBytes is > 0)
-        {
-            var totalMb = progress.TotalBytes.Value / 1024d / 1024d;
-            var percent = progress.PercentComplete ?? 0;
-            DownloadProgressBar.IsIndeterminate = false;
-            DownloadProgressBar.Value = percent;
-            DownloadProgressTextBlock.Text = $"{receivedMb:0.0} MB / {totalMb:0.0} MB ({percent:0}%)";
-        }
-        else
-        {
-            DownloadProgressBar.IsIndeterminate = true;
-            DownloadProgressTextBlock.Text = $"{receivedMb:0.0} MB downloaded";
+            UpdateStatusTextBlock.Text = "Could not open installer download page.\n" + ex.Message;
         }
     }
 
@@ -168,7 +103,7 @@ public partial class UpdatesWindow : Window
     {
         _isBusy = isBusy;
         CheckUpdatesButton.IsEnabled = !isBusy;
-        DownloadInstallButton.IsEnabled = !isBusy;
+        OpenDownloadPageButton.IsEnabled = !isBusy;
     }
 
     private void CloseButton_OnClick(object sender, RoutedEventArgs e)
