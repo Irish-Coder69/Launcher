@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.3 - 2026-08-03
+
+- Fixed login window responsiveness where sign-in could appear to do nothing on some attempts.
+- Added Enter-key submit support on user and password fields.
+- Improved login feedback with clear status/error messaging and retry focus behavior.
+
 ## 1.2.2 - 2026-08-03
 
 - Improved layout responsiveness so controls stay visible at different window sizes and display scaling levels.

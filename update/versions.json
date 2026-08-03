@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.2.3",
+    "releaseDate": "2026-08-03",
+    "description": "Fix login responsiveness and add clearer sign-in feedback",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.2.3/Launcher-1.2.3-Setup.exe",
+    "checksum": "",
+    "isRequired": false,
+    "notes": [
+      "Fixed a login flow issue where sign-in could appear to do nothing",
+      "Added Enter-key submission support for user/password fields",
+      "Added clearer in-window login status and retry behavior"
+    ]
+  },
+  {
     "version": "1.2.2",
     "releaseDate": "2026-08-03",
     "description": "Improve UI visibility with responsive layout and scrollable tab content",
