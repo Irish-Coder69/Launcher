@@ -12,18 +12,49 @@ namespace Launcher.Core.Services;
 public sealed class LauncherNativeStartRunner
 {
     private readonly LauncherNativeDetectionService _detectionService = new();
+    private readonly LauncherLearningService _learningService = new();
+    private readonly LauncherSecretStoreService _secretStore = new();
 
     public async Task RunAsync(
         LauncherConfigDocument document,
         bool dryRun,
         Action<string>? onOutput,
+        bool? autoApplyRecommendedOrderOverride = null,
         CancellationToken cancellationToken = default)
     {
         var config = document.Configuration;
         var configDirectory = Path.GetDirectoryName(document.FilePath) ?? Environment.CurrentDirectory;
         var launchedSteps = new List<LauncherSessionStep>();
+        var observedLaunchSteps = new List<string>();
+        var learningOptions = config.Learning ?? new LauncherLearningOptions();
 
-        foreach (var step in config.Steps)
+        var learningEnabled = learningOptions.Enabled;
+        var showRecommendedOrder = learningOptions.ShowRecommendedOrder;
+        var autoApplyRecommendedOrder = autoApplyRecommendedOrderOverride ?? learningOptions.AutoApplyRecommendedOrder;
+        var minRunsBeforeSuggestions = Math.Max(1, learningOptions.MinRunsBeforeSuggestions);
+        var launchStepNames = config.Steps
+            .Where(step => step.Enabled && IsLaunchStep(step))
+            .Select(step => step.Name)
+            .ToList();
+        var recommendedOrder = (learningEnabled && (showRecommendedOrder || autoApplyRecommendedOrder))
+            ? _learningService.GetRecommendedOrder(launchStepNames, minRunsBeforeSuggestions)
+            : Array.Empty<string>();
+
+        if (learningEnabled && showRecommendedOrder)
+        {
+            if (recommendedOrder.Count > 0)
+            {
+                Log(onOutput, "Learned recommended launch order: " + string.Join(" -> ", recommendedOrder));
+            }
+            else
+            {
+                Log(onOutput, $"Learning mode is collecting launch history (need at least {minRunsBeforeSuggestions} run(s) before suggestions).");
+            }
+        }
+
+        var executionSteps = BuildStepExecutionOrder(config.Steps, autoApplyRecommendedOrder && recommendedOrder.Count > 0, recommendedOrder, onOutput);
+
+        foreach (var step in executionSteps)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -38,7 +69,7 @@ public sealed class LauncherNativeStartRunner
             switch ((step.Type ?? string.Empty).Trim().ToLowerInvariant())
             {
                 case "launch":
-                    await RunLaunchStepAsync(step, configDirectory, dryRun, onOutput, launchedSteps, cancellationToken);
+                    await RunLaunchStepAsync(step, configDirectory, dryRun, onOutput, launchedSteps, observedLaunchSteps, cancellationToken);
                     break;
                 case "access-sql":
                     if (dryRun)
@@ -73,6 +104,12 @@ public sealed class LauncherNativeStartRunner
         else
         {
             SaveLauncherSessionState(document.FilePath, launchedSteps);
+
+            if (learningEnabled)
+            {
+                _learningService.RecordRun(observedLaunchSteps);
+                Log(onOutput, $"Learning recorded {observedLaunchSteps.Count} observed launch step(s) for this run.");
+            }
         }
 
         await EnsureLockKeysOnAsync(config, dryRun, onOutput, cancellationToken);
@@ -85,6 +122,7 @@ public sealed class LauncherNativeStartRunner
         bool dryRun,
         Action<string>? onOutput,
         List<LauncherSessionStep> launchedSteps,
+        List<string> observedLaunchSteps,
         CancellationToken cancellationToken)
     {
         var launchOnlyIfMissing = step.LaunchOnlyIfMissing ?? true;
@@ -100,6 +138,7 @@ public sealed class LauncherNativeStartRunner
                 Log(onOutput, dryRun
                     ? $"[DryRun] Would skip '{step.Name}' because it is already running"
                     : $"Skipping '{step.Name}' launch because it is already running");
+                observedLaunchSteps.Add(step.Name);
                 return;
             }
         }
@@ -172,7 +211,70 @@ public sealed class LauncherNativeStartRunner
                 Closed = false,
                 LaunchedAt = DateTimeOffset.Now.ToString("O")
             });
+
+            observedLaunchSteps.Add(step.Name);
         }
+    }
+
+    private static List<LauncherStep> BuildStepExecutionOrder(
+        IReadOnlyList<LauncherStep> steps,
+        bool autoApplyRecommendedOrder,
+        IReadOnlyList<string> recommendedOrder,
+        Action<string>? onOutput)
+    {
+        if (!autoApplyRecommendedOrder || recommendedOrder.Count == 0)
+        {
+            return steps.ToList();
+        }
+
+        var enabledLaunchStepsByName = steps
+            .Where(step => step.Enabled && IsLaunchStep(step))
+            .GroupBy(step => step.Name, StringComparer.Ordinal)
+            .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
+
+        if (enabledLaunchStepsByName.Count == 0)
+        {
+            return steps.ToList();
+        }
+
+        var orderedLaunchSteps = new List<LauncherStep>();
+        foreach (var stepName in recommendedOrder)
+        {
+            if (enabledLaunchStepsByName.Remove(stepName, out var step))
+            {
+                orderedLaunchSteps.Add(step);
+            }
+        }
+
+        foreach (var step in steps)
+        {
+            if (step.Enabled && IsLaunchStep(step) && enabledLaunchStepsByName.Remove(step.Name, out var remaining))
+            {
+                orderedLaunchSteps.Add(remaining);
+            }
+        }
+
+        var launchQueue = new Queue<LauncherStep>(orderedLaunchSteps);
+        var executionPlan = new List<LauncherStep>(steps.Count);
+        foreach (var step in steps)
+        {
+            if (step.Enabled && IsLaunchStep(step) && launchQueue.Count > 0)
+            {
+                executionPlan.Add(launchQueue.Dequeue());
+            }
+            else
+            {
+                executionPlan.Add(step);
+            }
+        }
+
+        Log(onOutput, "Auto-applying learned launch order for this run.");
+        return executionPlan;
+    }
+
+    private static bool IsLaunchStep(LauncherStep step)
+    {
+        return string.Equals(step.Type, "launch", StringComparison.OrdinalIgnoreCase);
     }
 
     private static async Task EnsureLockKeysOnAsync(
@@ -212,7 +314,7 @@ public sealed class LauncherNativeStartRunner
         }
     }
 
-    private static async Task SendLoginSequenceAsync(
+    private async Task SendLoginSequenceAsync(
         LauncherStep step,
         Process? process,
         bool dryRun,
@@ -307,7 +409,7 @@ public sealed class LauncherNativeStartRunner
         // Only derive a direct-entry value when the step explicitly configures loginFieldValue.
         // Deriving it from the loginSequence and skipping the real keystrokes broke Access forms
         // that don't register UI Automation ValuePattern writes the same way as real typing.
-        var inputValue = step.LoginFieldValue;
+        var inputValue = ResolveSecretTokensOrThrow(step.LoginFieldValue, step.Name);
 
         if (!string.IsNullOrWhiteSpace(inputValue))
         {
@@ -373,12 +475,14 @@ public sealed class LauncherNativeStartRunner
                 continue;
             }
 
+            var resolvedKeys = ResolveSecretTokensOrThrow(entry.Keys, step.Name);
+
             if (loginWindowHandle != IntPtr.Zero)
             {
                 NativeMethods.SetForegroundWindow(loginWindowHandle);
             }
 
-            SendKeys.SendWait(entry.Keys);
+            SendKeys.SendWait(resolvedKeys);
             await Task.Delay(entry.DelayMs ?? 700, cancellationToken);
         }
 
@@ -1538,6 +1642,22 @@ public sealed class LauncherNativeStartRunner
         }
 
         return false;
+    }
+
+    private string ResolveSecretTokensOrThrow(string? raw, string stepName)
+    {
+        if (string.IsNullOrWhiteSpace(raw))
+        {
+            return string.Empty;
+        }
+
+        if (_secretStore.ResolveSecretTokens(raw, out var resolved, out var missingSecrets))
+        {
+            return resolved;
+        }
+
+        throw new InvalidOperationException(
+            $"Step '{stepName}' references missing secret(s): {string.Join(", ", missingSecrets)}. Save the secret in Program Builder and retry.");
     }
 
     private static bool NameMatchesCandidate(string? value, string candidate)

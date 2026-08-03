@@ -1,6 +1,7 @@
 ﻿using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Windows;
 using Microsoft.Win32;
@@ -21,8 +22,12 @@ public partial class MainWindow : Window
     private readonly LauncherScriptBridge _scriptBridge = new();
     private readonly LauncherNativeDetectionService _nativeDetectionService = new();
     private readonly LauncherNativeStartRunner _nativeStartRunner = new();
+    private readonly LauncherLearningService _learningService = new();
+    private readonly LauncherSecretStoreService _secretStore = new();
     private readonly ObservableCollection<string> _logLines = new();
     private readonly ObservableCollection<StepRow> _stepRows = new();
+    private readonly ObservableCollection<string> _recommendedOrderLines = new();
+    private readonly ObservableCollection<string> _secretNames = new();
     private bool _isBusy;
     private CancellationTokenSource? _runCancellationSource;
 
@@ -36,6 +41,8 @@ public partial class MainWindow : Window
         Loaded += MainWindow_OnLoaded;
         LogListBox.ItemsSource = _logLines;
         StepsGrid.ItemsSource = _stepRows;
+        RecommendedOrderListBox.ItemsSource = _recommendedOrderLines;
+        SecretsListBox.ItemsSource = _secretNames;
 
         DetectLauncherPaths();
         ReloadConfigView();
@@ -117,6 +124,12 @@ public partial class MainWindow : Window
             DefaultCloseTimeoutTextBox.Text = config.CloseOptions.DefaultCloseTimeoutSeconds.ToString();
             DefaultCloseForceCheckBox.IsChecked = config.CloseOptions.DefaultCloseForce;
 
+            LearningEnabledCheckBox.IsChecked = config.Learning.Enabled;
+            ShowRecommendedOrderCheckBox.IsChecked = config.Learning.ShowRecommendedOrder;
+            AutoApplyRecommendedOrderCheckBox.IsChecked = config.Learning.AutoApplyRecommendedOrder;
+            MinRunsBeforeSuggestionsTextBox.Text = Math.Max(1, config.Learning.MinRunsBeforeSuggestions).ToString();
+            UseLearnedOrderThisRunCheckBox.IsChecked = config.Learning.AutoApplyRecommendedOrder;
+
             foreach (var step in config.Steps)
             {
                 _stepRows.Add(new StepRow
@@ -130,12 +143,17 @@ public partial class MainWindow : Window
 
             StatusText.Text = $"Config loaded: {config.Steps.Count} step(s)";
             AppendLog("Loaded config: " + configPath);
+            RefreshLearningRecommendations();
+            RefreshSecretList();
         }
         catch (Exception ex)
         {
             _configDocument = null;
             StatusText.Text = "Config load failed";
             AppendLog("Config error: " + ex.Message);
+            _recommendedOrderLines.Clear();
+            RecommendedOrderStatusText.Text = "Recommendation unavailable because config could not be loaded.";
+            _secretNames.Clear();
         }
     }
 
@@ -251,10 +269,12 @@ public partial class MainWindow : Window
                     _configDocument,
                     dryRun,
                     line => Dispatcher.Invoke(() => AppendLog(line)),
+                    UseLearnedOrderThisRunCheckBox.IsChecked == true,
                     cancellationToken);
 
                 StatusText.Text = "Completed";
                 AppendLog("Native start run completed.");
+                RefreshLearningRecommendations();
             }
             else
             {
@@ -301,8 +321,72 @@ public partial class MainWindow : Window
         BrowseConfigButton.IsEnabled = !isBusy;
         SaveSettingsButton.IsEnabled = !isBusy;
         ResetSettingsButton.IsEnabled = !isBusy;
+        ResetLearningHistoryButton.IsEnabled = !isBusy;
+        UseLearnedOrderThisRunCheckBox.IsEnabled = !isBusy;
+        AddOrUpdateProgramStepButton.IsEnabled = !isBusy;
+        PopulateBuilderFromSelectedStepButton.IsEnabled = !isBusy;
+        ClearProgramBuilderButton.IsEnabled = !isBusy;
+        SaveProgramSecretButton.IsEnabled = !isBusy;
+        InsertSecretTokenButton.IsEnabled = !isBusy;
+        RefreshSecretsButton.IsEnabled = !isBusy;
+        RenameSecretButton.IsEnabled = !isBusy;
+        DeleteSecretButton.IsEnabled = !isBusy;
+        RenameSecretNameTextBox.IsEnabled = !isBusy;
+        SecretsListBox.IsEnabled = !isBusy;
+        ProgramSecretNameTextBox.IsEnabled = !isBusy;
+        ProgramSecretValuePasswordBox.IsEnabled = !isBusy;
         StepsGrid.IsEnabled = !isBusy;
         StopButton.IsEnabled = isBusy;
+    }
+
+    private void RefreshSecretList()
+    {
+        _secretNames.Clear();
+        foreach (var name in _secretStore.GetSecretNames())
+        {
+            _secretNames.Add(name);
+        }
+    }
+
+    private void RefreshLearningRecommendations()
+    {
+        _recommendedOrderLines.Clear();
+
+        if (_configDocument is null)
+        {
+            RecommendedOrderStatusText.Text = "Load a valid config to view learned recommendations.";
+            return;
+        }
+
+        var config = _configDocument.Configuration;
+        var learning = config.Learning ?? new LauncherLearningOptions();
+        if (!learning.Enabled)
+        {
+            RecommendedOrderStatusText.Text = "Learning is currently disabled in settings.";
+            return;
+        }
+
+        var launchStepNames = config.Steps
+            .Where(step => step.Enabled && string.Equals(step.Type, "launch", StringComparison.OrdinalIgnoreCase))
+            .Select(step => step.Name)
+            .ToList();
+
+        var minRuns = Math.Max(1, learning.MinRunsBeforeSuggestions);
+        var recommendations = _learningService.GetRecommendedOrder(launchStepNames, minRuns);
+        if (recommendations.Count == 0)
+        {
+            RecommendedOrderStatusText.Text = $"No learned order yet. Run Start at least {minRuns} time(s).";
+            return;
+        }
+
+        RecommendedOrderStatusText.Text = learning.AutoApplyRecommendedOrder
+            ? "Auto-apply is enabled. This order will be used for launch steps."
+            : "Suggested order based on your history.";
+
+        for (var index = 0; index < recommendations.Count; index++)
+        {
+            _recommendedOrderLines.Add($"{index + 1}. {recommendations[index]}");
+        }
     }
 
     private void AppendLog(string message)
@@ -466,6 +550,12 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (!int.TryParse(MinRunsBeforeSuggestionsTextBox.Text.Trim(), out var minRunsBeforeSuggestions) || minRunsBeforeSuggestions < 1)
+        {
+            MessageBox.Show(this, "Learning minimum runs must be a positive integer.", "Launcher Native", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
         var settings = new LauncherSettingsInput
         {
             CheckForUpdates = CheckForUpdatesCheckBox.IsChecked == true,
@@ -474,7 +564,11 @@ public partial class MainWindow : Window
             CloseOnlyTrackedApps = CloseOnlyTrackedCheckBox.IsChecked == true,
             DefaultCloseMethod = GetSelectedCloseMethod(),
             DefaultCloseTimeoutSeconds = timeoutSeconds,
-            DefaultCloseForce = DefaultCloseForceCheckBox.IsChecked == true
+            DefaultCloseForce = DefaultCloseForceCheckBox.IsChecked == true,
+            LearningEnabled = LearningEnabledCheckBox.IsChecked == true,
+            ShowRecommendedOrder = ShowRecommendedOrderCheckBox.IsChecked == true,
+            AutoApplyRecommendedOrder = AutoApplyRecommendedOrderCheckBox.IsChecked == true,
+            MinRunsBeforeSuggestions = minRunsBeforeSuggestions
         };
 
         var enabledByName = _stepRows.ToDictionary(s => s.Name, s => s.Enabled, StringComparer.Ordinal);
@@ -501,6 +595,386 @@ public partial class MainWindow : Window
     {
         ReloadConfigView();
         AppendLog("Reloaded config without saving edits.");
+    }
+
+    private void ResetLearningHistoryButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        var confirmation = MessageBox.Show(
+            this,
+            "Reset learned launch history? This cannot be undone.",
+            "Launcher Native",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+
+        if (confirmation != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        if (!_learningService.ResetHistory())
+        {
+            MessageBox.Show(this, "Could not reset learning history file.", "Launcher Native", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+
+        AppendLog("Learning history reset: " + _learningService.StateFilePath);
+        StatusText.Text = "Learning history reset";
+        RefreshLearningRecommendations();
+    }
+
+    private void AddOrUpdateProgramStepButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (_configDocument is null)
+        {
+            MessageBox.Show(this, "Load a config before adding a program step.", "Launcher Native", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var stepName = NormalizeText(ProgramStepNameTextBox.Text);
+        var programPath = NormalizeText(ProgramPathTextBox.Text);
+
+        if (string.IsNullOrWhiteSpace(stepName) || string.IsNullOrWhiteSpace(programPath))
+        {
+            MessageBox.Show(this, "Step Name and Program Path are required.", "Launcher Native", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        if (!TryParseOptionalPositiveInt(ProgramPostLaunchDelayTextBox.Text, out var postLaunchDelaySeconds) ||
+            !TryParseOptionalPositiveInt(ProgramWaitAfterStepTextBox.Text, out var waitAfterStepSeconds) ||
+            !TryParseOptionalPositiveInt(ProgramWaitForLoginCompleteTextBox.Text, out var waitForLoginCompleteSeconds))
+        {
+            MessageBox.Show(this, "Timing values must be blank or positive integers.", "Launcher Native", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var windowTitle = NormalizeText(ProgramWindowTitleTextBox.Text);
+        var processName = Path.GetFileNameWithoutExtension(programPath);
+        var loginSequence = ParseLoginSequence(ProgramLoginKeysTextBox.Text);
+        var step = new LauncherStep
+        {
+            Name = stepName,
+            Type = "launch",
+            Enabled = true,
+            ProgramPath = programPath,
+            Arguments = NormalizeText(ProgramArgumentsTextBox.Text),
+            WorkingDirectory = NormalizeText(ProgramWorkingDirectoryTextBox.Text),
+            WindowTitle = windowTitle,
+            LoginWindowTitle = NormalizeText(ProgramLoginWindowTitleTextBox.Text),
+            LoginSequence = loginSequence,
+            WaitForLoginCompleteSeconds = waitForLoginCompleteSeconds,
+            PostLaunchDelaySeconds = postLaunchDelaySeconds,
+            WaitAfterStepSeconds = waitAfterStepSeconds,
+            LaunchOnlyIfMissing = true,
+            ProductivityNotes = NormalizeText(ProgramProductivityNotesTextBox.Text),
+            RunningWindowTitles = string.IsNullOrWhiteSpace(windowTitle)
+                ? new List<string>()
+                : new List<string> { windowTitle },
+            CloseWindowTitles = string.IsNullOrWhiteSpace(windowTitle)
+                ? new List<string>()
+                : new List<string> { windowTitle },
+            RunningProcessNames = string.IsNullOrWhiteSpace(processName)
+                ? new List<string>()
+                : new List<string> { processName },
+            CloseProcessNames = string.IsNullOrWhiteSpace(processName)
+                ? new List<string>()
+                : new List<string> { processName }
+        };
+
+        UpsertStep(step);
+
+        try
+        {
+            _configStore.Save(_configDocument);
+            AppendLog($"Program builder saved step '{step.Name}'.");
+            StatusText.Text = $"Program step '{step.Name}' saved";
+            ReloadConfigView();
+        }
+        catch (Exception ex)
+        {
+            AppendLog("Program step save failed: " + ex.Message);
+            StatusText.Text = "Program step save failed";
+            MessageBox.Show(this, ex.Message, "Launcher Native", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
+    }
+
+    private void PopulateBuilderFromSelectedStepButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (!TryGetSelectedStep(out var step) || step is null)
+        {
+            return;
+        }
+
+        ProgramStepNameTextBox.Text = step.Name;
+        ProgramPathTextBox.Text = step.ProgramPath ?? string.Empty;
+        ProgramArgumentsTextBox.Text = step.Arguments ?? string.Empty;
+        ProgramWorkingDirectoryTextBox.Text = step.WorkingDirectory ?? string.Empty;
+        ProgramWindowTitleTextBox.Text = step.WindowTitle ?? string.Empty;
+        ProgramLoginWindowTitleTextBox.Text = step.LoginWindowTitle ?? string.Empty;
+        ProgramPostLaunchDelayTextBox.Text = step.PostLaunchDelaySeconds?.ToString() ?? string.Empty;
+        ProgramWaitAfterStepTextBox.Text = step.WaitAfterStepSeconds?.ToString() ?? string.Empty;
+        ProgramWaitForLoginCompleteTextBox.Text = step.WaitForLoginCompleteSeconds?.ToString() ?? string.Empty;
+        ProgramProductivityNotesTextBox.Text = step.ProductivityNotes ?? string.Empty;
+        ProgramLoginKeysTextBox.Text = string.Join(
+            Environment.NewLine,
+            step.LoginSequence.Select(entry => entry.DelayMs is > 0
+                ? $"{entry.Keys}|{entry.DelayMs}"
+                : entry.Keys));
+
+        StatusText.Text = $"Loaded '{step.Name}' into Program Builder";
+    }
+
+    private void ClearProgramBuilderButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        ProgramStepNameTextBox.Text = string.Empty;
+        ProgramPathTextBox.Text = string.Empty;
+        ProgramArgumentsTextBox.Text = string.Empty;
+        ProgramWorkingDirectoryTextBox.Text = string.Empty;
+        ProgramWindowTitleTextBox.Text = string.Empty;
+        ProgramLoginWindowTitleTextBox.Text = string.Empty;
+        ProgramPostLaunchDelayTextBox.Text = string.Empty;
+        ProgramWaitAfterStepTextBox.Text = string.Empty;
+        ProgramWaitForLoginCompleteTextBox.Text = string.Empty;
+        ProgramLoginKeysTextBox.Text = string.Empty;
+        ProgramProductivityNotesTextBox.Text = string.Empty;
+        ProgramSecretNameTextBox.Text = string.Empty;
+        ProgramSecretValuePasswordBox.Password = string.Empty;
+        StatusText.Text = "Program Builder form cleared";
+    }
+
+    private void SaveProgramSecretButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        var secretName = NormalizeText(ProgramSecretNameTextBox.Text);
+        var secretValue = ProgramSecretValuePasswordBox.Password;
+        if (string.IsNullOrWhiteSpace(secretName) || string.IsNullOrWhiteSpace(secretValue))
+        {
+            MessageBox.Show(this, "Secret Name and Secret Value are required.", "Launcher Native", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        if (!_secretStore.SaveSecret(secretName, secretValue))
+        {
+            MessageBox.Show(this, "Could not save the secret.", "Launcher Native", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+
+        ProgramSecretValuePasswordBox.Password = string.Empty;
+        AppendLog($"Saved secret '{secretName}' to encrypted local store.");
+        StatusText.Text = $"Secret '{secretName}' saved";
+        RefreshSecretList();
+    }
+
+    private void InsertSecretTokenButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        var secretName = NormalizeText(ProgramSecretNameTextBox.Text);
+        if (string.IsNullOrWhiteSpace(secretName))
+        {
+            MessageBox.Show(this, "Enter a Secret Name first.", "Launcher Native", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var token = LauncherSecretStoreService.BuildToken(secretName);
+        if (!string.IsNullOrWhiteSpace(ProgramLoginKeysTextBox.Text) && !ProgramLoginKeysTextBox.Text.EndsWith(Environment.NewLine, StringComparison.Ordinal))
+        {
+            ProgramLoginKeysTextBox.Text += Environment.NewLine;
+        }
+
+        ProgramLoginKeysTextBox.Text += token;
+        ProgramLoginKeysTextBox.Focus();
+        ProgramLoginKeysTextBox.CaretIndex = ProgramLoginKeysTextBox.Text.Length;
+        StatusText.Text = $"Inserted token for secret '{secretName}'";
+    }
+
+    private void RefreshSecretsButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        RefreshSecretList();
+        StatusText.Text = "Secret list refreshed";
+    }
+
+    private void RenameSecretButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (SecretsListBox.SelectedItem is not string oldName || string.IsNullOrWhiteSpace(oldName))
+        {
+            MessageBox.Show(this, "Select a secret to rename.", "Launcher Native", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var newName = NormalizeText(RenameSecretNameTextBox.Text);
+        if (string.IsNullOrWhiteSpace(newName))
+        {
+            MessageBox.Show(this, "Enter the new secret name.", "Launcher Native", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        if (!_secretStore.RenameSecret(oldName, newName))
+        {
+            MessageBox.Show(this, "Could not rename secret. Confirm the new name is unique.", "Launcher Native", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+
+        AppendLog($"Renamed secret '{oldName}' to '{newName}'.");
+        ProgramSecretNameTextBox.Text = newName;
+        RenameSecretNameTextBox.Text = string.Empty;
+        RefreshSecretList();
+        SecretsListBox.SelectedItem = newName;
+        StatusText.Text = "Secret renamed";
+    }
+
+    private void DeleteSecretButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (SecretsListBox.SelectedItem is not string selectedName || string.IsNullOrWhiteSpace(selectedName))
+        {
+            MessageBox.Show(this, "Select a secret to delete.", "Launcher Native", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        var confirmation = MessageBox.Show(
+            this,
+            $"Delete secret '{selectedName}'? This cannot be undone.",
+            "Launcher Native",
+            MessageBoxButton.YesNo,
+            MessageBoxImage.Warning);
+
+        if (confirmation != MessageBoxResult.Yes)
+        {
+            return;
+        }
+
+        if (!_secretStore.DeleteSecret(selectedName))
+        {
+            MessageBox.Show(this, "Could not delete secret.", "Launcher Native", MessageBoxButton.OK, MessageBoxImage.Error);
+            return;
+        }
+
+        AppendLog($"Deleted secret '{selectedName}'.");
+        if (string.Equals(ProgramSecretNameTextBox.Text?.Trim(), selectedName, StringComparison.OrdinalIgnoreCase))
+        {
+            ProgramSecretNameTextBox.Text = string.Empty;
+        }
+
+        RefreshSecretList();
+        StatusText.Text = "Secret deleted";
+    }
+
+    private void SecretsListBox_OnSelectionChanged(object sender, System.Windows.Controls.SelectionChangedEventArgs e)
+    {
+        if (SecretsListBox.SelectedItem is not string selectedName || string.IsNullOrWhiteSpace(selectedName))
+        {
+            return;
+        }
+
+        ProgramSecretNameTextBox.Text = selectedName;
+    }
+
+    private static string? NormalizeText(string? value)
+    {
+        var text = value?.Trim();
+        return string.IsNullOrWhiteSpace(text) ? null : text;
+    }
+
+    private static bool TryParseOptionalPositiveInt(string value, out int? parsed)
+    {
+        parsed = null;
+        if (string.IsNullOrWhiteSpace(value))
+        {
+            return true;
+        }
+
+        if (!int.TryParse(value.Trim(), out var numericValue) || numericValue < 1)
+        {
+            return false;
+        }
+
+        parsed = numericValue;
+        return true;
+    }
+
+    private static List<LauncherKeySequenceEntry> ParseLoginSequence(string? text)
+    {
+        var entries = new List<LauncherKeySequenceEntry>();
+        if (string.IsNullOrWhiteSpace(text))
+        {
+            return entries;
+        }
+
+        var lines = text
+            .Split(new[] { "\r\n", "\n" }, StringSplitOptions.RemoveEmptyEntries)
+            .Select(line => line.Trim())
+            .Where(line => !string.IsNullOrWhiteSpace(line));
+
+        foreach (var line in lines)
+        {
+            var parts = line.Split('|', 2, StringSplitOptions.TrimEntries);
+            var keys = parts[0];
+            if (string.IsNullOrWhiteSpace(keys))
+            {
+                continue;
+            }
+
+            int? delayMs = null;
+            if (parts.Length > 1 && int.TryParse(parts[1], out var parsedDelay) && parsedDelay > 0)
+            {
+                delayMs = parsedDelay;
+            }
+
+            entries.Add(new LauncherKeySequenceEntry
+            {
+                Keys = keys,
+                DelayMs = delayMs
+            });
+        }
+
+        return entries;
+    }
+
+    private void UpsertStep(LauncherStep step)
+    {
+        if (_configDocument is null)
+        {
+            return;
+        }
+
+        var configSteps = _configDocument.Configuration.Steps;
+        var existingConfigIndex = configSteps.FindIndex(s => string.Equals(s.Name, step.Name, StringComparison.OrdinalIgnoreCase));
+        if (existingConfigIndex >= 0)
+        {
+            configSteps[existingConfigIndex] = step;
+        }
+        else
+        {
+            configSteps.Add(step);
+        }
+
+        if (_configDocument.Root["steps"] is not JsonArray stepsArray)
+        {
+            stepsArray = new JsonArray();
+            _configDocument.Root["steps"] = stepsArray;
+        }
+
+        var stepNode = JsonSerializer.SerializeToNode(step) as JsonObject ?? new JsonObject();
+        var existingRootIndex = -1;
+        for (var i = 0; i < stepsArray.Count; i++)
+        {
+            if (stepsArray[i] is not JsonObject existingObject)
+            {
+                continue;
+            }
+
+            var existingName = existingObject["name"]?.GetValue<string>();
+            if (string.Equals(existingName, step.Name, StringComparison.OrdinalIgnoreCase))
+            {
+                existingRootIndex = i;
+                break;
+            }
+        }
+
+        if (existingRootIndex >= 0)
+        {
+            stepsArray[existingRootIndex] = stepNode;
+        }
+        else
+        {
+            stepsArray.Add(stepNode);
+        }
     }
 
     private sealed class StepRow

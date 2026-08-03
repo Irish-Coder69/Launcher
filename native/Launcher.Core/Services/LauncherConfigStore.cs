@@ -66,6 +66,13 @@ public sealed class LauncherConfigStore
         closeOptions["defaultCloseTimeoutSeconds"] = settings.DefaultCloseTimeoutSeconds;
         closeOptions["defaultCloseForce"] = settings.DefaultCloseForce;
         document.Root["closeOptions"] = closeOptions;
+
+        var learningOptions = document.Root["learning"] as JsonObject ?? new JsonObject();
+        learningOptions["enabled"] = settings.LearningEnabled;
+        learningOptions["showRecommendedOrder"] = settings.ShowRecommendedOrder;
+        learningOptions["autoApplyRecommendedOrder"] = settings.AutoApplyRecommendedOrder;
+        learningOptions["minRunsBeforeSuggestions"] = settings.MinRunsBeforeSuggestions;
+        document.Root["learning"] = learningOptions;
     }
 
     public void ApplyStepEnabledStates(LauncherConfigDocument document, IReadOnlyDictionary<string, bool> enabledByStepName)

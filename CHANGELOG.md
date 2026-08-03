@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.0 - 2026-08-03
+
+- Added behavior learning for launch flow with a recommended order model based on prior runs, including optional auto-apply and per-run override controls.
+- Added a Program Builder tab so users can add or update launch steps directly in the app (program path, arguments, login flow, timing, and additional productivity notes) without hand-editing JSON.
+- Added secure credential handling using an encrypted local secret vault (Windows DPAPI) and runtime token resolution (`{{secret:Name}}`) so login sequences can avoid storing plaintext secrets in config files.
+- Added full in-app secret management (save, list, rename, delete, insert token) to support customer-friendly credential workflows for market release readiness.
+
 ## 1.1.40 - 2026-07-31
 
 - Fixed the SQL Server login/password wait timing out early: the wait loop counted iterations as if each took a full second, but iterations that dismissed the Access confirmation dialog only slept 400-1000ms, so a run of dismiss iterations could burn through the whole configured timeout in far less real time than intended, reporting "not detected" right before the real login box actually appeared. The wait now tracks real elapsed time instead of iteration count, and no longer re-processes a confirmation dialog it already tried to dismiss on every poll.

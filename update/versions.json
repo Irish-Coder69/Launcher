@@ -1,5 +1,19 @@
 [
   {
+    "version": "1.2.0",
+    "releaseDate": "2026-08-03",
+    "description": "Add launch-learning controls, Program Builder, and secure secret vault management",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.2.0/Launcher-1.2.0-Setup.exe",
+    "checksum": "",
+    "isRequired": false,
+    "notes": [
+      "Added a learning system that tracks launch flow history, recommends startup order, supports optional auto-apply, and supports per-run user override",
+      "Added a Program Builder tab for creating/updating launch steps directly in-app, including program paths, login sequences, timing, and productivity notes",
+      "Added secure secret handling with encrypted local storage and runtime token resolution using {{secret:Name}}",
+      "Added full secret management in-app: save, list, rename, delete, and token insertion for login sequences"
+    ]
+  },
+  {
     "version": "1.1.40",
     "releaseDate": "2026-07-31",
     "description": "Fix early SQL login timeout and restore visible install progress on self-update",

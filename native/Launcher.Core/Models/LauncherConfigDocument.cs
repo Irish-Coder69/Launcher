@@ -26,4 +26,12 @@ public sealed class LauncherSettingsInput
     public int DefaultCloseTimeoutSeconds { get; set; } = 12;
 
     public bool DefaultCloseForce { get; set; }
+
+    public bool LearningEnabled { get; set; } = true;
+
+    public bool ShowRecommendedOrder { get; set; } = true;
+
+    public bool AutoApplyRecommendedOrder { get; set; }
+
+    public int MinRunsBeforeSuggestions { get; set; } = 3;
 }

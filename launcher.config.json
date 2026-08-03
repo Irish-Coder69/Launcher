@@ -10,6 +10,12 @@
     "defaultCloseTimeoutSeconds": 12,
     "defaultCloseForce": false
   },
+  "learning": {
+    "enabled": true,
+    "showRecommendedOrder": true,
+    "autoApplyRecommendedOrder": false,
+    "minRunsBeforeSuggestions": 3
+  },
   "steps": [
     {
       "name": "Outlook",

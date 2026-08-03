@@ -16,8 +16,26 @@ public sealed class LauncherConfiguration
     [JsonPropertyName("closeOptions")]
     public LauncherCloseOptions CloseOptions { get; set; } = new();
 
+    [JsonPropertyName("learning")]
+    public LauncherLearningOptions Learning { get; set; } = new();
+
     [JsonPropertyName("steps")]
     public List<LauncherStep> Steps { get; set; } = new();
+}
+
+public sealed class LauncherLearningOptions
+{
+    [JsonPropertyName("enabled")]
+    public bool Enabled { get; set; } = true;
+
+    [JsonPropertyName("showRecommendedOrder")]
+    public bool ShowRecommendedOrder { get; set; } = true;
+
+    [JsonPropertyName("autoApplyRecommendedOrder")]
+    public bool AutoApplyRecommendedOrder { get; set; }
+
+    [JsonPropertyName("minRunsBeforeSuggestions")]
+    public int MinRunsBeforeSuggestions { get; set; } = 3;
 }
 
 public sealed class LauncherCloseOptions
@@ -63,6 +81,9 @@ public sealed class LauncherStep
 
     [JsonPropertyName("workingDirectory")]
     public string? WorkingDirectory { get; set; }
+
+    [JsonPropertyName("productivityNotes")]
+    public string? ProductivityNotes { get; set; }
 
     [JsonPropertyName("windowStyle")]
     public string? WindowStyle { get; set; }

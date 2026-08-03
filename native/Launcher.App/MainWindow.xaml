@@ -94,6 +94,7 @@
                 <Button x:Name="StartButton" Width="220" Height="36" Margin="0,0,0,8" Content="Run Start" Click="StartButton_OnClick" />
                 <Button x:Name="CloseButton" Width="220" Height="36" Margin="0,0,0,8" Content="Run Close" Click="CloseButton_OnClick" />
                 <Button x:Name="StartAndWaitButton" Width="220" Height="36" Margin="0,0,0,8" Content="Start + Wait For CLOSEAPPS" Click="StartAndWaitButton_OnClick" />
+                <CheckBox x:Name="UseLearnedOrderThisRunCheckBox" Margin="0,0,0,8" Foreground="#DCE6FF" Content="Use Learned Order This Run" />
                 <Button x:Name="StopButton" Width="220" Height="36" Content="STOP" FontWeight="Bold" IsEnabled="False" Click="StopButton_OnClick">
                     <Button.Style>
                         <Style TargetType="Button">
@@ -170,10 +171,21 @@
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
+                                <RowDefinition Height="Auto" />
                                 <RowDefinition Height="*" />
                             </Grid.RowDefinitions>
-                            <TextBlock Text="Live Output" FontWeight="SemiBold" Foreground="#DCE6FF" />
-                            <ListBox x:Name="LogListBox" Grid.Row="1" Margin="0,8,0,0" Background="#0D1422" Foreground="#BFD2F7" BorderBrush="#2A3652" BorderThickness="1" FontFamily="Consolas" />
+                            <TextBlock Text="Learned Recommended Order" FontWeight="SemiBold" Foreground="#DCE6FF" />
+                            <TextBlock x:Name="RecommendedOrderStatusText" Grid.Row="1" Margin="0,6,0,0" Foreground="#8FA8D8" TextWrapping="Wrap" />
+                            <ListBox x:Name="RecommendedOrderListBox" Grid.Row="2" Margin="0,8,0,12" Height="130" Background="#0D1422" Foreground="#DCE6FF" BorderBrush="#2A3652" BorderThickness="1" />
+                            <Grid Grid.Row="3">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <TextBlock Text="Live Output" FontWeight="SemiBold" Foreground="#DCE6FF" />
+                                <ListBox x:Name="LogListBox" Grid.Row="1" Margin="0,8,0,0" Background="#0D1422" Foreground="#BFD2F7" BorderBrush="#2A3652" BorderThickness="1" FontFamily="Consolas" />
+                            </Grid>
                         </Grid>
                     </Border>
                 </Grid>
@@ -182,6 +194,7 @@
             <TabItem Header="Settings">
                 <Grid Margin="12" Background="#121A2A">
                     <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
@@ -233,10 +246,159 @@
 
                     <TextBlock Grid.Row="2" Margin="2,10,0,0" Text="Tip: You can toggle individual step enabled states in the Run tab and save all settings together." Foreground="#8FA8D8" />
 
-                    <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,10,0,0">
+                    <Border Grid.Row="3" Margin="0,10,0,0" Padding="12" CornerRadius="10" Background="#101829" BorderBrush="#2A3652" BorderThickness="1">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1.1*" />
+                                <ColumnDefinition Width="1*" />
+                                <ColumnDefinition Width="1*" />
+                                <ColumnDefinition Width="Auto" />
+                            </Grid.ColumnDefinitions>
+                            <StackPanel Grid.Column="0">
+                                <TextBlock Text="Learning" Foreground="#DCE6FF" />
+                                <CheckBox x:Name="LearningEnabledCheckBox" Content="Enable Learning" Foreground="#DCE6FF" Margin="0,6,0,0" />
+                                <CheckBox x:Name="ShowRecommendedOrderCheckBox" Content="Show Recommended Order" Foreground="#DCE6FF" Margin="0,4,0,0" />
+                                <CheckBox x:Name="AutoApplyRecommendedOrderCheckBox" Content="Auto Apply Recommended Order" Foreground="#DCE6FF" Margin="0,4,0,0" />
+                            </StackPanel>
+                            <StackPanel Grid.Column="1" Margin="10,0,0,0">
+                                <TextBlock Text="Minimum Runs" Foreground="#DCE6FF" />
+                                <TextBox x:Name="MinRunsBeforeSuggestionsTextBox" Margin="0,6,0,0" Height="28" Width="120" />
+                            </StackPanel>
+                            <TextBlock Grid.Column="2" Margin="10,0,0,0" Foreground="#8FA8D8" TextWrapping="Wrap"
+                                       Text="When auto-apply is enabled, launch steps run in learned order once enough history exists." />
+                            <Button x:Name="ResetLearningHistoryButton" Grid.Column="3" Width="190" Height="34" Margin="12,0,0,0"
+                                    VerticalAlignment="Top" Content="Reset Learning History" Click="ResetLearningHistoryButton_OnClick" />
+                        </Grid>
+                    </Border>
+
+                    <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,10,0,0">
                         <Button x:Name="SaveSettingsButton" Width="180" Height="34" Content="Save Config Changes" Click="SaveSettingsButton_OnClick" />
                         <Button x:Name="ResetSettingsButton" Width="180" Height="34" Margin="8,0,0,0" Content="Reload Without Saving" Click="ResetSettingsButton_OnClick" />
                     </StackPanel>
+                </Grid>
+            </TabItem>
+
+            <TabItem Header="Program Builder">
+                <Grid Margin="12" Background="#121A2A">
+                    <Grid.RowDefinitions>
+                        <RowDefinition Height="Auto" />
+                        <RowDefinition Height="*" />
+                    </Grid.RowDefinitions>
+
+                    <TextBlock Text="Add or Update Program Step" FontSize="18" FontWeight="SemiBold" Foreground="#DCE6FF" />
+
+                    <Border Grid.Row="1" Margin="0,10,0,0" Padding="12" CornerRadius="10" Background="#101829" BorderBrush="#2A3652" BorderThickness="1">
+                        <Grid>
+                            <Grid.ColumnDefinitions>
+                                <ColumnDefinition Width="1.2*" />
+                                <ColumnDefinition Width="1*" />
+                            </Grid.ColumnDefinitions>
+
+                            <Grid>
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <Grid.ColumnDefinitions>
+                                    <ColumnDefinition Width="190" />
+                                    <ColumnDefinition Width="*" />
+                                </Grid.ColumnDefinitions>
+
+                                <TextBlock Text="Step Name" Foreground="#DCE6FF" Margin="0,4,8,8" />
+                                <TextBox x:Name="ProgramStepNameTextBox" Grid.Column="1" Height="28" Margin="0,0,0,8" />
+
+                                <TextBlock Grid.Row="1" Text="Program Path" Foreground="#DCE6FF" Margin="0,4,8,8" />
+                                <TextBox x:Name="ProgramPathTextBox" Grid.Row="1" Grid.Column="1" Height="28" Margin="0,0,0,8" />
+
+                                <TextBlock Grid.Row="2" Text="Arguments" Foreground="#DCE6FF" Margin="0,4,8,8" />
+                                <TextBox x:Name="ProgramArgumentsTextBox" Grid.Row="2" Grid.Column="1" Height="28" Margin="0,0,0,8" />
+
+                                <TextBlock Grid.Row="3" Text="Working Directory" Foreground="#DCE6FF" Margin="0,4,8,8" />
+                                <TextBox x:Name="ProgramWorkingDirectoryTextBox" Grid.Row="3" Grid.Column="1" Height="28" Margin="0,0,0,8" />
+
+                                <TextBlock Grid.Row="4" Text="Main Window Title" Foreground="#DCE6FF" Margin="0,4,8,8" />
+                                <TextBox x:Name="ProgramWindowTitleTextBox" Grid.Row="4" Grid.Column="1" Height="28" Margin="0,0,0,8" />
+
+                                <TextBlock Grid.Row="5" Text="Login Window Title" Foreground="#DCE6FF" Margin="0,4,8,8" />
+                                <TextBox x:Name="ProgramLoginWindowTitleTextBox" Grid.Row="5" Grid.Column="1" Height="28" Margin="0,0,0,8" />
+
+                                <Grid Grid.Row="6" Grid.ColumnSpan="2" Margin="0,8,0,0">
+                                    <Grid.ColumnDefinitions>
+                                        <ColumnDefinition Width="190" />
+                                        <ColumnDefinition Width="120" />
+                                        <ColumnDefinition Width="120" />
+                                        <ColumnDefinition Width="120" />
+                                        <ColumnDefinition Width="*" />
+                                    </Grid.ColumnDefinitions>
+                                    <TextBlock Text="Timing (sec)" Foreground="#DCE6FF" Margin="0,4,8,0" />
+                                    <TextBox x:Name="ProgramPostLaunchDelayTextBox" Grid.Column="1" Height="28" Margin="0,0,8,0" ToolTip="Post Launch" />
+                                    <TextBox x:Name="ProgramWaitAfterStepTextBox" Grid.Column="2" Height="28" Margin="0,0,8,0" ToolTip="Wait After Step" />
+                                    <TextBox x:Name="ProgramWaitForLoginCompleteTextBox" Grid.Column="3" Height="28" Margin="0,0,8,0" ToolTip="Wait For Login Complete" />
+                                    <TextBlock Grid.Column="4" Text="Post Launch / Wait After / Login Wait" Foreground="#8FA8D8" VerticalAlignment="Center" />
+                                </Grid>
+                            </Grid>
+
+                            <Grid Grid.Column="1" Margin="14,0,0,0">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                    <RowDefinition Height="Auto" />
+                                </Grid.RowDefinitions>
+
+                                <TextBlock Text="Login Sequence" Foreground="#DCE6FF" />
+                                <TextBlock Grid.Row="1" Margin="0,4,0,8" Text="One key command per line. Optional delay format: keys|delayMs. For secrets use tokens like {{secret:MyPassword}}" Foreground="#8FA8D8" TextWrapping="Wrap" />
+                                <TextBox x:Name="ProgramLoginKeysTextBox" Grid.Row="2" Height="120" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" TextWrapping="Wrap" />
+
+                                <StackPanel Grid.Row="3" Margin="0,12,0,0">
+                                    <TextBlock Text="Secure Secret Vault" Foreground="#DCE6FF" />
+                                    <Grid Margin="0,6,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="150" />
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="160" />
+                                            <ColumnDefinition Width="160" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox x:Name="ProgramSecretNameTextBox" Height="28" Margin="0,0,8,0" ToolTip="Secret Name" />
+                                        <PasswordBox x:Name="ProgramSecretValuePasswordBox" Grid.Column="1" Height="28" Margin="0,0,8,0" ToolTip="Secret Value" />
+                                        <Button x:Name="SaveProgramSecretButton" Grid.Column="2" Height="28" Margin="0,0,8,0" Content="Save Secret" Click="SaveProgramSecretButton_OnClick" />
+                                        <Button x:Name="InsertSecretTokenButton" Grid.Column="3" Height="28" Content="Insert Token" Click="InsertSecretTokenButton_OnClick" />
+                                    </Grid>
+
+                                    <TextBlock Text="Manage Saved Secrets" Foreground="#DCE6FF" />
+                                    <Grid Margin="0,6,0,10">
+                                        <Grid.ColumnDefinitions>
+                                            <ColumnDefinition Width="*" />
+                                            <ColumnDefinition Width="150" />
+                                            <ColumnDefinition Width="130" />
+                                            <ColumnDefinition Width="130" />
+                                        </Grid.ColumnDefinitions>
+                                        <TextBox x:Name="RenameSecretNameTextBox" Height="28" Margin="0,0,8,0" ToolTip="New Secret Name" />
+                                        <Button x:Name="RefreshSecretsButton" Grid.Column="1" Height="28" Margin="0,0,8,0" Content="Refresh" Click="RefreshSecretsButton_OnClick" />
+                                        <Button x:Name="RenameSecretButton" Grid.Column="2" Height="28" Margin="0,0,8,0" Content="Rename" Click="RenameSecretButton_OnClick" />
+                                        <Button x:Name="DeleteSecretButton" Grid.Column="3" Height="28" Content="Delete" Click="DeleteSecretButton_OnClick" />
+                                    </Grid>
+                                    <ListBox x:Name="SecretsListBox" Height="110" Background="#0D1422" Foreground="#DCE6FF" BorderBrush="#2A3652" BorderThickness="1" SelectionChanged="SecretsListBox_OnSelectionChanged" />
+
+                                    <TextBlock Text="Productivity Notes / Additional Info" Foreground="#DCE6FF" />
+                                    <TextBox x:Name="ProgramProductivityNotesTextBox" Margin="0,6,0,0" AcceptsReturn="True" VerticalScrollBarVisibility="Auto" TextWrapping="Wrap" MinHeight="130" />
+                                </StackPanel>
+
+                                <WrapPanel Grid.Row="4" Margin="0,12,0,0">
+                                    <Button x:Name="AddOrUpdateProgramStepButton" Width="200" Height="34" Content="Add / Update Program Step" Click="AddOrUpdateProgramStepButton_OnClick" />
+                                    <Button x:Name="PopulateBuilderFromSelectedStepButton" Width="210" Height="34" Margin="8,0,0,0" Content="Load Selected Step Into Builder" Click="PopulateBuilderFromSelectedStepButton_OnClick" />
+                                    <Button x:Name="ClearProgramBuilderButton" Width="150" Height="34" Margin="8,0,0,0" Content="Clear Form" Click="ClearProgramBuilderButton_OnClick" />
+                                </WrapPanel>
+                            </Grid>
+                        </Grid>
+                    </Border>
                 </Grid>
             </TabItem>
         </TabControl>
