@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.5 - 2026-08-03
+
+- Run tab now stays blank until taught startup steps exist.
+- During Teach Session, each newly learned app is added live to the Run tab as it is captured.
+- Run Start now executes taught startup steps only.
+- Reset Learning History now also clears taught run steps so the Run tab is blank and ready for the next teaching cycle.
+
 ## 1.2.4 - 2026-08-03
 
 - Added a Teach Session workflow so users can teach Launcher what they open/login to in a live session, then apply that captured flow into startup steps.

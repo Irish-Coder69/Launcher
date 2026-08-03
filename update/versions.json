@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.2.5",
+    "releaseDate": "2026-08-03",
+    "description": "Make Run tab taught-only with live teach capture and reset-to-blank behavior",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.2.5/Launcher-1.2.5-Setup.exe",
+    "checksum": "",
+    "isRequired": false,
+    "notes": [
+      "Run tab remains blank until taught steps are created",
+      "Teach Session adds learned apps to the Run tab live as each step is captured",
+      "Reset Learning History clears taught run steps so teaching can restart from a blank Run tab"
+    ]
+  },
+  {
     "version": "1.2.4",
     "releaseDate": "2026-08-03",
     "description": "Add Teach Session flow to learn and save startup process",

@@ -5,6 +5,7 @@ using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Windows;
+using System.Windows.Threading;
 using Microsoft.Win32;
 using Launcher.Core;
 using Launcher.Core.Models;
@@ -18,6 +19,7 @@ namespace Launcher.App;
 public partial class MainWindow : Window
 {
     private const string DefaultUpdateUrl = "https://raw.githubusercontent.com/Irish-Coder69/Launcher/main/update/versions.json";
+    private const string TaughtStepMarker = "[TaughtFlow]";
 
     private readonly LauncherConfigStore _configStore = new();
     private readonly LauncherScriptBridge _scriptBridge = new();
@@ -31,9 +33,11 @@ public partial class MainWindow : Window
     private readonly ObservableCollection<string> _secretNames = new();
     private readonly ObservableCollection<ProgramSearchResult> _programSearchResults = new();
     private readonly List<ProgramSearchResult> _teachSessionCapturedApps = new();
+    private readonly HashSet<string> _teachSessionCapturedKeys = new(StringComparer.OrdinalIgnoreCase);
     private bool _isBusy;
     private bool _isTeachSessionActive;
     private HashSet<int> _teachSessionBaselineProcessIds = new();
+    private DispatcherTimer? _teachSessionTimer;
     private CancellationTokenSource? _runCancellationSource;
     private readonly LauncherUserProfile? _currentUser;
 
@@ -141,7 +145,7 @@ public partial class MainWindow : Window
             MinRunsBeforeSuggestionsTextBox.Text = Math.Max(1, config.Learning.MinRunsBeforeSuggestions).ToString();
             UseLearnedOrderThisRunCheckBox.IsChecked = config.Learning.AutoApplyRecommendedOrder;
 
-            foreach (var step in config.Steps)
+            foreach (var step in GetTaughtSteps(config).Where(step => step.Enabled && string.Equals(step.Type, "launch", StringComparison.OrdinalIgnoreCase)))
             {
                 _stepRows.Add(new StepRow
                 {
@@ -152,10 +156,13 @@ public partial class MainWindow : Window
                 });
             }
 
-            StatusText.Text = $"Config loaded: {config.Steps.Count} step(s)";
+            StatusText.Text = _stepRows.Count == 0
+                ? "Run tab is blank until programs are taught"
+                : $"Taught flow loaded: {_stepRows.Count} step(s)";
             AppendLog("Loaded config: " + configPath);
             RefreshLearningRecommendations();
             RefreshSecretList();
+            ApplyTeachSessionButton.IsEnabled = !_isBusy && !_isTeachSessionActive && _teachSessionCapturedApps.Count > 0;
         }
         catch (Exception ex)
         {
@@ -276,8 +283,27 @@ public partial class MainWindow : Window
                     _configDocument = _configStore.Load(configPath);
                 }
 
+                var taughtSteps = GetTaughtSteps(_configDocument.Configuration)
+                    .Where(step => step.Enabled && string.Equals(step.Type, "launch", StringComparison.OrdinalIgnoreCase))
+                    .ToList();
+
+                if (taughtSteps.Count == 0)
+                {
+                    StatusText.Text = "No taught steps yet";
+                    AppendLog("Run Start skipped: no taught startup steps are saved yet.");
+                    MessageBox.Show(
+                        this,
+                        "No taught startup steps exist yet.\n\nUse Start Teach Session, open/login to your apps, then click Apply Taught Flow.",
+                        "Launcher Native",
+                        MessageBoxButton.OK,
+                        MessageBoxImage.Information);
+                    return;
+                }
+
+                var runtimeDocument = BuildRuntimeDocumentForTaughtSteps(_configDocument, taughtSteps);
+
                 await _nativeStartRunner.RunAsync(
-                    _configDocument,
+                    runtimeDocument,
                     dryRun,
                     line => Dispatcher.Invoke(() => AppendLog(line)),
                     UseLearnedOrderThisRunCheckBox.IsChecked == true,
@@ -592,7 +618,17 @@ public partial class MainWindow : Window
     {
         _teachSessionBaselineProcessIds = CaptureCurrentProcessIds();
         _teachSessionCapturedApps.Clear();
+        _teachSessionCapturedKeys.Clear();
+        _stepRows.Clear();
         _isTeachSessionActive = true;
+
+        _teachSessionTimer ??= new DispatcherTimer
+        {
+            Interval = TimeSpan.FromSeconds(2)
+        };
+        _teachSessionTimer.Tick -= TeachSessionTimer_OnTick;
+        _teachSessionTimer.Tick += TeachSessionTimer_OnTick;
+        _teachSessionTimer.Start();
 
         StartTeachSessionButton.IsEnabled = false;
         StopTeachSessionButton.IsEnabled = true;
@@ -615,14 +651,10 @@ public partial class MainWindow : Window
             return;
         }
 
-        var learnedApps = CaptureNewlyOpenedPrograms(_teachSessionBaselineProcessIds)
-            .GroupBy(item => (item.ProgramPath ?? string.Empty) + "|" + (item.WindowTitle ?? string.Empty), StringComparer.OrdinalIgnoreCase)
-            .Select(group => group.First())
-            .OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
-            .ToList();
+        _teachSessionTimer?.Stop();
 
-        _teachSessionCapturedApps.Clear();
-        _teachSessionCapturedApps.AddRange(learnedApps);
+        CaptureTeachSessionDeltas();
+
         _isTeachSessionActive = false;
         _teachSessionBaselineProcessIds.Clear();
 
@@ -630,12 +662,11 @@ public partial class MainWindow : Window
         StopTeachSessionButton.IsEnabled = false;
         ApplyTeachSessionButton.IsEnabled = _teachSessionCapturedApps.Count > 0;
 
-        RefreshProgramSearchResults(_teachSessionCapturedApps);
-
         if (_teachSessionCapturedApps.Count == 0)
         {
             StatusText.Text = "Teach session found no new apps";
             AppendLog("Teach session stopped. No newly opened apps were detected.");
+            _stepRows.Clear();
             MessageBox.Show(
                 this,
                 "No newly opened programs were detected during this Teach Session.\n\nStart Teach Session again, then open programs after starting it.",
@@ -669,6 +700,8 @@ public partial class MainWindow : Window
             return;
         }
 
+        RemoveTaughtStepsFromConfig(_configDocument);
+
         var existingNames = new HashSet<string>(_configDocument.Configuration.Steps.Select(step => step.Name), StringComparer.OrdinalIgnoreCase);
 
         foreach (var app in _teachSessionCapturedApps)
@@ -697,6 +730,7 @@ public partial class MainWindow : Window
                 LaunchOnlyIfMissing = true,
                 PostLaunchDelaySeconds = 2,
                 WaitAfterStepSeconds = 1,
+                ProductivityNotes = TaughtStepMarker + " Captured from Teach Session on " + DateTimeOffset.Now.ToString("O"),
                 RunningProcessNames = string.IsNullOrWhiteSpace(processName)
                     ? new List<string>()
                     : new List<string> { processName },
@@ -832,8 +866,19 @@ public partial class MainWindow : Window
             return;
         }
 
+        if (_configDocument is not null)
+        {
+            RemoveTaughtStepsFromConfig(_configDocument);
+            _configStore.Save(_configDocument);
+            _stepRows.Clear();
+            _teachSessionCapturedApps.Clear();
+            _teachSessionCapturedKeys.Clear();
+            ApplyTeachSessionButton.IsEnabled = false;
+            AppendLog("Cleared taught run steps after learning reset.");
+        }
+
         AppendLog("Learning history reset: " + _learningService.StateFilePath);
-        StatusText.Text = "Learning history reset";
+        StatusText.Text = "Learning reset; Run tab is blank and ready for new teaching";
         RefreshLearningRecommendations();
     }
 
@@ -1115,6 +1160,99 @@ public partial class MainWindow : Window
                 WindowTitle = windowTitle,
                 Source = "Teach Session"
             };
+        }
+    }
+
+    private void TeachSessionTimer_OnTick(object? sender, EventArgs e)
+    {
+        CaptureTeachSessionDeltas();
+    }
+
+    private void CaptureTeachSessionDeltas()
+    {
+        foreach (var app in CaptureNewlyOpenedPrograms(_teachSessionBaselineProcessIds))
+        {
+            var key = (app.ProgramPath ?? string.Empty) + "|" + (app.WindowTitle ?? string.Empty);
+            if (!_teachSessionCapturedKeys.Add(key))
+            {
+                continue;
+            }
+
+            _teachSessionCapturedApps.Add(app);
+            AddTaughtStepRowPreview(app, _teachSessionCapturedApps.Count);
+            AppendLog($"Taught step learned: {app.DisplayName}");
+            StatusText.Text = $"Teach session learned {_teachSessionCapturedApps.Count} step(s)";
+        }
+    }
+
+    private void AddTaughtStepRowPreview(ProgramSearchResult app, int sequenceNumber)
+    {
+        var displayName = NormalizeText(app.DisplayName) ?? "Taught Program " + sequenceNumber;
+        _stepRows.Add(new StepRow
+        {
+            Name = "Taught - " + displayName,
+            Type = "launch",
+            Enabled = true,
+            ProgramPath = app.ProgramPath ?? string.Empty
+        });
+    }
+
+    private static IEnumerable<LauncherStep> GetTaughtSteps(LauncherConfiguration config)
+    {
+        return config.Steps.Where(IsTaughtStep);
+    }
+
+    private static bool IsTaughtStep(LauncherStep step)
+    {
+        return (!string.IsNullOrWhiteSpace(step.ProductivityNotes) && step.ProductivityNotes.Contains(TaughtStepMarker, StringComparison.OrdinalIgnoreCase)) ||
+               step.Name.StartsWith("Taught - ", StringComparison.OrdinalIgnoreCase);
+    }
+
+    private static LauncherConfigDocument BuildRuntimeDocumentForTaughtSteps(LauncherConfigDocument source, IReadOnlyList<LauncherStep> taughtSteps)
+    {
+        var runtimeRoot = source.Root.DeepClone() as JsonObject ?? new JsonObject();
+        runtimeRoot["steps"] = JsonSerializer.SerializeToNode(taughtSteps) as JsonArray ?? new JsonArray();
+
+        var runtimeConfiguration = runtimeRoot.Deserialize<LauncherConfiguration>(new JsonSerializerOptions
+        {
+            PropertyNameCaseInsensitive = true,
+            ReadCommentHandling = JsonCommentHandling.Skip,
+            AllowTrailingCommas = true
+        }) ?? new LauncherConfiguration();
+
+        return new LauncherConfigDocument
+        {
+            FilePath = source.FilePath,
+            Root = runtimeRoot,
+            Configuration = runtimeConfiguration
+        };
+    }
+
+    private static void RemoveTaughtStepsFromConfig(LauncherConfigDocument document)
+    {
+        document.Configuration.Steps = document.Configuration.Steps
+            .Where(step => !IsTaughtStep(step))
+            .ToList();
+
+        if (document.Root["steps"] is not JsonArray stepsArray)
+        {
+            return;
+        }
+
+        for (var i = stepsArray.Count - 1; i >= 0; i--)
+        {
+            if (stepsArray[i] is not JsonObject stepObject)
+            {
+                continue;
+            }
+
+            var name = stepObject["name"]?.GetValue<string>() ?? string.Empty;
+            var notes = stepObject["productivityNotes"]?.GetValue<string>() ?? string.Empty;
+            if (name.StartsWith("Taught - ", StringComparison.OrdinalIgnoreCase) ||
+                notes.Contains(TaughtStepMarker, StringComparison.OrdinalIgnoreCase))
+            {
+                stepsArray.RemoveAt(i);
+            }
         }
     }
 
