@@ -51,12 +51,26 @@
                 <StackPanel x:Name="UpdateAvailablePanel"
                             Margin="0,14,0,0"
                             Visibility="Collapsed">
-                    <Button x:Name="OpenDownloadPageButton"
-                        Width="230"
+                    <Button x:Name="DownloadInstallerButton"
+                        Width="210"
                             Height="34"
                             HorizontalAlignment="Left"
-                        Content="Open Installer Download Page"
-                        Click="OpenDownloadPageButton_OnClick" />
+                        Content="Download Installer"
+                        Click="DownloadInstallerButton_OnClick" />
+                </StackPanel>
+
+                <StackPanel x:Name="DownloadProgressPanel"
+                            Margin="0,16,0,0"
+                            Visibility="Collapsed">
+                    <ProgressBar x:Name="DownloadProgressBar"
+                                 Height="18"
+                                 Minimum="0"
+                                 Maximum="100" />
+                    <TextBlock x:Name="DownloadProgressTextBlock"
+                               Margin="0,6,0,0"
+                               Foreground="#8FA8D8"
+                               FontSize="12"
+                               Text="" />
                 </StackPanel>
             </StackPanel>
         </Border>

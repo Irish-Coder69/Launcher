@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.2.6",
+    "releaseDate": "2026-08-03",
+    "description": "Download installer in-app and enforce uninstall-first update prompts",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.2.6/Launcher-1.2.6-Setup.exe",
+    "checksum": "",
+    "isRequired": false,
+    "notes": [
+      "Updater now downloads installer directly in-app instead of opening GitHub download page",
+      "Update flow explicitly requires user to confirm old version uninstall before installer launch",
+      "After download, user can launch installer immediately or open installer file location for manual install"
+    ]
+  },
+  {
     "version": "1.2.5",
     "releaseDate": "2026-08-03",
     "description": "Make Run tab taught-only with live teach capture and reset-to-blank behavior",

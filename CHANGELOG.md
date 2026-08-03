@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.6 - 2026-08-03
+
+- Updated in-app updater to download installer directly without opening the GitHub website.
+- Added explicit uninstall-first confirmation before installation can proceed.
+- Added clear post-download choices to launch now or open the installer location for later manual install.
+
 ## 1.2.5 - 2026-08-03
 
 - Run tab now stays blank until taught startup steps exist.
