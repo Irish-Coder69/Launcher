@@ -30,7 +30,10 @@ public partial class MainWindow : Window
     private readonly ObservableCollection<string> _recommendedOrderLines = new();
     private readonly ObservableCollection<string> _secretNames = new();
     private readonly ObservableCollection<ProgramSearchResult> _programSearchResults = new();
+    private readonly List<ProgramSearchResult> _teachSessionCapturedApps = new();
     private bool _isBusy;
+    private bool _isTeachSessionActive;
+    private HashSet<int> _teachSessionBaselineProcessIds = new();
     private CancellationTokenSource? _runCancellationSource;
     private readonly LauncherUserProfile? _currentUser;
 
@@ -338,6 +341,9 @@ public partial class MainWindow : Window
         ApplyProgramSearchResultButton.IsEnabled = !isBusy;
         LearnProgramsIntoSearchButton.IsEnabled = !isBusy;
         LearnOpenAppsButton.IsEnabled = !isBusy;
+        StartTeachSessionButton.IsEnabled = !isBusy && !_isTeachSessionActive;
+        StopTeachSessionButton.IsEnabled = !isBusy && _isTeachSessionActive;
+        ApplyTeachSessionButton.IsEnabled = !isBusy && !_isTeachSessionActive && _teachSessionCapturedApps.Count > 0;
         ProgramSearchQueryTextBox.IsEnabled = !isBusy;
         ProgramSearchResultsListBox.IsEnabled = !isBusy;
         SaveProgramSecretButton.IsEnabled = !isBusy;
@@ -580,6 +586,149 @@ public partial class MainWindow : Window
         RefreshProgramSearchResults(GetOpenApplicationSuggestions());
         StatusText.Text = $"Learned {_programSearchResults.Count} currently open app(s)";
         AppendLog($"Learned {_programSearchResults.Count} currently open app(s) into program search.");
+    }
+
+    private void StartTeachSessionButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        _teachSessionBaselineProcessIds = CaptureCurrentProcessIds();
+        _teachSessionCapturedApps.Clear();
+        _isTeachSessionActive = true;
+
+        StartTeachSessionButton.IsEnabled = false;
+        StopTeachSessionButton.IsEnabled = true;
+        ApplyTeachSessionButton.IsEnabled = false;
+
+        StatusText.Text = "Teach session started";
+        AppendLog("Teach session started. Open and login to your apps now, then click Stop Teach Session.");
+        MessageBox.Show(
+            this,
+            "Teach Session started.\n\nOpen the programs and complete any login steps exactly how you want.\nWhen done, click Stop Teach Session.",
+            "Launcher Native",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
+    }
+
+    private void StopTeachSessionButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (!_isTeachSessionActive)
+        {
+            return;
+        }
+
+        var learnedApps = CaptureNewlyOpenedPrograms(_teachSessionBaselineProcessIds)
+            .GroupBy(item => (item.ProgramPath ?? string.Empty) + "|" + (item.WindowTitle ?? string.Empty), StringComparer.OrdinalIgnoreCase)
+            .Select(group => group.First())
+            .OrderBy(item => item.DisplayName, StringComparer.OrdinalIgnoreCase)
+            .ToList();
+
+        _teachSessionCapturedApps.Clear();
+        _teachSessionCapturedApps.AddRange(learnedApps);
+        _isTeachSessionActive = false;
+        _teachSessionBaselineProcessIds.Clear();
+
+        StartTeachSessionButton.IsEnabled = true;
+        StopTeachSessionButton.IsEnabled = false;
+        ApplyTeachSessionButton.IsEnabled = _teachSessionCapturedApps.Count > 0;
+
+        RefreshProgramSearchResults(_teachSessionCapturedApps);
+
+        if (_teachSessionCapturedApps.Count == 0)
+        {
+            StatusText.Text = "Teach session found no new apps";
+            AppendLog("Teach session stopped. No newly opened apps were detected.");
+            MessageBox.Show(
+                this,
+                "No newly opened programs were detected during this Teach Session.\n\nStart Teach Session again, then open programs after starting it.",
+                "Launcher Native",
+                MessageBoxButton.OK,
+                MessageBoxImage.Information);
+            return;
+        }
+
+        StatusText.Text = $"Teach session captured {_teachSessionCapturedApps.Count} app(s)";
+        AppendLog($"Teach session captured {_teachSessionCapturedApps.Count} app(s). Click Apply Taught Flow to save startup steps.");
+        MessageBox.Show(
+            this,
+            $"Captured {_teachSessionCapturedApps.Count} app(s).\n\nClick 'Apply Taught Flow' to save them into your startup config.",
+            "Launcher Native",
+            MessageBoxButton.OK,
+            MessageBoxImage.Information);
+    }
+
+    private void ApplyTeachSessionButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (_configDocument is null)
+        {
+            MessageBox.Show(this, "Load a config before applying a taught flow.", "Launcher Native", MessageBoxButton.OK, MessageBoxImage.Warning);
+            return;
+        }
+
+        if (_teachSessionCapturedApps.Count == 0)
+        {
+            MessageBox.Show(this, "No taught apps are waiting to be applied.", "Launcher Native", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        var existingNames = new HashSet<string>(_configDocument.Configuration.Steps.Select(step => step.Name), StringComparer.OrdinalIgnoreCase);
+
+        foreach (var app in _teachSessionCapturedApps)
+        {
+            if (string.IsNullOrWhiteSpace(app.ProgramPath))
+            {
+                continue;
+            }
+
+            var baseName = NormalizeText(app.DisplayName) ?? Path.GetFileNameWithoutExtension(app.ProgramPath);
+            var stepName = BuildUniqueStepName(existingNames, "Taught - " + baseName);
+            existingNames.Add(stepName);
+
+            var processName = Path.GetFileNameWithoutExtension(app.ProgramPath);
+            var windowTitle = NormalizeText(app.WindowTitle);
+
+            var taughtStep = new LauncherStep
+            {
+                Name = stepName,
+                Type = "launch",
+                Enabled = true,
+                ProgramPath = app.ProgramPath,
+                Arguments = NormalizeText(app.Arguments),
+                WorkingDirectory = NormalizeText(Path.GetDirectoryName(app.ProgramPath)),
+                WindowTitle = windowTitle,
+                LaunchOnlyIfMissing = true,
+                PostLaunchDelaySeconds = 2,
+                WaitAfterStepSeconds = 1,
+                RunningProcessNames = string.IsNullOrWhiteSpace(processName)
+                    ? new List<string>()
+                    : new List<string> { processName },
+                CloseProcessNames = string.IsNullOrWhiteSpace(processName)
+                    ? new List<string>()
+                    : new List<string> { processName },
+                RunningWindowTitles = string.IsNullOrWhiteSpace(windowTitle)
+                    ? new List<string>()
+                    : new List<string> { windowTitle },
+                CloseWindowTitles = string.IsNullOrWhiteSpace(windowTitle)
+                    ? new List<string>()
+                    : new List<string> { windowTitle }
+            };
+
+            UpsertStep(taughtStep);
+        }
+
+        try
+        {
+            _configStore.Save(_configDocument);
+            AppendLog($"Applied taught flow with {_teachSessionCapturedApps.Count} app(s) to config.");
+            StatusText.Text = "Taught flow applied";
+            _teachSessionCapturedApps.Clear();
+            ApplyTeachSessionButton.IsEnabled = false;
+            ReloadConfigView();
+        }
+        catch (Exception ex)
+        {
+            AppendLog("Applying taught flow failed: " + ex.Message);
+            StatusText.Text = "Apply taught flow failed";
+            MessageBox.Show(this, ex.Message, "Launcher Native", MessageBoxButton.OK, MessageBoxImage.Error);
+        }
     }
 
     private void ApplyProgramSearchResultButton_OnClick(object sender, RoutedEventArgs e)
@@ -904,6 +1053,86 @@ public partial class MainWindow : Window
                 Source = "Open App"
             };
         }
+    }
+
+    private static HashSet<int> CaptureCurrentProcessIds()
+    {
+        var ids = new HashSet<int>();
+        foreach (var process in Process.GetProcesses())
+        {
+            try
+            {
+                ids.Add(process.Id);
+            }
+            catch
+            {
+                // Ignore processes that become inaccessible during capture.
+            }
+        }
+
+        return ids;
+    }
+
+    private static IEnumerable<ProgramSearchResult> CaptureNewlyOpenedPrograms(IReadOnlySet<int> baselineProcessIds)
+    {
+        foreach (var process in Process.GetProcesses())
+        {
+            string processName;
+            string windowTitle;
+            string? path;
+
+            try
+            {
+                if (baselineProcessIds.Contains(process.Id))
+                {
+                    continue;
+                }
+
+                processName = process.ProcessName;
+                windowTitle = process.MainWindowTitle;
+                path = process.MainModule?.FileName;
+            }
+            catch
+            {
+                continue;
+            }
+
+            if (string.Equals(processName, "Launcher", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(processName, "Launcher.App", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            if (string.IsNullOrWhiteSpace(path) || !path.EndsWith(".exe", StringComparison.OrdinalIgnoreCase))
+            {
+                continue;
+            }
+
+            yield return new ProgramSearchResult
+            {
+                DisplayName = string.IsNullOrWhiteSpace(windowTitle) ? processName : windowTitle,
+                ProgramPath = path,
+                WindowTitle = windowTitle,
+                Source = "Teach Session"
+            };
+        }
+    }
+
+    private static string BuildUniqueStepName(IReadOnlySet<string> existingNames, string baseName)
+    {
+        var normalizedBase = string.IsNullOrWhiteSpace(baseName) ? "Taught Program" : baseName.Trim();
+        if (!existingNames.Contains(normalizedBase))
+        {
+            return normalizedBase;
+        }
+
+        var suffix = 2;
+        while (existingNames.Contains(normalizedBase + " " + suffix))
+        {
+            suffix++;
+        }
+
+        return normalizedBase + " " + suffix;
     }
 
     private IEnumerable<ProgramSearchResult> GetStartMenuSuggestions(string query)

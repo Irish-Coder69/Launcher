@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.4 - 2026-08-03
+
+- Added a Teach Session workflow so users can teach Launcher what they open/login to in a live session, then apply that captured flow into startup steps.
+- Added Run tab controls: Start Teach Session, Stop Teach Session, and Apply Taught Flow.
+- Taught programs are converted into launch steps and saved to config so future Run Start runs can replay the learned startup set.
+
 ## 1.2.3 - 2026-08-03
 
 - Fixed login window responsiveness where sign-in could appear to do nothing on some attempts.

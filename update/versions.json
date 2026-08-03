@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.2.4",
+    "releaseDate": "2026-08-03",
+    "description": "Add Teach Session flow to learn and save startup process",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.2.4/Launcher-1.2.4-Setup.exe",
+    "checksum": "",
+    "isRequired": false,
+    "notes": [
+      "Added Start Teach Session / Stop Teach Session / Apply Taught Flow controls in Run tab",
+      "Captures newly opened programs during a teach session and converts them into launch steps",
+      "Saved taught flow can be replayed on future Run Start clicks"
+    ]
+  },
+  {
     "version": "1.2.3",
     "releaseDate": "2026-08-03",
     "description": "Fix login responsiveness and add clearer sign-in feedback",

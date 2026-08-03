@@ -154,6 +154,9 @@
                                 <Button x:Name="DetectRunningButton" Content="Native Detect Running" Width="160" Height="30" Click="DetectRunningButton_OnClick" />
                                 <Button x:Name="DetectCloseTargetsButton" Content="Native Detect Close Targets" Width="190" Height="30" Margin="8,0,0,0" Click="DetectCloseTargetsButton_OnClick" />
                                 <Button x:Name="LearnOpenAppsButton" Content="Learn Open Apps" Width="140" Height="30" Margin="8,0,0,0" Click="LearnOpenAppsButton_OnClick" />
+                                <Button x:Name="StartTeachSessionButton" Content="Start Teach Session" Width="160" Height="30" Margin="8,0,0,0" Click="StartTeachSessionButton_OnClick" />
+                                <Button x:Name="StopTeachSessionButton" Content="Stop Teach Session" Width="160" Height="30" Margin="8,0,0,0" Click="StopTeachSessionButton_OnClick" IsEnabled="False" />
+                                <Button x:Name="ApplyTeachSessionButton" Content="Apply Taught Flow" Width="150" Height="30" Margin="8,0,0,0" Click="ApplyTeachSessionButton_OnClick" IsEnabled="False" />
                             </WrapPanel>
 
                             <DataGrid x:Name="StepsGrid" Grid.Row="2" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
