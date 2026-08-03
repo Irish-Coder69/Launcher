@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.7 - 2026-08-03
+
+- Added installed-program inventory scanning (Registry, UWP/Appx, Start Menu, and PATH) with local cache and manual refresh support.
+- Program search now uses the installed-program inventory so taught/replay flows can resolve and reuse exact app paths more reliably.
+- Teach Session now captures richer interaction flow data including foreground window transitions, keyboard input events, and mouse click events.
+- Added taught event replay support for focus-window, key-input, and mouse-click events to better follow full user teaching workflows.
+- Added inventory-aware launch fallback: if a taught program path is missing, Launcher can resolve it from cached installed-app identity metadata.
+
 ## 1.2.6 - 2026-08-03
 
 - Updated in-app updater to download installer directly without opening the GitHub website.

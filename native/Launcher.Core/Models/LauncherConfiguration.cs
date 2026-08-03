@@ -67,6 +67,21 @@ public sealed class LauncherStep
     [JsonPropertyName("programPath")]
     public string? ProgramPath { get; set; }
 
+    [JsonPropertyName("programDisplayName")]
+    public string? ProgramDisplayName { get; set; }
+
+    [JsonPropertyName("detectionAppId")]
+    public string? DetectionAppId { get; set; }
+
+    [JsonPropertyName("detectionMethod")]
+    public string? DetectionMethod { get; set; }
+
+    [JsonPropertyName("inventoryCachedAt")]
+    public string? InventoryCachedAt { get; set; }
+
+    [JsonPropertyName("taughtEvents")]
+    public List<LauncherTaughtEvent> TaughtEvents { get; set; } = new();
+
     [JsonPropertyName("fallbackProgramPath")]
     public string? FallbackProgramPath { get; set; }
 
@@ -291,6 +306,39 @@ public sealed class LauncherKeySequenceEntry
 
     [JsonPropertyName("delayMs")]
     public int? DelayMs { get; set; }
+}
+
+public sealed class LauncherTaughtEvent
+{
+    [JsonPropertyName("eventType")]
+    public string EventType { get; set; } = string.Empty;
+
+    [JsonPropertyName("timestamp")]
+    public string? Timestamp { get; set; }
+
+    [JsonPropertyName("windowTitle")]
+    public string? WindowTitle { get; set; }
+
+    [JsonPropertyName("processPath")]
+    public string? ProcessPath { get; set; }
+
+    [JsonPropertyName("delayMs")]
+    public int? DelayMs { get; set; }
+
+    [JsonPropertyName("notes")]
+    public string? Notes { get; set; }
+
+    [JsonPropertyName("inputValue")]
+    public string? InputValue { get; set; }
+
+    [JsonPropertyName("mouseButton")]
+    public string? MouseButton { get; set; }
+
+    [JsonPropertyName("mouseX")]
+    public int? MouseX { get; set; }
+
+    [JsonPropertyName("mouseY")]
+    public int? MouseY { get; set; }
 }
 
 public sealed class LauncherWindowSpec

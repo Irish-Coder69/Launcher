@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.2.7",
+    "releaseDate": "2026-08-03",
+    "description": "Add installed-program inventory, richer teach-session event capture, and taught event replay",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.2.7/Launcher-1.2.7-Setup.exe",
+    "checksum": "",
+    "isRequired": false,
+    "notes": [
+      "Installed-program inventory now scans registry, UWP/Appx, Start Menu, and PATH entries with cache and refresh support",
+      "Teach Session now captures full interaction context including focus-window transitions, key input, and mouse clicks",
+      "Launcher now replays taught focus/key/click events and can fall back to inventory identity when a taught executable path changes"
+    ]
+  },
+  {
     "version": "1.2.6",
     "releaseDate": "2026-08-03",
     "description": "Download installer in-app and enforce uninstall-first update prompts",

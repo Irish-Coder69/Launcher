@@ -14,6 +14,7 @@ public sealed class LauncherNativeStartRunner
     private readonly LauncherNativeDetectionService _detectionService = new();
     private readonly LauncherLearningService _learningService = new();
     private readonly LauncherSecretStoreService _secretStore = new();
+    private readonly LauncherProgramInventoryService _programInventoryService = new();
 
     public async Task RunAsync(
         LauncherConfigDocument document,
@@ -173,6 +174,7 @@ public sealed class LauncherNativeStartRunner
         await WaitForWindowToCloseAsync(step, dryRun, onOutput, cancellationToken);
         await InvokePreLoginWindowPreparationAsync(step, process, dryRun, onOutput, cancellationToken);
         await SendLoginSequenceAsync(step, process, dryRun, onOutput, cancellationToken);
+        await ReplayTaughtEventsAsync(step, process, dryRun, onOutput, cancellationToken);
 
         var loginCompleteWait = step.WaitForLoginCompleteSeconds ?? 0;
         if (loginCompleteWait > 0)
@@ -1176,7 +1178,7 @@ public sealed class LauncherNativeStartRunner
         }
     }
 
-    private static Process? StartStepProcess(LauncherStep step, string configDirectory)
+    private Process? StartStepProcess(LauncherStep step, string configDirectory)
     {
         if (string.IsNullOrWhiteSpace(step.ProgramPath))
         {
@@ -1185,9 +1187,7 @@ public sealed class LauncherNativeStartRunner
 
         var rawProgramPath = step.ProgramPath;
         var looksLikePath = LooksLikePath(rawProgramPath);
-        var resolvedProgramPath = looksLikePath
-            ? ResolveAccessibleStepPath(configDirectory, step.ProgramPath, step.FallbackProgramPath)
-            : step.ProgramPath;
+        var resolvedProgramPath = ResolveLaunchTarget(step, configDirectory);
 
         if (looksLikePath && string.IsNullOrWhiteSpace(resolvedProgramPath))
         {
@@ -1238,7 +1238,7 @@ public sealed class LauncherNativeStartRunner
         });
     }
 
-    private static string GetDryRunTarget(LauncherStep step, string configDirectory)
+    private string GetDryRunTarget(LauncherStep step, string configDirectory)
     {
         if (string.IsNullOrWhiteSpace(step.ProgramPath))
         {
@@ -1250,7 +1250,217 @@ public sealed class LauncherNativeStartRunner
             return step.ProgramPath;
         }
 
-        return ResolveAccessibleStepPath(configDirectory, step.ProgramPath, step.FallbackProgramPath) ?? ResolveStepPath(configDirectory, step.ProgramPath);
+        return ResolveLaunchTarget(step, configDirectory) ?? ResolveStepPath(configDirectory, step.ProgramPath);
+    }
+
+    private string? ResolveLaunchTarget(LauncherStep step, string configDirectory)
+    {
+        var rawProgramPath = step.ProgramPath;
+        if (string.IsNullOrWhiteSpace(rawProgramPath))
+        {
+            return null;
+        }
+
+        if (!LooksLikePath(rawProgramPath))
+        {
+            return rawProgramPath;
+        }
+
+        var resolved = ResolveAccessibleStepPath(configDirectory, step.ProgramPath, step.FallbackProgramPath);
+        if (!string.IsNullOrWhiteSpace(resolved))
+        {
+            return resolved;
+        }
+
+        var inventoryMatch = FindInventoryMatchForStep(step);
+        if (!string.IsNullOrWhiteSpace(inventoryMatch?.ProgramPath) && File.Exists(inventoryMatch.ProgramPath))
+        {
+            return inventoryMatch.ProgramPath;
+        }
+
+        return null;
+    }
+
+    private LauncherProgramInventoryEntry? FindInventoryMatchForStep(LauncherStep step)
+    {
+        var inventory = _programInventoryService.GetCachedPrograms();
+        if (inventory.Count == 0)
+        {
+            try
+            {
+                inventory = _programInventoryService.GetProgramsAsync(forceRefresh: true).GetAwaiter().GetResult();
+            }
+            catch
+            {
+                return null;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(step.DetectionAppId))
+        {
+            var byAppId = inventory.FirstOrDefault(item =>
+                !string.IsNullOrWhiteSpace(item.AppId) &&
+                string.Equals(item.AppId, step.DetectionAppId, StringComparison.OrdinalIgnoreCase));
+
+            if (byAppId is not null)
+            {
+                return byAppId;
+            }
+        }
+
+        if (!string.IsNullOrWhiteSpace(step.ProgramDisplayName))
+        {
+            var byName = inventory.FirstOrDefault(item =>
+                item.DisplayName.Contains(step.ProgramDisplayName, StringComparison.OrdinalIgnoreCase) ||
+                step.ProgramDisplayName.Contains(item.DisplayName, StringComparison.OrdinalIgnoreCase));
+
+            if (byName is not null)
+            {
+                return byName;
+            }
+        }
+
+        var leafName = Path.GetFileName(step.ProgramPath);
+        if (string.IsNullOrWhiteSpace(leafName))
+        {
+            return null;
+        }
+
+        return inventory.FirstOrDefault(item =>
+            !string.IsNullOrWhiteSpace(item.ProgramPath) &&
+            string.Equals(Path.GetFileName(item.ProgramPath), leafName, StringComparison.OrdinalIgnoreCase));
+    }
+
+    private static async Task ReplayTaughtEventsAsync(
+        LauncherStep step,
+        Process? process,
+        bool dryRun,
+        Action<string>? onOutput,
+        CancellationToken cancellationToken)
+    {
+        if (step.TaughtEvents.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var taughtEvent in step.TaughtEvents)
+        {
+            cancellationToken.ThrowIfCancellationRequested();
+
+            var delayMs = Math.Max(0, taughtEvent.DelayMs ?? 0);
+            if (delayMs > 0)
+            {
+                if (dryRun)
+                {
+                    Log(onOutput, $"[DryRun] Would wait {delayMs} ms before taught focus event '{taughtEvent.WindowTitle}'");
+                }
+                else
+                {
+                    await Task.Delay(delayMs, cancellationToken);
+                }
+            }
+
+            var eventType = taughtEvent.EventType?.Trim().ToLowerInvariant();
+            switch (eventType)
+            {
+                case "focus-window":
+                {
+                    var title = taughtEvent.WindowTitle;
+                    if (string.IsNullOrWhiteSpace(title))
+                    {
+                        continue;
+                    }
+
+                    if (dryRun)
+                    {
+                        Log(onOutput, $"[DryRun] Would verify/activate taught window '{title}'");
+                        continue;
+                    }
+
+                    var activated = await TryActivateWindowAsync(new[] { title }, process?.Id, 5, 250, cancellationToken);
+                    if (activated)
+                    {
+                        Log(onOutput, $"Taught flow matched window '{title}'");
+                    }
+                    else
+                    {
+                        Log(onOutput, $"Taught flow window not observed in time: '{title}'");
+                    }
+
+                    break;
+                }
+                case "key-input":
+                {
+                    if (string.IsNullOrWhiteSpace(taughtEvent.InputValue))
+                    {
+                        continue;
+                    }
+
+                    if (dryRun)
+                    {
+                        Log(onOutput, $"[DryRun] Would replay key input '{taughtEvent.InputValue}'");
+                        continue;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(taughtEvent.WindowTitle))
+                    {
+                        await TryActivateWindowAsync(new[] { taughtEvent.WindowTitle }, process?.Id, 3, 200, cancellationToken);
+                    }
+
+                    SendTaughtInput(taughtEvent.InputValue!);
+                    break;
+                }
+                case "mouse-click":
+                {
+                    if (!taughtEvent.MouseX.HasValue || !taughtEvent.MouseY.HasValue)
+                    {
+                        continue;
+                    }
+
+                    if (dryRun)
+                    {
+                        Log(onOutput, $"[DryRun] Would replay mouse {taughtEvent.MouseButton ?? "left"} click at ({taughtEvent.MouseX.Value}, {taughtEvent.MouseY.Value})");
+                        continue;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(taughtEvent.WindowTitle))
+                    {
+                        await TryActivateWindowAsync(new[] { taughtEvent.WindowTitle }, process?.Id, 3, 200, cancellationToken);
+                    }
+
+                    ReplayMouseClick(taughtEvent.MouseX.Value, taughtEvent.MouseY.Value, taughtEvent.MouseButton);
+                    break;
+                }
+            }
+        }
+    }
+
+    private static void SendTaughtInput(string inputValue)
+    {
+        if (string.IsNullOrWhiteSpace(inputValue))
+        {
+            return;
+        }
+
+        SendKeys.SendWait(inputValue);
+        Thread.Sleep(25);
+    }
+
+    private static void ReplayMouseClick(int x, int y, string? mouseButton)
+    {
+        NativeMethods.SetCursorPos(x, y);
+
+        if (string.Equals(mouseButton, "right", StringComparison.OrdinalIgnoreCase))
+        {
+            NativeMethods.mouse_event(NativeMethods.MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, UIntPtr.Zero);
+            Thread.Sleep(20);
+            NativeMethods.mouse_event(NativeMethods.MOUSEEVENTF_RIGHTUP, 0, 0, 0, UIntPtr.Zero);
+            return;
+        }
+
+        NativeMethods.mouse_event(NativeMethods.MOUSEEVENTF_LEFTDOWN, 0, 0, 0, UIntPtr.Zero);
+        Thread.Sleep(20);
+        NativeMethods.mouse_event(NativeMethods.MOUSEEVENTF_LEFTUP, 0, 0, 0, UIntPtr.Zero);
     }
 
     private static List<int> GetTrackedProcessIds(LauncherStep step)
@@ -2034,6 +2244,8 @@ public sealed class LauncherNativeStartRunner
         internal const int SW_MINIMIZE = 6;
         internal const uint MOUSEEVENTF_LEFTDOWN = 0x0002;
         internal const uint MOUSEEVENTF_LEFTUP = 0x0004;
+        internal const uint MOUSEEVENTF_RIGHTDOWN = 0x0008;
+        internal const uint MOUSEEVENTF_RIGHTUP = 0x0010;
 
         internal delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 

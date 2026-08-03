@@ -2,6 +2,9 @@
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Globalization;
+using System.Runtime.InteropServices;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Nodes;
 using System.Windows;
@@ -27,6 +30,7 @@ public partial class MainWindow : Window
     private readonly LauncherNativeStartRunner _nativeStartRunner = new();
     private readonly LauncherLearningService _learningService = new();
     private readonly LauncherSecretStoreService _secretStore = new();
+    private readonly LauncherProgramInventoryService _programInventoryService = new();
     private readonly ObservableCollection<string> _logLines = new();
     private readonly ObservableCollection<StepRow> _stepRows = new();
     private readonly ObservableCollection<string> _recommendedOrderLines = new();
@@ -34,6 +38,15 @@ public partial class MainWindow : Window
     private readonly ObservableCollection<ProgramSearchResult> _programSearchResults = new();
     private readonly List<ProgramSearchResult> _teachSessionCapturedApps = new();
     private readonly HashSet<string> _teachSessionCapturedKeys = new(StringComparer.OrdinalIgnoreCase);
+    private readonly Dictionary<string, TeachCapturedProgram> _teachSessionPrograms = new(StringComparer.OrdinalIgnoreCase);
+    private readonly List<TeachFocusEvent> _teachSessionFocusEvents = new();
+    private readonly List<TeachInteractionEvent> _teachSessionInteractionEvents = new();
+    private readonly object _teachSessionEventLock = new();
+    private bool _teachSessionCaptureSensitiveInput;
+    private IntPtr _keyboardHookHandle = IntPtr.Zero;
+    private IntPtr _mouseHookHandle = IntPtr.Zero;
+    private HookProc? _keyboardHookProc;
+    private HookProc? _mouseHookProc;
     private bool _isBusy;
     private bool _isTeachSessionActive;
     private HashSet<int> _teachSessionBaselineProcessIds = new();
@@ -50,6 +63,7 @@ public partial class MainWindow : Window
         InitializeComponent();
         _currentUser = currentUser;
         Loaded += MainWindow_OnLoaded;
+        Closing += MainWindow_OnClosing;
         LogListBox.ItemsSource = _logLines;
         StepsGrid.ItemsSource = _stepRows;
         RecommendedOrderListBox.ItemsSource = _recommendedOrderLines;
@@ -60,12 +74,39 @@ public partial class MainWindow : Window
         ReloadConfigView();
     }
 
-    private void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
+    private void MainWindow_OnClosing(object? sender, System.ComponentModel.CancelEventArgs e)
+    {
+        StopTeachSessionHooks();
+    }
+
+    private async void MainWindow_OnLoaded(object sender, RoutedEventArgs e)
     {
         WindowState = WindowState.Maximized;
         CurrentUserTextBlock.Text = _currentUser is null
             ? "Signed in user: none"
             : $"Signed in user: {_currentUser.DisplayName} ({_currentUser.UserName})";
+
+        await WarmProgramInventoryAsync();
+    }
+
+    private async Task WarmProgramInventoryAsync()
+    {
+        try
+        {
+            var cached = _programInventoryService.GetCachedPrograms();
+            if (cached.Count > 0)
+            {
+                AppendLog($"Program inventory cache loaded ({cached.Count} entries).");
+                return;
+            }
+
+            var entries = await _programInventoryService.GetProgramsAsync();
+            AppendLog($"Program inventory scanned ({entries.Count} entries). Cache: {_programInventoryService.CacheFilePath}");
+        }
+        catch (Exception ex)
+        {
+            AppendLog("Program inventory warm-up failed: " + ex.Message);
+        }
     }
 
     private void ExitMenuItem_OnClick(object sender, RoutedEventArgs e)
@@ -366,6 +407,7 @@ public partial class MainWindow : Window
         SearchProgramsButton.IsEnabled = !isBusy;
         ApplyProgramSearchResultButton.IsEnabled = !isBusy;
         LearnProgramsIntoSearchButton.IsEnabled = !isBusy;
+        RefreshInventoryButton.IsEnabled = !isBusy;
         LearnOpenAppsButton.IsEnabled = !isBusy;
         StartTeachSessionButton.IsEnabled = !isBusy && !_isTeachSessionActive;
         StopTeachSessionButton.IsEnabled = !isBusy && _isTeachSessionActive;
@@ -594,7 +636,7 @@ public partial class MainWindow : Window
         StatusText.Text = $"Found {targets.Count} close target(s)";
     }
 
-    private void SearchProgramsButton_OnClick(object sender, RoutedEventArgs e)
+    private async void SearchProgramsButton_OnClick(object sender, RoutedEventArgs e)
     {
         var query = NormalizeText(ProgramSearchQueryTextBox.Text);
         if (string.IsNullOrWhiteSpace(query))
@@ -603,8 +645,16 @@ public partial class MainWindow : Window
             return;
         }
 
-        RefreshProgramSearchResults(SearchProgramSuggestions(query));
-        StatusText.Text = $"Found {_programSearchResults.Count} program match(es)";
+        try
+        {
+            RefreshProgramSearchResults(await SearchProgramSuggestionsAsync(query));
+            StatusText.Text = $"Found {_programSearchResults.Count} program match(es)";
+        }
+        catch (Exception ex)
+        {
+            AppendLog("Program search failed: " + ex.Message);
+            StatusText.Text = "Program search failed";
+        }
     }
 
     private void LearnOpenAppsButton_OnClick(object sender, RoutedEventArgs e)
@@ -616,11 +666,30 @@ public partial class MainWindow : Window
 
     private void StartTeachSessionButton_OnClick(object sender, RoutedEventArgs e)
     {
+        var captureConfirmation = MessageBox.Show(
+            this,
+            "Teach Session can capture window focus, mouse clicks, and keyboard input across apps while recording.\n\nDo you want to capture typed input for full replay?",
+            "Launcher Native",
+            MessageBoxButton.YesNoCancel,
+            MessageBoxImage.Question);
+
+        if (captureConfirmation == MessageBoxResult.Cancel)
+        {
+            return;
+        }
+
+        _teachSessionCaptureSensitiveInput = captureConfirmation == MessageBoxResult.Yes;
+
         _teachSessionBaselineProcessIds = CaptureCurrentProcessIds();
         _teachSessionCapturedApps.Clear();
         _teachSessionCapturedKeys.Clear();
+        _teachSessionPrograms.Clear();
+        _teachSessionFocusEvents.Clear();
+        _teachSessionInteractionEvents.Clear();
         _stepRows.Clear();
         _isTeachSessionActive = true;
+
+        StartTeachSessionHooks();
 
         _teachSessionTimer ??= new DispatcherTimer
         {
@@ -635,10 +704,10 @@ public partial class MainWindow : Window
         ApplyTeachSessionButton.IsEnabled = false;
 
         StatusText.Text = "Teach session started";
-        AppendLog("Teach session started. Open and login to your apps now, then click Stop Teach Session.");
+        AppendLog("Teach session started. Open apps and complete each login/workflow step now, then click Stop Teach Session.");
         MessageBox.Show(
             this,
-            "Teach Session started.\n\nOpen the programs and complete any login steps exactly how you want.\nWhen done, click Stop Teach Session.",
+                "Teach Session started.\n\nOpen programs and complete login/workflow steps exactly how you want them replayed.\nWhen done, click Stop Teach Session.",
             "Launcher Native",
             MessageBoxButton.OK,
             MessageBoxImage.Information);
@@ -652,6 +721,7 @@ public partial class MainWindow : Window
         }
 
         _teachSessionTimer?.Stop();
+        StopTeachSessionHooks();
 
         CaptureTeachSessionDeltas();
 
@@ -660,9 +730,9 @@ public partial class MainWindow : Window
 
         StartTeachSessionButton.IsEnabled = true;
         StopTeachSessionButton.IsEnabled = false;
-        ApplyTeachSessionButton.IsEnabled = _teachSessionCapturedApps.Count > 0;
+        ApplyTeachSessionButton.IsEnabled = _teachSessionPrograms.Count > 0;
 
-        if (_teachSessionCapturedApps.Count == 0)
+        if (_teachSessionPrograms.Count == 0)
         {
             StatusText.Text = "Teach session found no new apps";
             AppendLog("Teach session stopped. No newly opened apps were detected.");
@@ -676,17 +746,17 @@ public partial class MainWindow : Window
             return;
         }
 
-        StatusText.Text = $"Teach session captured {_teachSessionCapturedApps.Count} app(s)";
-        AppendLog($"Teach session captured {_teachSessionCapturedApps.Count} app(s). Click Apply Taught Flow to save startup steps.");
+        StatusText.Text = $"Teach session captured {_teachSessionPrograms.Count} app(s)";
+        AppendLog($"Teach session captured {_teachSessionPrograms.Count} app(s) with {_teachSessionFocusEvents.Count} window focus transition(s). Click Apply Taught Flow to save startup steps.");
         MessageBox.Show(
             this,
-            $"Captured {_teachSessionCapturedApps.Count} app(s).\n\nClick 'Apply Taught Flow' to save them into your startup config.",
+            $"Captured {_teachSessionPrograms.Count} app(s).\n\nClick 'Apply Taught Flow' to save them into your startup config.",
             "Launcher Native",
             MessageBoxButton.OK,
             MessageBoxImage.Information);
     }
 
-    private void ApplyTeachSessionButton_OnClick(object sender, RoutedEventArgs e)
+    private async void ApplyTeachSessionButton_OnClick(object sender, RoutedEventArgs e)
     {
         if (_configDocument is null)
         {
@@ -694,18 +764,20 @@ public partial class MainWindow : Window
             return;
         }
 
-        if (_teachSessionCapturedApps.Count == 0)
+        if (_teachSessionPrograms.Count == 0)
         {
             MessageBox.Show(this, "No taught apps are waiting to be applied.", "Launcher Native", MessageBoxButton.OK, MessageBoxImage.Information);
             return;
         }
 
         RemoveTaughtStepsFromConfig(_configDocument);
+        var inventoryEntries = await _programInventoryService.GetProgramsAsync();
 
         var existingNames = new HashSet<string>(_configDocument.Configuration.Steps.Select(step => step.Name), StringComparer.OrdinalIgnoreCase);
 
-        foreach (var app in _teachSessionCapturedApps)
+        foreach (var captured in _teachSessionPrograms.Values.OrderBy(item => item.FirstSeenUtc))
         {
+            var app = captured.Program;
             if (string.IsNullOrWhiteSpace(app.ProgramPath))
             {
                 continue;
@@ -716,7 +788,14 @@ public partial class MainWindow : Window
             existingNames.Add(stepName);
 
             var processName = Path.GetFileNameWithoutExtension(app.ProgramPath);
-            var windowTitle = NormalizeText(app.WindowTitle);
+            var observedTitles = captured.ObservedWindowTitles
+                .Where(title => !string.IsNullOrWhiteSpace(title))
+                .Distinct(StringComparer.OrdinalIgnoreCase)
+                .ToList();
+
+            var primaryWindowTitle = observedTitles.FirstOrDefault();
+            var appDurationSeconds = Math.Max(1, (int)Math.Round((captured.LastSeenUtc - captured.FirstSeenUtc).TotalSeconds));
+            var inventoryMatch = FindInventoryMatch(app, inventoryEntries);
 
             var taughtStep = new LauncherStep
             {
@@ -724,25 +803,26 @@ public partial class MainWindow : Window
                 Type = "launch",
                 Enabled = true,
                 ProgramPath = app.ProgramPath,
+                ProgramDisplayName = inventoryMatch?.DisplayName ?? app.DisplayName,
+                DetectionAppId = inventoryMatch?.AppId,
+                DetectionMethod = inventoryMatch?.Source,
+                InventoryCachedAt = DateTimeOffset.Now.ToString("O"),
                 Arguments = NormalizeText(app.Arguments),
                 WorkingDirectory = NormalizeText(Path.GetDirectoryName(app.ProgramPath)),
-                WindowTitle = windowTitle,
+                WindowTitle = primaryWindowTitle,
                 LaunchOnlyIfMissing = true,
                 PostLaunchDelaySeconds = 2,
-                WaitAfterStepSeconds = 1,
-                ProductivityNotes = TaughtStepMarker + " Captured from Teach Session on " + DateTimeOffset.Now.ToString("O"),
+                WaitAfterStepSeconds = appDurationSeconds,
+                ProductivityNotes = TaughtStepMarker + " Captured from Teach Session on " + DateTimeOffset.Now.ToString("O") + $" | Observed windows={observedTitles.Count}",
+                TaughtEvents = BuildTaughtEventsForProgram(captured),
                 RunningProcessNames = string.IsNullOrWhiteSpace(processName)
                     ? new List<string>()
                     : new List<string> { processName },
                 CloseProcessNames = string.IsNullOrWhiteSpace(processName)
                     ? new List<string>()
                     : new List<string> { processName },
-                RunningWindowTitles = string.IsNullOrWhiteSpace(windowTitle)
-                    ? new List<string>()
-                    : new List<string> { windowTitle },
-                CloseWindowTitles = string.IsNullOrWhiteSpace(windowTitle)
-                    ? new List<string>()
-                    : new List<string> { windowTitle }
+                RunningWindowTitles = observedTitles,
+                CloseWindowTitles = observedTitles
             };
 
             UpsertStep(taughtStep);
@@ -751,9 +831,11 @@ public partial class MainWindow : Window
         try
         {
             _configStore.Save(_configDocument);
-            AppendLog($"Applied taught flow with {_teachSessionCapturedApps.Count} app(s) to config.");
+            AppendLog($"Applied taught flow with {_teachSessionPrograms.Count} app(s) to config.");
             StatusText.Text = "Taught flow applied";
             _teachSessionCapturedApps.Clear();
+            _teachSessionPrograms.Clear();
+            _teachSessionFocusEvents.Clear();
             ApplyTeachSessionButton.IsEnabled = false;
             ReloadConfigView();
         }
@@ -1044,13 +1126,30 @@ public partial class MainWindow : Window
         StatusText.Text = $"Inserted token for secret '{secretName}'";
     }
 
-    private IEnumerable<ProgramSearchResult> SearchProgramSuggestions(string query)
+    private async Task<IEnumerable<ProgramSearchResult>> SearchProgramSuggestionsAsync(string query)
     {
         var results = new List<ProgramSearchResult>();
         results.AddRange(GetOpenApplicationSuggestions(query));
+        results.AddRange(await GetInventorySuggestionsAsync(query));
         results.AddRange(GetStartMenuSuggestions(query));
         results.AddRange(GetPathExecutableSuggestions(query));
         return results;
+    }
+
+    private async Task<IEnumerable<ProgramSearchResult>> GetInventorySuggestionsAsync(string query)
+    {
+        var normalizedQuery = NormalizeText(query) ?? string.Empty;
+        var entries = await _programInventoryService.GetProgramsAsync();
+        return entries
+            .Where(item => item.DisplayName.Contains(normalizedQuery, StringComparison.OrdinalIgnoreCase) ||
+                           (item.ProgramPath?.Contains(normalizedQuery, StringComparison.OrdinalIgnoreCase) ?? false))
+            .Select(item => new ProgramSearchResult
+            {
+                DisplayName = item.DisplayName,
+                ProgramPath = item.ProgramPath,
+                Source = "Inventory:" + item.Source
+            })
+            .ToList();
     }
 
     private IEnumerable<ProgramSearchResult> GetOpenApplicationSuggestions(string? query = null)
@@ -1170,19 +1269,350 @@ public partial class MainWindow : Window
 
     private void CaptureTeachSessionDeltas()
     {
+        CaptureForegroundWindowEvent();
+
         foreach (var app in CaptureNewlyOpenedPrograms(_teachSessionBaselineProcessIds))
         {
-            var key = (app.ProgramPath ?? string.Empty) + "|" + (app.WindowTitle ?? string.Empty);
-            if (!_teachSessionCapturedKeys.Add(key))
+            if (string.IsNullOrWhiteSpace(app.ProgramPath))
             {
                 continue;
             }
 
-            _teachSessionCapturedApps.Add(app);
-            AddTaughtStepRowPreview(app, _teachSessionCapturedApps.Count);
-            AppendLog($"Taught step learned: {app.DisplayName}");
-            StatusText.Text = $"Teach session learned {_teachSessionCapturedApps.Count} step(s)";
+            var programKey = app.ProgramPath;
+            if (!_teachSessionPrograms.TryGetValue(programKey, out var captured))
+            {
+                captured = new TeachCapturedProgram(app);
+                _teachSessionPrograms[programKey] = captured;
+                _teachSessionCapturedApps.Add(app);
+                AddTaughtStepRowPreview(app, _teachSessionCapturedApps.Count);
+                AppendLog($"Taught app learned: {app.DisplayName}");
+            }
+
+            captured.ObserveWindowTitle(app.WindowTitle);
+
+            var key = (app.ProgramPath ?? string.Empty) + "|" + (app.WindowTitle ?? string.Empty);
+            if (_teachSessionCapturedKeys.Add(key) && !string.IsNullOrWhiteSpace(app.WindowTitle))
+            {
+                AppendLog($"Taught window observed: {app.WindowTitle}");
+            }
+
+            StatusText.Text = $"Teach session learned {_teachSessionPrograms.Count} app(s)";
         }
+    }
+
+    private static LauncherProgramInventoryEntry? FindInventoryMatch(
+        ProgramSearchResult app,
+        IReadOnlyList<LauncherProgramInventoryEntry> inventory)
+    {
+        var path = NormalizeText(app.ProgramPath);
+        if (!string.IsNullOrWhiteSpace(path))
+        {
+            var pathMatch = inventory.FirstOrDefault(item =>
+                !string.IsNullOrWhiteSpace(item.ProgramPath) &&
+                string.Equals(item.ProgramPath, path, StringComparison.OrdinalIgnoreCase));
+
+            if (pathMatch is not null)
+            {
+                return pathMatch;
+            }
+        }
+
+        var displayName = NormalizeText(app.DisplayName);
+        if (!string.IsNullOrWhiteSpace(displayName))
+        {
+            return inventory.FirstOrDefault(item =>
+                item.DisplayName.Contains(displayName, StringComparison.OrdinalIgnoreCase) ||
+                displayName.Contains(item.DisplayName, StringComparison.OrdinalIgnoreCase));
+        }
+
+        return null;
+    }
+
+    private List<LauncherTaughtEvent> BuildTaughtEventsForProgram(TeachCapturedProgram captured)
+    {
+        var events = new List<LauncherTaughtEvent>();
+
+        var relevantFocusEvents = _teachSessionFocusEvents
+            .Where(item =>
+                (!string.IsNullOrWhiteSpace(captured.Program.ProgramPath) &&
+                 !string.IsNullOrWhiteSpace(item.ProcessPath) &&
+                 string.Equals(item.ProcessPath, captured.Program.ProgramPath, StringComparison.OrdinalIgnoreCase)) ||
+                captured.ObservedWindowTitles.Any(title => string.Equals(title, item.WindowTitle, StringComparison.OrdinalIgnoreCase)))
+            .OrderBy(item => item.ObservedAtUtc)
+            .ToList();
+
+        DateTimeOffset? previousTimestamp = null;
+        foreach (var focusEvent in relevantFocusEvents)
+        {
+            var delay = previousTimestamp is null
+                ? 0
+                : Math.Max(0, (int)Math.Round((focusEvent.ObservedAtUtc - previousTimestamp.Value).TotalMilliseconds));
+
+            events.Add(new LauncherTaughtEvent
+            {
+                EventType = "focus-window",
+                Timestamp = focusEvent.ObservedAtUtc.ToString("O"),
+                WindowTitle = focusEvent.WindowTitle,
+                ProcessPath = focusEvent.ProcessPath,
+                DelayMs = delay,
+                Notes = "Captured during Teach Session"
+            });
+
+            previousTimestamp = focusEvent.ObservedAtUtc;
+        }
+
+        var relevantInteractionEvents = _teachSessionInteractionEvents
+            .Where(item =>
+                (!string.IsNullOrWhiteSpace(captured.Program.ProgramPath) &&
+                 !string.IsNullOrWhiteSpace(item.ProcessPath) &&
+                 string.Equals(item.ProcessPath, captured.Program.ProgramPath, StringComparison.OrdinalIgnoreCase)) ||
+                captured.ObservedWindowTitles.Any(title => string.Equals(title, item.WindowTitle, StringComparison.OrdinalIgnoreCase)))
+            .OrderBy(item => item.ObservedAtUtc)
+            .ToList();
+
+        foreach (var interactionEvent in relevantInteractionEvents)
+        {
+            var delay = previousTimestamp is null
+                ? 0
+                : Math.Max(0, (int)Math.Round((interactionEvent.ObservedAtUtc - previousTimestamp.Value).TotalMilliseconds));
+
+            events.Add(new LauncherTaughtEvent
+            {
+                EventType = interactionEvent.EventType,
+                Timestamp = interactionEvent.ObservedAtUtc.ToString("O"),
+                WindowTitle = interactionEvent.WindowTitle,
+                ProcessPath = interactionEvent.ProcessPath,
+                DelayMs = delay,
+                InputValue = interactionEvent.InputValue,
+                MouseButton = interactionEvent.MouseButton,
+                MouseX = interactionEvent.MouseX,
+                MouseY = interactionEvent.MouseY,
+                Notes = "Captured during Teach Session"
+            });
+
+            previousTimestamp = interactionEvent.ObservedAtUtc;
+        }
+
+        return events;
+    }
+
+    private void StartTeachSessionHooks()
+    {
+        if (_keyboardHookHandle != IntPtr.Zero || _mouseHookHandle != IntPtr.Zero)
+        {
+            return;
+        }
+
+        _keyboardHookProc = KeyboardHookCallback;
+        _mouseHookProc = MouseHookCallback;
+
+        var moduleHandle = GetModuleHandle(null);
+        _keyboardHookHandle = SetWindowsHookEx(WH_KEYBOARD_LL, _keyboardHookProc, moduleHandle, 0);
+        _mouseHookHandle = SetWindowsHookEx(WH_MOUSE_LL, _mouseHookProc, moduleHandle, 0);
+
+        AppendLog(_teachSessionCaptureSensitiveInput
+            ? "Teach hooks active: recording focus, clicks, and key input."
+            : "Teach hooks active: recording focus and clicks (key input masked)." );
+    }
+
+    private void StopTeachSessionHooks()
+    {
+        if (_keyboardHookHandle != IntPtr.Zero)
+        {
+            _ = UnhookWindowsHookEx(_keyboardHookHandle);
+            _keyboardHookHandle = IntPtr.Zero;
+        }
+
+        if (_mouseHookHandle != IntPtr.Zero)
+        {
+            _ = UnhookWindowsHookEx(_mouseHookHandle);
+            _mouseHookHandle = IntPtr.Zero;
+        }
+    }
+
+    private IntPtr KeyboardHookCallback(int nCode, IntPtr wParam, IntPtr lParam)
+    {
+        if (nCode < 0 || !_isTeachSessionActive)
+        {
+            return CallNextHookEx(IntPtr.Zero, nCode, wParam, lParam);
+        }
+
+        var message = wParam.ToInt32();
+        if (message != WM_KEYDOWN && message != WM_SYSKEYDOWN)
+        {
+            return CallNextHookEx(IntPtr.Zero, nCode, wParam, lParam);
+        }
+
+        var keyInfo = Marshal.PtrToStructure<KbdLlHookStruct>(lParam);
+        var inputValue = _teachSessionCaptureSensitiveInput
+            ? BuildKeyInputValue((int)keyInfo.vkCode)
+            : "[captured-key]";
+
+        RecordTeachInteractionEvent(new TeachInteractionEvent
+        {
+            ObservedAtUtc = DateTimeOffset.Now,
+            EventType = "key-input",
+            InputValue = inputValue,
+            WindowTitle = GetForegroundWindowTitle(),
+            ProcessPath = GetForegroundProcessPath()
+        });
+
+        return CallNextHookEx(IntPtr.Zero, nCode, wParam, lParam);
+    }
+
+    private IntPtr MouseHookCallback(int nCode, IntPtr wParam, IntPtr lParam)
+    {
+        if (nCode < 0 || !_isTeachSessionActive)
+        {
+            return CallNextHookEx(IntPtr.Zero, nCode, wParam, lParam);
+        }
+
+        var message = wParam.ToInt32();
+        var button = message switch
+        {
+            WM_LBUTTONDOWN => "left",
+            WM_RBUTTONDOWN => "right",
+            _ => null
+        };
+
+        if (button is null)
+        {
+            return CallNextHookEx(IntPtr.Zero, nCode, wParam, lParam);
+        }
+
+        var mouseInfo = Marshal.PtrToStructure<MsLlHookStruct>(lParam);
+        RecordTeachInteractionEvent(new TeachInteractionEvent
+        {
+            ObservedAtUtc = DateTimeOffset.Now,
+            EventType = "mouse-click",
+            MouseButton = button,
+            MouseX = mouseInfo.pt.x,
+            MouseY = mouseInfo.pt.y,
+            WindowTitle = GetForegroundWindowTitle(),
+            ProcessPath = GetForegroundProcessPath()
+        });
+
+        return CallNextHookEx(IntPtr.Zero, nCode, wParam, lParam);
+    }
+
+    private void RecordTeachInteractionEvent(TeachInteractionEvent interactionEvent)
+    {
+        lock (_teachSessionEventLock)
+        {
+            _teachSessionInteractionEvents.Add(interactionEvent);
+        }
+    }
+
+    private static string BuildKeyInputValue(int virtualKeyCode)
+    {
+        if (virtualKeyCode >= 'A' && virtualKeyCode <= 'Z')
+        {
+            return char.ToLowerInvariant((char)virtualKeyCode).ToString(CultureInfo.InvariantCulture);
+        }
+
+        if (virtualKeyCode >= '0' && virtualKeyCode <= '9')
+        {
+            return ((char)virtualKeyCode).ToString(CultureInfo.InvariantCulture);
+        }
+
+        return virtualKeyCode switch
+        {
+            0x0D => "{ENTER}",
+            0x09 => "{TAB}",
+            0x08 => "{BACKSPACE}",
+            0x1B => "{ESC}",
+            0x20 => " ",
+            _ => "{" + virtualKeyCode + "}"
+        };
+    }
+
+    private static string? GetForegroundProcessPath()
+    {
+        var handle = GetForegroundWindow();
+        if (handle == IntPtr.Zero)
+        {
+            return null;
+        }
+
+        GetWindowThreadProcessId(handle, out var processId);
+        try
+        {
+            return Process.GetProcessById((int)processId).MainModule?.FileName;
+        }
+        catch
+        {
+            return null;
+        }
+    }
+
+    private static string GetForegroundWindowTitle()
+    {
+        var handle = GetForegroundWindow();
+        if (handle == IntPtr.Zero)
+        {
+            return string.Empty;
+        }
+
+        return GetWindowTitle(handle);
+    }
+
+    private void CaptureForegroundWindowEvent()
+    {
+        var handle = GetForegroundWindow();
+        if (handle == IntPtr.Zero)
+        {
+            return;
+        }
+
+        var title = GetWindowTitle(handle);
+        if (string.IsNullOrWhiteSpace(title))
+        {
+            return;
+        }
+
+        GetWindowThreadProcessId(handle, out var processId);
+        var eventTime = DateTimeOffset.Now;
+
+        string? processPath = null;
+        try
+        {
+            var process = Process.GetProcessById((int)processId);
+            processPath = process.MainModule?.FileName;
+        }
+        catch
+        {
+            processPath = null;
+        }
+
+        if (_teachSessionFocusEvents.Count > 0)
+        {
+            var last = _teachSessionFocusEvents[_teachSessionFocusEvents.Count - 1];
+            if (string.Equals(last.WindowTitle, title, StringComparison.OrdinalIgnoreCase) &&
+                string.Equals(last.ProcessPath, processPath, StringComparison.OrdinalIgnoreCase))
+            {
+                return;
+            }
+        }
+
+        _teachSessionFocusEvents.Add(new TeachFocusEvent
+        {
+            ObservedAtUtc = eventTime,
+            WindowTitle = title,
+            ProcessPath = processPath
+        });
+    }
+
+    private static string GetWindowTitle(IntPtr handle)
+    {
+        var length = GetWindowTextLength(handle);
+        if (length <= 0)
+        {
+            return string.Empty;
+        }
+
+        var builder = new StringBuilder(length + 1);
+        _ = GetWindowText(handle, builder, builder.Capacity);
+        return builder.ToString();
     }
 
     private void AddTaughtStepRowPreview(ProgramSearchResult app, int sequenceNumber)
@@ -1371,6 +1801,22 @@ public partial class MainWindow : Window
     {
         RefreshSecretList();
         StatusText.Text = "Secret list refreshed";
+    }
+
+    private async void RefreshInventoryButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        try
+        {
+            StatusText.Text = "Refreshing inventory...";
+            var entries = await _programInventoryService.GetProgramsAsync(forceRefresh: true);
+            StatusText.Text = $"Program inventory refreshed ({entries.Count} entries)";
+            AppendLog($"Program inventory refreshed ({entries.Count} entries).");
+        }
+        catch (Exception ex)
+        {
+            StatusText.Text = "Program inventory refresh failed";
+            AppendLog("Program inventory refresh failed: " + ex.Message);
+        }
     }
 
     private void RenameSecretButton_OnClick(object sender, RoutedEventArgs e)
@@ -1587,4 +2033,126 @@ public partial class MainWindow : Window
             ? $"{DisplayName} [{Source}]"
             : $"{DisplayName} [{Source}] - {ProgramPath}";
     }
+
+    private sealed class TeachCapturedProgram
+    {
+        public TeachCapturedProgram(ProgramSearchResult program)
+        {
+            Program = program;
+            FirstSeenUtc = DateTimeOffset.Now;
+            LastSeenUtc = DateTimeOffset.Now;
+            ObserveWindowTitle(program.WindowTitle);
+        }
+
+        public ProgramSearchResult Program { get; }
+
+        public DateTimeOffset FirstSeenUtc { get; }
+
+        public DateTimeOffset LastSeenUtc { get; private set; }
+
+        public List<string> ObservedWindowTitles { get; } = new();
+
+        public void ObserveWindowTitle(string? title)
+        {
+            LastSeenUtc = DateTimeOffset.Now;
+            var normalized = NormalizeText(title);
+            if (string.IsNullOrWhiteSpace(normalized))
+            {
+                return;
+            }
+
+            if (!ObservedWindowTitles.Contains(normalized, StringComparer.OrdinalIgnoreCase))
+            {
+                ObservedWindowTitles.Add(normalized);
+            }
+        }
+    }
+
+    private sealed class TeachFocusEvent
+    {
+        public DateTimeOffset ObservedAtUtc { get; set; }
+
+        public string WindowTitle { get; set; } = string.Empty;
+
+        public string? ProcessPath { get; set; }
+    }
+
+    private sealed class TeachInteractionEvent
+    {
+        public DateTimeOffset ObservedAtUtc { get; set; }
+
+        public string EventType { get; set; } = string.Empty;
+
+        public string? InputValue { get; set; }
+
+        public string? MouseButton { get; set; }
+
+        public int? MouseX { get; set; }
+
+        public int? MouseY { get; set; }
+
+        public string? WindowTitle { get; set; }
+
+        public string? ProcessPath { get; set; }
+    }
+
+    private const int WH_KEYBOARD_LL = 13;
+    private const int WH_MOUSE_LL = 14;
+    private const int WM_KEYDOWN = 0x0100;
+    private const int WM_SYSKEYDOWN = 0x0104;
+    private const int WM_LBUTTONDOWN = 0x0201;
+    private const int WM_RBUTTONDOWN = 0x0204;
+
+    private delegate IntPtr HookProc(int nCode, IntPtr wParam, IntPtr lParam);
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct Point
+    {
+        public int x;
+        public int y;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct MsLlHookStruct
+    {
+        public Point pt;
+        public int mouseData;
+        public int flags;
+        public int time;
+        public IntPtr dwExtraInfo;
+    }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct KbdLlHookStruct
+    {
+        public uint vkCode;
+        public uint scanCode;
+        public uint flags;
+        public uint time;
+        public IntPtr dwExtraInfo;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr SetWindowsHookEx(int idHook, HookProc lpfn, IntPtr hmod, uint dwThreadId);
+
+    [DllImport("user32.dll")]
+    private static extern bool UnhookWindowsHookEx(IntPtr hhk);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr CallNextHookEx(IntPtr hhk, int nCode, IntPtr wParam, IntPtr lParam);
+
+    [DllImport("kernel32.dll", CharSet = CharSet.Auto)]
+    private static extern IntPtr GetModuleHandle(string? lpModuleName);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetForegroundWindow();
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern int GetWindowText(IntPtr hWnd, StringBuilder text, int count);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern int GetWindowTextLength(IntPtr hWnd);
+
+    [DllImport("user32.dll")]
+    private static extern uint GetWindowThreadProcessId(IntPtr hWnd, out uint lpdwProcessId);
 }
