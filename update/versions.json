@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.2.2",
+    "releaseDate": "2026-08-03",
+    "description": "Improve UI visibility with responsive layout and scrollable tab content",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.2.2/Launcher-1.2.2-Setup.exe",
+    "checksum": "",
+    "isRequired": false,
+    "notes": [
+      "Added scroll support to Run, Settings, and Program Builder tabs so controls remain reachable",
+      "Updated top action controls to wrap below the config panel so Run Start/Run Close/Learn options stay visible",
+      "Fixes partial visibility issues on smaller displays and high-DPI scaling"
+    ]
+  },
+  {
     "version": "1.2.1",
     "releaseDate": "2026-08-03",
     "description": "Switch to manual uninstall/install updates and add editable login account management",

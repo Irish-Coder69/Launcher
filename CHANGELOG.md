@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.2 - 2026-08-03
+
+- Improved layout responsiveness so controls stay visible at different window sizes and display scaling levels.
+- Added tab-level scrolling for Run, Settings, and Program Builder to prevent clipped content.
+- Reworked the top command area into a wrapping control row below Launcher Config so action buttons remain visible instead of partially hidden.
+
 ## 1.2.1 - 2026-08-03
 
 - Removed in-app self-update execution. The updater now only checks version availability and opens the installer download page, then instructs users to do a normal Windows uninstall/install workflow.

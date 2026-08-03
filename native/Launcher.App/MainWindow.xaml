@@ -71,10 +71,10 @@
         </Border>
 
         <Grid Grid.Row="2" Margin="16,0,16,12">
-            <Grid.ColumnDefinitions>
-                <ColumnDefinition Width="*" />
-                <ColumnDefinition Width="Auto" />
-            </Grid.ColumnDefinitions>
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto" />
+                <RowDefinition Height="Auto" />
+            </Grid.RowDefinitions>
 
             <Border Padding="12" CornerRadius="10" Background="#121A2A" BorderBrush="#2A3652" BorderThickness="1">
                 <Grid>
@@ -91,12 +91,12 @@
                 </Grid>
             </Border>
 
-            <StackPanel Grid.Column="1" Margin="16,0,0,0" VerticalAlignment="Top">
-                <Button x:Name="StartButton" Width="220" Height="36" Margin="0,0,0,8" Content="Run Start" Click="StartButton_OnClick" />
-                <Button x:Name="CloseButton" Width="220" Height="36" Margin="0,0,0,8" Content="Run Close" Click="CloseButton_OnClick" />
-                <Button x:Name="StartAndWaitButton" Width="220" Height="36" Margin="0,0,0,8" Content="Start + Wait For CLOSEAPPS" Click="StartAndWaitButton_OnClick" />
-                <CheckBox x:Name="UseLearnedOrderThisRunCheckBox" Margin="0,0,0,8" Foreground="#DCE6FF" Content="Use Learned Order This Run" />
-                <Button x:Name="StopButton" Width="220" Height="36" Content="STOP" FontWeight="Bold" IsEnabled="False" Click="StopButton_OnClick">
+            <WrapPanel Grid.Row="1" Margin="0,10,0,0" ItemHeight="36">
+                <Button x:Name="StartButton" Width="220" Height="36" Margin="0,0,8,8" Content="Run Start" Click="StartButton_OnClick" />
+                <Button x:Name="CloseButton" Width="220" Height="36" Margin="0,0,8,8" Content="Run Close" Click="CloseButton_OnClick" />
+                <Button x:Name="StartAndWaitButton" Width="220" Height="36" Margin="0,0,8,8" Content="Start + Wait For CLOSEAPPS" Click="StartAndWaitButton_OnClick" />
+                <CheckBox x:Name="UseLearnedOrderThisRunCheckBox" Margin="0,8,12,8" Foreground="#DCE6FF" Content="Use Learned Order This Run" VerticalAlignment="Center" />
+                <Button x:Name="StopButton" Width="220" Height="36" Margin="0,0,0,8" Content="STOP" FontWeight="Bold" IsEnabled="False" Click="StopButton_OnClick">
                     <Button.Style>
                         <Style TargetType="Button">
                             <Setter Property="Background" Value="#C0392B" />
@@ -128,12 +128,13 @@
                         </Style>
                     </Button.Style>
                 </Button>
-            </StackPanel>
+            </WrapPanel>
         </Grid>
 
         <TabControl Grid.Row="3" Margin="16,0,16,16" Background="#121A2A" BorderBrush="#2A3652" BorderThickness="1">
             <TabItem Header="Run">
-                <Grid Margin="12" Background="#121A2A">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="12" Background="#121A2A">
+                <Grid Background="#121A2A">
                     <Grid.ColumnDefinitions>
                         <ColumnDefinition Width="1.25*" />
                         <ColumnDefinition Width="2*" />
@@ -149,11 +150,11 @@
 
                             <TextBlock Text="Configured Steps (Editable Enabled State)" FontWeight="SemiBold" Foreground="#DCE6FF" />
 
-                            <StackPanel Grid.Row="1" Orientation="Horizontal" Margin="0,8,0,8">
+                            <WrapPanel Grid.Row="1" Margin="0,8,0,8" ItemHeight="30">
                                 <Button x:Name="DetectRunningButton" Content="Native Detect Running" Width="160" Height="30" Click="DetectRunningButton_OnClick" />
                                 <Button x:Name="DetectCloseTargetsButton" Content="Native Detect Close Targets" Width="190" Height="30" Margin="8,0,0,0" Click="DetectCloseTargetsButton_OnClick" />
                                 <Button x:Name="LearnOpenAppsButton" Content="Learn Open Apps" Width="140" Height="30" Margin="8,0,0,0" Click="LearnOpenAppsButton_OnClick" />
-                            </StackPanel>
+                            </WrapPanel>
 
                             <DataGrid x:Name="StepsGrid" Grid.Row="2" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
                                       Background="#0D1422" Foreground="#DCE6FF" BorderBrush="#2A3652" BorderThickness="1"
@@ -191,10 +192,12 @@
                         </Grid>
                     </Border>
                 </Grid>
+                </ScrollViewer>
             </TabItem>
 
             <TabItem Header="Settings">
-                <Grid Margin="12" Background="#121A2A">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="12" Background="#121A2A">
+                <Grid Background="#121A2A">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="Auto" />
@@ -278,10 +281,12 @@
                         <Button x:Name="ResetSettingsButton" Width="180" Height="34" Margin="8,0,0,0" Content="Reload Without Saving" Click="ResetSettingsButton_OnClick" />
                     </StackPanel>
                 </Grid>
+                </ScrollViewer>
             </TabItem>
 
             <TabItem Header="Program Builder">
-                <Grid Margin="12" Background="#121A2A">
+                <ScrollViewer VerticalScrollBarVisibility="Auto" HorizontalScrollBarVisibility="Disabled" Padding="12" Background="#121A2A">
+                <Grid Background="#121A2A">
                     <Grid.RowDefinitions>
                         <RowDefinition Height="Auto" />
                         <RowDefinition Height="*" />
@@ -420,6 +425,7 @@
                         </Grid>
                     </Border>
                 </Grid>
+                </ScrollViewer>
             </TabItem>
         </TabControl>
     </Grid>
