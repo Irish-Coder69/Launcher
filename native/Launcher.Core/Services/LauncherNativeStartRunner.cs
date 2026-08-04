@@ -1347,6 +1347,11 @@ public sealed class LauncherNativeStartRunner
         {
             cancellationToken.ThrowIfCancellationRequested();
 
+            if (!taughtEvent.IncludeInReplay)
+            {
+                continue;
+            }
+
             var delayMs = Math.Max(0, taughtEvent.DelayMs ?? 0);
             if (delayMs > 0)
             {
@@ -1396,9 +1401,42 @@ public sealed class LauncherNativeStartRunner
                         continue;
                     }
 
+                    if (taughtEvent.IsMasked || string.Equals(taughtEvent.InputValue, "[masked]", StringComparison.OrdinalIgnoreCase))
+                    {
+                        Log(onOutput, "Skipping masked key-input taught event.");
+                        continue;
+                    }
+
                     if (dryRun)
                     {
                         Log(onOutput, $"[DryRun] Would replay key input '{taughtEvent.InputValue}'");
+                        continue;
+                    }
+
+                    if (!string.IsNullOrWhiteSpace(taughtEvent.WindowTitle))
+                    {
+                        await TryActivateWindowAsync(new[] { taughtEvent.WindowTitle }, process?.Id, 3, 200, cancellationToken);
+                    }
+
+                    SendTaughtInput(taughtEvent.InputValue!);
+                    break;
+                }
+                case "barcode-scan":
+                {
+                    if (string.IsNullOrWhiteSpace(taughtEvent.InputValue))
+                    {
+                        continue;
+                    }
+
+                    if (taughtEvent.IsMasked || string.Equals(taughtEvent.InputValue, "[masked]", StringComparison.OrdinalIgnoreCase))
+                    {
+                        Log(onOutput, "Skipping masked barcode-scan taught event.");
+                        continue;
+                    }
+
+                    if (dryRun)
+                    {
+                        Log(onOutput, $"[DryRun] Would replay barcode scan '{taughtEvent.InputValue}'");
                         continue;
                     }
 
@@ -1429,6 +1467,22 @@ public sealed class LauncherNativeStartRunner
                     }
 
                     ReplayMouseClick(taughtEvent.MouseX.Value, taughtEvent.MouseY.Value, taughtEvent.MouseButton);
+                    break;
+                }
+                case "mouse-move":
+                {
+                    if (!taughtEvent.MouseX.HasValue || !taughtEvent.MouseY.HasValue)
+                    {
+                        continue;
+                    }
+
+                    if (dryRun)
+                    {
+                        Log(onOutput, $"[DryRun] Would move mouse to ({taughtEvent.MouseX.Value}, {taughtEvent.MouseY.Value})");
+                        continue;
+                    }
+
+                    NativeMethods.SetCursorPos(taughtEvent.MouseX.Value, taughtEvent.MouseY.Value);
                     break;
                 }
             }

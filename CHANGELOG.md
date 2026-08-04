@@ -1,5 +1,13 @@
 # Changelog
 
+## 1.2.8 - 2026-08-04
+
+- Added Teach Session review panel controls to refresh, mask, unmask, remove, and edit captured events before applying taught flow.
+- Added high-fidelity key translation for captured key input, including modifier combinations and symbol-safe SendKeys replay formatting.
+- Added pointer movement capture and replay support (`mouse-move` events) alongside existing mouse click replay.
+- Added barcode scanner burst detection for keyboard-wedge scans so rapid scan input is grouped as a single `barcode-scan` taught event.
+- Added optional per-step safety policy to require user confirmation before replaying masked/scanner events at runtime (replay, skip sensitive events for this run, or cancel run).
+
 ## 1.2.7 - 2026-08-03
 
 - Added installed-program inventory scanning (Registry, UWP/Appx, Start Menu, and PATH) with local cache and manual refresh support.

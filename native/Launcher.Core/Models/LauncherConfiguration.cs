@@ -79,6 +79,9 @@ public sealed class LauncherStep
     [JsonPropertyName("inventoryCachedAt")]
     public string? InventoryCachedAt { get; set; }
 
+    [JsonPropertyName("requireSensitiveReplayConfirmation")]
+    public bool RequireSensitiveReplayConfirmation { get; set; }
+
     [JsonPropertyName("taughtEvents")]
     public List<LauncherTaughtEvent> TaughtEvents { get; set; } = new();
 
@@ -339,6 +342,12 @@ public sealed class LauncherTaughtEvent
 
     [JsonPropertyName("mouseY")]
     public int? MouseY { get; set; }
+
+    [JsonPropertyName("isMasked")]
+    public bool IsMasked { get; set; }
+
+    [JsonPropertyName("includeInReplay")]
+    public bool IncludeInReplay { get; set; } = true;
 }
 
 public sealed class LauncherWindowSpec

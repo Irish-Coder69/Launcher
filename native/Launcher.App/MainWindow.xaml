@@ -146,6 +146,7 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="*" />
+                                <RowDefinition Height="230" />
                             </Grid.RowDefinitions>
 
                             <TextBlock Text="Configured Steps (Editable Enabled State)" FontWeight="SemiBold" Foreground="#DCE6FF" />
@@ -170,6 +171,40 @@
                                     <DataGridTextColumn Header="Program" Binding="{Binding ProgramPath}" IsReadOnly="True" Width="*" />
                                 </DataGrid.Columns>
                             </DataGrid>
+
+                            <Grid Grid.Row="3" Margin="0,10,0,0">
+                                <Grid.RowDefinitions>
+                                    <RowDefinition Height="Auto" />
+                                    <RowDefinition Height="*" />
+                                </Grid.RowDefinitions>
+                                <WrapPanel>
+                                    <TextBlock Text="Teach Session Review" FontWeight="SemiBold" Foreground="#DCE6FF" VerticalAlignment="Center" Margin="0,0,12,0" />
+                                    <Button x:Name="RefreshTeachReviewButton" Content="Refresh Review" Width="120" Height="28" Margin="0,0,8,0" Click="RefreshTeachReviewButton_OnClick" />
+                                    <Button x:Name="MaskTeachReviewSelectionButton" Content="Mask Selected" Width="120" Height="28" Margin="0,0,8,0" Click="MaskTeachReviewSelectionButton_OnClick" />
+                                    <Button x:Name="UnmaskTeachReviewSelectionButton" Content="Unmask Selected" Width="130" Height="28" Margin="0,0,8,0" Click="UnmaskTeachReviewSelectionButton_OnClick" />
+                                    <Button x:Name="RemoveTeachReviewSelectionButton" Content="Remove Selected" Width="130" Height="28" Click="RemoveTeachReviewSelectionButton_OnClick" />
+                                    <CheckBox x:Name="RequireConfirmSensitiveReplayCheckBox"
+                                              Margin="14,5,0,0"
+                                              Foreground="#DCE6FF"
+                                              Content="Require confirm before replaying masked/scanner events"
+                                              IsChecked="True" />
+                                </WrapPanel>
+
+                                <DataGrid x:Name="TeachReviewEventsGrid" Grid.Row="1" Margin="0,8,0,0"
+                                          AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
+                                          Background="#0D1422" Foreground="#DCE6FF" BorderBrush="#2A3652" BorderThickness="1"
+                                          HeadersVisibility="Column" GridLinesVisibility="Horizontal"
+                                          SelectionMode="Single" SelectionUnit="FullRow">
+                                    <DataGrid.Columns>
+                                        <DataGridCheckBoxColumn Header="Use" Binding="{Binding IncludeInSave, Mode=TwoWay}" Width="50" />
+                                        <DataGridCheckBoxColumn Header="Masked" Binding="{Binding IsMasked, Mode=TwoWay}" Width="70" />
+                                        <DataGridTextColumn Header="Type" Binding="{Binding EventType}" IsReadOnly="True" Width="100" />
+                                        <DataGridTextColumn Header="Delay (ms)" Binding="{Binding DelayMs, Mode=TwoWay}" Width="85" />
+                                        <DataGridTextColumn Header="Window" Binding="{Binding WindowTitle}" IsReadOnly="True" Width="220" />
+                                        <DataGridTextColumn Header="Input / Mouse" Binding="{Binding DisplayValue, Mode=TwoWay}" Width="*" />
+                                    </DataGrid.Columns>
+                                </DataGrid>
+                            </Grid>
                         </Grid>
                     </Border>
 

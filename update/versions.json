@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.2.8",
+    "releaseDate": "2026-08-04",
+    "description": "Add teach-review masking controls, scanner burst grouping, and sensitive replay confirmation",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.2.8/Launcher-1.2.8-Setup.exe",
+    "checksum": "",
+    "isRequired": false,
+    "notes": [
+      "Teach Session review now supports refresh, mask/unmask, remove, and editable event data before applying taught flow",
+      "Keyboard-wedge barcode scans are grouped into a single barcode-scan taught event and can be masked or skipped",
+      "Run Start now optionally prompts before replaying masked/scanner events so users can replay, skip sensitive events for the run, or cancel"
+    ]
+  },
+  {
     "version": "1.2.7",
     "releaseDate": "2026-08-03",
     "description": "Add installed-program inventory, richer teach-session event capture, and taught event replay",

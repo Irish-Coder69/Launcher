@@ -36,17 +36,22 @@ public partial class MainWindow : Window
     private readonly ObservableCollection<string> _recommendedOrderLines = new();
     private readonly ObservableCollection<string> _secretNames = new();
     private readonly ObservableCollection<ProgramSearchResult> _programSearchResults = new();
+    private readonly ObservableCollection<TeachReviewEventRow> _teachReviewRows = new();
     private readonly List<ProgramSearchResult> _teachSessionCapturedApps = new();
     private readonly HashSet<string> _teachSessionCapturedKeys = new(StringComparer.OrdinalIgnoreCase);
     private readonly Dictionary<string, TeachCapturedProgram> _teachSessionPrograms = new(StringComparer.OrdinalIgnoreCase);
     private readonly List<TeachFocusEvent> _teachSessionFocusEvents = new();
     private readonly List<TeachInteractionEvent> _teachSessionInteractionEvents = new();
+    private readonly List<TeachInteractionEvent> _pendingFastKeyEvents = new();
     private readonly object _teachSessionEventLock = new();
     private bool _teachSessionCaptureSensitiveInput;
     private IntPtr _keyboardHookHandle = IntPtr.Zero;
     private IntPtr _mouseHookHandle = IntPtr.Zero;
     private HookProc? _keyboardHookProc;
     private HookProc? _mouseHookProc;
+    private DateTimeOffset _lastMouseMoveCaptureUtc = DateTimeOffset.MinValue;
+    private int _lastMouseMoveX = int.MinValue;
+    private int _lastMouseMoveY = int.MinValue;
     private bool _isBusy;
     private bool _isTeachSessionActive;
     private HashSet<int> _teachSessionBaselineProcessIds = new();
@@ -57,6 +62,9 @@ public partial class MainWindow : Window
     private string _launcherRoot = string.Empty;
     private string _launcherScriptPath = string.Empty;
     private LauncherConfigDocument? _configDocument;
+
+    private const int ScannerBurstMaxGapMs = 75;
+    private const int ScannerBurstMinLength = 6;
 
     public MainWindow(LauncherUserProfile? currentUser = null)
     {
@@ -69,6 +77,7 @@ public partial class MainWindow : Window
         RecommendedOrderListBox.ItemsSource = _recommendedOrderLines;
         SecretsListBox.ItemsSource = _secretNames;
         ProgramSearchResultsListBox.ItemsSource = _programSearchResults;
+        TeachReviewEventsGrid.ItemsSource = _teachReviewRows;
 
         DetectLauncherPaths();
         ReloadConfigView();
@@ -342,6 +351,13 @@ public partial class MainWindow : Window
                 }
 
                 var runtimeDocument = BuildRuntimeDocumentForTaughtSteps(_configDocument, taughtSteps);
+                var sensitiveReplayDecision = HandleSensitiveReplayConfirmation(runtimeDocument);
+                if (sensitiveReplayDecision == SensitiveReplayConfirmationOutcome.Cancelled)
+                {
+                    StatusText.Text = "Start cancelled";
+                    AppendLog("Run Start cancelled by user before sensitive event replay.");
+                    return;
+                }
 
                 await _nativeStartRunner.RunAsync(
                     runtimeDocument,
@@ -412,6 +428,11 @@ public partial class MainWindow : Window
         StartTeachSessionButton.IsEnabled = !isBusy && !_isTeachSessionActive;
         StopTeachSessionButton.IsEnabled = !isBusy && _isTeachSessionActive;
         ApplyTeachSessionButton.IsEnabled = !isBusy && !_isTeachSessionActive && _teachSessionCapturedApps.Count > 0;
+        RefreshTeachReviewButton.IsEnabled = !isBusy;
+        MaskTeachReviewSelectionButton.IsEnabled = !isBusy;
+        UnmaskTeachReviewSelectionButton.IsEnabled = !isBusy;
+        RemoveTeachReviewSelectionButton.IsEnabled = !isBusy;
+        TeachReviewEventsGrid.IsEnabled = !isBusy;
         ProgramSearchQueryTextBox.IsEnabled = !isBusy;
         ProgramSearchResultsListBox.IsEnabled = !isBusy;
         SaveProgramSecretButton.IsEnabled = !isBusy;
@@ -686,8 +707,10 @@ public partial class MainWindow : Window
         _teachSessionPrograms.Clear();
         _teachSessionFocusEvents.Clear();
         _teachSessionInteractionEvents.Clear();
+        _teachReviewRows.Clear();
         _stepRows.Clear();
         _isTeachSessionActive = true;
+        RequireConfirmSensitiveReplayCheckBox.IsChecked = true;
 
         StartTeachSessionHooks();
 
@@ -722,6 +745,7 @@ public partial class MainWindow : Window
 
         _teachSessionTimer?.Stop();
         StopTeachSessionHooks();
+        FlushPendingFastKeyEvents();
 
         CaptureTeachSessionDeltas();
 
@@ -748,6 +772,7 @@ public partial class MainWindow : Window
 
         StatusText.Text = $"Teach session captured {_teachSessionPrograms.Count} app(s)";
         AppendLog($"Teach session captured {_teachSessionPrograms.Count} app(s) with {_teachSessionFocusEvents.Count} window focus transition(s). Click Apply Taught Flow to save startup steps.");
+        RefreshTeachReviewRows();
         MessageBox.Show(
             this,
             $"Captured {_teachSessionPrograms.Count} app(s).\n\nClick 'Apply Taught Flow' to save them into your startup config.",
@@ -807,6 +832,7 @@ public partial class MainWindow : Window
                 DetectionAppId = inventoryMatch?.AppId,
                 DetectionMethod = inventoryMatch?.Source,
                 InventoryCachedAt = DateTimeOffset.Now.ToString("O"),
+                RequireSensitiveReplayConfirmation = RequireConfirmSensitiveReplayCheckBox.IsChecked == true,
                 Arguments = NormalizeText(app.Arguments),
                 WorkingDirectory = NormalizeText(Path.GetDirectoryName(app.ProgramPath)),
                 WindowTitle = primaryWindowTitle,
@@ -836,7 +862,11 @@ public partial class MainWindow : Window
             _teachSessionCapturedApps.Clear();
             _teachSessionPrograms.Clear();
             _teachSessionFocusEvents.Clear();
+            _teachSessionInteractionEvents.Clear();
+            _pendingFastKeyEvents.Clear();
+            _teachReviewRows.Clear();
             ApplyTeachSessionButton.IsEnabled = false;
+            RequireConfirmSensitiveReplayCheckBox.IsChecked = true;
             ReloadConfigView();
         }
         catch (Exception ex)
@@ -956,6 +986,7 @@ public partial class MainWindow : Window
             _teachSessionCapturedApps.Clear();
             _teachSessionCapturedKeys.Clear();
             ApplyTeachSessionButton.IsEnabled = false;
+            _pendingFastKeyEvents.Clear();
             AppendLog("Cleared taught run steps after learning reset.");
         }
 
@@ -1332,68 +1363,93 @@ public partial class MainWindow : Window
     {
         var events = new List<LauncherTaughtEvent>();
 
-        var relevantFocusEvents = _teachSessionFocusEvents
-            .Where(item =>
+        var relevantEvents = _teachReviewRows
+            .Where(row => row.IncludeInSave)
+            .Where(row =>
                 (!string.IsNullOrWhiteSpace(captured.Program.ProgramPath) &&
-                 !string.IsNullOrWhiteSpace(item.ProcessPath) &&
-                 string.Equals(item.ProcessPath, captured.Program.ProgramPath, StringComparison.OrdinalIgnoreCase)) ||
-                captured.ObservedWindowTitles.Any(title => string.Equals(title, item.WindowTitle, StringComparison.OrdinalIgnoreCase)))
-            .OrderBy(item => item.ObservedAtUtc)
+                 !string.IsNullOrWhiteSpace(row.ProcessPath) &&
+                 string.Equals(row.ProcessPath, captured.Program.ProgramPath, StringComparison.OrdinalIgnoreCase)) ||
+                captured.ObservedWindowTitles.Any(title => string.Equals(title, row.WindowTitle, StringComparison.OrdinalIgnoreCase)))
+            .OrderBy(row => row.ObservedAtUtc)
             .ToList();
 
         DateTimeOffset? previousTimestamp = null;
-        foreach (var focusEvent in relevantFocusEvents)
+        foreach (var row in relevantEvents)
         {
             var delay = previousTimestamp is null
                 ? 0
-                : Math.Max(0, (int)Math.Round((focusEvent.ObservedAtUtc - previousTimestamp.Value).TotalMilliseconds));
+                : Math.Max(0, (int)Math.Round((row.ObservedAtUtc - previousTimestamp.Value).TotalMilliseconds));
 
             events.Add(new LauncherTaughtEvent
             {
-                EventType = "focus-window",
-                Timestamp = focusEvent.ObservedAtUtc.ToString("O"),
-                WindowTitle = focusEvent.WindowTitle,
-                ProcessPath = focusEvent.ProcessPath,
-                DelayMs = delay,
+                EventType = row.EventType,
+                Timestamp = row.ObservedAtUtc.ToString("O"),
+                WindowTitle = row.WindowTitle,
+                ProcessPath = row.ProcessPath,
+                DelayMs = row.DelayMs ?? delay,
+                InputValue = row.IsMasked && string.Equals(row.EventType, "key-input", StringComparison.OrdinalIgnoreCase)
+                    ? "[masked]"
+                    : row.InputValue,
+                MouseButton = row.MouseButton,
+                MouseX = row.MouseX,
+                MouseY = row.MouseY,
+                IsMasked = row.IsMasked,
+                IncludeInReplay = row.IncludeInSave,
                 Notes = "Captured during Teach Session"
             });
 
-            previousTimestamp = focusEvent.ObservedAtUtc;
-        }
-
-        var relevantInteractionEvents = _teachSessionInteractionEvents
-            .Where(item =>
-                (!string.IsNullOrWhiteSpace(captured.Program.ProgramPath) &&
-                 !string.IsNullOrWhiteSpace(item.ProcessPath) &&
-                 string.Equals(item.ProcessPath, captured.Program.ProgramPath, StringComparison.OrdinalIgnoreCase)) ||
-                captured.ObservedWindowTitles.Any(title => string.Equals(title, item.WindowTitle, StringComparison.OrdinalIgnoreCase)))
-            .OrderBy(item => item.ObservedAtUtc)
-            .ToList();
-
-        foreach (var interactionEvent in relevantInteractionEvents)
-        {
-            var delay = previousTimestamp is null
-                ? 0
-                : Math.Max(0, (int)Math.Round((interactionEvent.ObservedAtUtc - previousTimestamp.Value).TotalMilliseconds));
-
-            events.Add(new LauncherTaughtEvent
-            {
-                EventType = interactionEvent.EventType,
-                Timestamp = interactionEvent.ObservedAtUtc.ToString("O"),
-                WindowTitle = interactionEvent.WindowTitle,
-                ProcessPath = interactionEvent.ProcessPath,
-                DelayMs = delay,
-                InputValue = interactionEvent.InputValue,
-                MouseButton = interactionEvent.MouseButton,
-                MouseX = interactionEvent.MouseX,
-                MouseY = interactionEvent.MouseY,
-                Notes = "Captured during Teach Session"
-            });
-
-            previousTimestamp = interactionEvent.ObservedAtUtc;
+            previousTimestamp = row.ObservedAtUtc;
         }
 
         return events;
+    }
+
+    private void RefreshTeachReviewRows()
+    {
+        _teachReviewRows.Clear();
+
+        if (_teachSessionPrograms.Count == 0)
+        {
+            return;
+        }
+
+        var timeline = new List<TeachReviewEventRow>();
+
+        timeline.AddRange(_teachSessionFocusEvents.Select(item => new TeachReviewEventRow
+        {
+            ObservedAtUtc = item.ObservedAtUtc,
+            EventType = "focus-window",
+            WindowTitle = item.WindowTitle,
+            ProcessPath = item.ProcessPath,
+            IncludeInSave = true,
+            IsMasked = false
+        }));
+
+        timeline.AddRange(_teachSessionInteractionEvents.Select(item => new TeachReviewEventRow
+        {
+            ObservedAtUtc = item.ObservedAtUtc,
+            EventType = item.EventType,
+            InputValue = item.InputValue,
+            MouseButton = item.MouseButton,
+            MouseX = item.MouseX,
+            MouseY = item.MouseY,
+            WindowTitle = item.WindowTitle,
+            ProcessPath = item.ProcessPath,
+            IncludeInSave = true,
+            IsMasked = !_teachSessionCaptureSensitiveInput && string.Equals(item.EventType, "key-input", StringComparison.OrdinalIgnoreCase)
+        }));
+
+        DateTimeOffset? previous = null;
+        foreach (var row in timeline.OrderBy(item => item.ObservedAtUtc))
+        {
+            row.DelayMs = previous is null
+                ? 0
+                : Math.Max(0, (int)Math.Round((row.ObservedAtUtc - previous.Value).TotalMilliseconds));
+            previous = row.ObservedAtUtc;
+            _teachReviewRows.Add(row);
+        }
+
+        AppendLog($"Teach review ready with {_teachReviewRows.Count} event(s). You can mask/remove/edit before applying.");
     }
 
     private void StartTeachSessionHooks()
@@ -1402,6 +1458,10 @@ public partial class MainWindow : Window
         {
             return;
         }
+
+        _lastMouseMoveCaptureUtc = DateTimeOffset.MinValue;
+        _lastMouseMoveX = int.MinValue;
+        _lastMouseMoveY = int.MinValue;
 
         _keyboardHookProc = KeyboardHookCallback;
         _mouseHookProc = MouseHookCallback;
@@ -1444,20 +1504,141 @@ public partial class MainWindow : Window
         }
 
         var keyInfo = Marshal.PtrToStructure<KbdLlHookStruct>(lParam);
+        if (IsModifierKey((int)keyInfo.vkCode))
+        {
+            return CallNextHookEx(IntPtr.Zero, nCode, wParam, lParam);
+        }
+
+        var windowTitle = GetForegroundWindowTitle();
+        var processPath = GetForegroundProcessPath();
+        var plainCharacter = TranslateVirtualKeyToCharacter(keyInfo.vkCode, keyInfo.scanCode);
+
+        if (_teachSessionCaptureSensitiveInput)
+        {
+            if (TryCaptureScannerBurstKey(keyInfo, plainCharacter, windowTitle, processPath))
+            {
+                return CallNextHookEx(IntPtr.Zero, nCode, wParam, lParam);
+            }
+
+            FlushPendingFastKeyEvents();
+        }
+
         var inputValue = _teachSessionCaptureSensitiveInput
-            ? BuildKeyInputValue((int)keyInfo.vkCode)
+            ? BuildKeyInputValue(keyInfo)
             : "[captured-key]";
+
+        if (string.IsNullOrWhiteSpace(inputValue))
+        {
+            return CallNextHookEx(IntPtr.Zero, nCode, wParam, lParam);
+        }
 
         RecordTeachInteractionEvent(new TeachInteractionEvent
         {
             ObservedAtUtc = DateTimeOffset.Now,
             EventType = "key-input",
             InputValue = inputValue,
-            WindowTitle = GetForegroundWindowTitle(),
-            ProcessPath = GetForegroundProcessPath()
+            WindowTitle = windowTitle,
+            ProcessPath = processPath
         });
 
         return CallNextHookEx(IntPtr.Zero, nCode, wParam, lParam);
+    }
+
+    private bool TryCaptureScannerBurstKey(KbdLlHookStruct keyInfo, string plainCharacter, string windowTitle, string? processPath)
+    {
+        // Barcode scanners in keyboard wedge mode usually emit fast plain characters with no modifiers.
+        var isEnter = keyInfo.vkCode == 0x0D;
+        var hasModifier = !string.IsNullOrWhiteSpace(GetSendKeyModifierPrefix());
+        var isPlainCharacter = !string.IsNullOrEmpty(plainCharacter) && plainCharacter.Length == 1 && !char.IsControl(plainCharacter[0]);
+
+        if (!isPlainCharacter && !isEnter)
+        {
+            return false;
+        }
+
+        if (hasModifier)
+        {
+            return false;
+        }
+
+        lock (_teachSessionEventLock)
+        {
+            var now = DateTimeOffset.Now;
+
+            if (_pendingFastKeyEvents.Count > 0)
+            {
+                var last = _pendingFastKeyEvents[_pendingFastKeyEvents.Count - 1];
+                var gap = (now - last.ObservedAtUtc).TotalMilliseconds;
+                var sameTarget = string.Equals(last.WindowTitle, windowTitle, StringComparison.OrdinalIgnoreCase) &&
+                                 string.Equals(last.ProcessPath, processPath, StringComparison.OrdinalIgnoreCase);
+
+                if (!sameTarget || gap > ScannerBurstMaxGapMs)
+                {
+                    FlushPendingFastKeyEvents_NoLock();
+                }
+            }
+
+            if (isPlainCharacter)
+            {
+                _pendingFastKeyEvents.Add(new TeachInteractionEvent
+                {
+                    ObservedAtUtc = now,
+                    EventType = "key-input",
+                    InputValue = plainCharacter,
+                    WindowTitle = windowTitle,
+                    ProcessPath = processPath
+                });
+
+                return true;
+            }
+
+            if (isEnter)
+            {
+                FlushPendingFastKeyEvents_NoLock();
+                return true;
+            }
+        }
+
+        return false;
+    }
+
+    private void FlushPendingFastKeyEvents()
+    {
+        lock (_teachSessionEventLock)
+        {
+            FlushPendingFastKeyEvents_NoLock();
+        }
+    }
+
+    private void FlushPendingFastKeyEvents_NoLock()
+    {
+        if (_pendingFastKeyEvents.Count == 0)
+        {
+            return;
+        }
+
+        if (_pendingFastKeyEvents.Count >= ScannerBurstMinLength)
+        {
+            var first = _pendingFastKeyEvents[0];
+            var combined = string.Concat(_pendingFastKeyEvents.Select(item => item.InputValue));
+            _teachSessionInteractionEvents.Add(new TeachInteractionEvent
+            {
+                ObservedAtUtc = first.ObservedAtUtc,
+                EventType = "barcode-scan",
+                InputValue = combined,
+                WindowTitle = first.WindowTitle,
+                ProcessPath = first.ProcessPath
+            });
+        }
+        else
+        {
+            foreach (var keyEvent in _pendingFastKeyEvents)
+            {
+                _teachSessionInteractionEvents.Add(keyEvent);
+            }
+        }
+
+        _pendingFastKeyEvents.Clear();
     }
 
     private IntPtr MouseHookCallback(int nCode, IntPtr wParam, IntPtr lParam)
@@ -1472,6 +1653,7 @@ public partial class MainWindow : Window
         {
             WM_LBUTTONDOWN => "left",
             WM_RBUTTONDOWN => "right",
+            WM_MOUSEMOVE => "move",
             _ => null
         };
 
@@ -1481,11 +1663,26 @@ public partial class MainWindow : Window
         }
 
         var mouseInfo = Marshal.PtrToStructure<MsLlHookStruct>(lParam);
+        if (string.Equals(button, "move", StringComparison.Ordinal))
+        {
+            var now = DateTimeOffset.Now;
+            if (now - _lastMouseMoveCaptureUtc < TimeSpan.FromMilliseconds(120) &&
+                Math.Abs(mouseInfo.pt.x - _lastMouseMoveX) < 8 &&
+                Math.Abs(mouseInfo.pt.y - _lastMouseMoveY) < 8)
+            {
+                return CallNextHookEx(IntPtr.Zero, nCode, wParam, lParam);
+            }
+
+            _lastMouseMoveCaptureUtc = now;
+            _lastMouseMoveX = mouseInfo.pt.x;
+            _lastMouseMoveY = mouseInfo.pt.y;
+        }
+
         RecordTeachInteractionEvent(new TeachInteractionEvent
         {
             ObservedAtUtc = DateTimeOffset.Now,
-            EventType = "mouse-click",
-            MouseButton = button,
+            EventType = string.Equals(button, "move", StringComparison.Ordinal) ? "mouse-move" : "mouse-click",
+            MouseButton = string.Equals(button, "move", StringComparison.Ordinal) ? null : button,
             MouseX = mouseInfo.pt.x,
             MouseY = mouseInfo.pt.y,
             WindowTitle = GetForegroundWindowTitle(),
@@ -1499,31 +1696,132 @@ public partial class MainWindow : Window
     {
         lock (_teachSessionEventLock)
         {
+            FlushPendingFastKeyEvents_NoLock();
             _teachSessionInteractionEvents.Add(interactionEvent);
         }
     }
 
-    private static string BuildKeyInputValue(int virtualKeyCode)
+    private static string BuildKeyInputValue(KbdLlHookStruct keyInfo)
     {
-        if (virtualKeyCode >= 'A' && virtualKeyCode <= 'Z')
+        var virtualKeyCode = (int)keyInfo.vkCode;
+        var modifiers = GetSendKeyModifierPrefix();
+        var token = ConvertVirtualKeyToSendKeysToken(virtualKeyCode, keyInfo.scanCode);
+        if (string.IsNullOrWhiteSpace(token))
         {
-            return char.ToLowerInvariant((char)virtualKeyCode).ToString(CultureInfo.InvariantCulture);
+            return string.Empty;
         }
 
-        if (virtualKeyCode >= '0' && virtualKeyCode <= '9')
+        if (string.IsNullOrWhiteSpace(modifiers))
         {
-            return ((char)virtualKeyCode).ToString(CultureInfo.InvariantCulture);
+            return token;
         }
 
-        return virtualKeyCode switch
+        if (token.Length == 1)
+        {
+            return modifiers + token;
+        }
+
+        return modifiers + "(" + token + ")";
+    }
+
+    private static string GetSendKeyModifierPrefix()
+    {
+        var builder = new StringBuilder();
+        if (IsVirtualKeyDown(VK_CONTROL) || IsVirtualKeyDown(VK_LCONTROL) || IsVirtualKeyDown(VK_RCONTROL))
+        {
+            builder.Append('^');
+        }
+
+        if (IsVirtualKeyDown(VK_MENU) || IsVirtualKeyDown(VK_LMENU) || IsVirtualKeyDown(VK_RMENU))
+        {
+            builder.Append('%');
+        }
+
+        if (IsVirtualKeyDown(VK_SHIFT) || IsVirtualKeyDown(VK_LSHIFT) || IsVirtualKeyDown(VK_RSHIFT))
+        {
+            builder.Append('+');
+        }
+
+        return builder.ToString();
+    }
+
+    private static string ConvertVirtualKeyToSendKeysToken(int virtualKeyCode, uint scanCode)
+    {
+        var knownToken = virtualKeyCode switch
         {
             0x0D => "{ENTER}",
             0x09 => "{TAB}",
             0x08 => "{BACKSPACE}",
             0x1B => "{ESC}",
             0x20 => " ",
-            _ => "{" + virtualKeyCode + "}"
+            0x2E => "{DELETE}",
+            0x2D => "{INSERT}",
+            0x24 => "{HOME}",
+            0x23 => "{END}",
+            0x21 => "{PGUP}",
+            0x22 => "{PGDN}",
+            0x25 => "{LEFT}",
+            0x26 => "{UP}",
+            0x27 => "{RIGHT}",
+            0x28 => "{DOWN}",
+            >= 0x70 and <= 0x7B => "{F" + (virtualKeyCode - 0x6F) + "}",
+            _ => null
         };
+
+        if (!string.IsNullOrWhiteSpace(knownToken))
+        {
+            return knownToken;
+        }
+
+        var translated = TranslateVirtualKeyToCharacter((uint)virtualKeyCode, scanCode);
+        if (string.IsNullOrWhiteSpace(translated))
+        {
+            return "{" + virtualKeyCode + "}";
+        }
+
+        return EscapeSendKeysCharacter(translated[0]);
+    }
+
+    private static string TranslateVirtualKeyToCharacter(uint virtualKeyCode, uint scanCode)
+    {
+        var keyboardState = new byte[256];
+        if (!GetKeyboardState(keyboardState))
+        {
+            return string.Empty;
+        }
+
+        var buffer = new StringBuilder(8);
+        var layout = GetKeyboardLayout(0);
+        var translatedLength = ToUnicodeEx(virtualKeyCode, scanCode, keyboardState, buffer, buffer.Capacity, 0, layout);
+        return translatedLength > 0 ? buffer.ToString()[..translatedLength] : string.Empty;
+    }
+
+    private static string EscapeSendKeysCharacter(char value)
+    {
+        return value switch
+        {
+            '+' => "{+}",
+            '^' => "{^}",
+            '%' => "{%}",
+            '~' => "{~}",
+            '(' => "{(}",
+            ')' => "{)}",
+            '{' => "{{}",
+            '}' => "{}}",
+            '[' => "{[}",
+            ']' => "{]}",
+            _ => value.ToString(CultureInfo.InvariantCulture)
+        };
+    }
+
+    private static bool IsModifierKey(int virtualKeyCode)
+    {
+        return virtualKeyCode is VK_SHIFT or VK_LSHIFT or VK_RSHIFT or VK_CONTROL or VK_LCONTROL or VK_RCONTROL or VK_MENU or VK_LMENU or VK_RMENU;
+    }
+
+    private static bool IsVirtualKeyDown(int virtualKey)
+    {
+        return (GetAsyncKeyState(virtualKey) & 0x8000) != 0;
     }
 
     private static string? GetForegroundProcessPath()
@@ -1656,6 +1954,68 @@ public partial class MainWindow : Window
             Root = runtimeRoot,
             Configuration = runtimeConfiguration
         };
+    }
+
+    private SensitiveReplayConfirmationOutcome HandleSensitiveReplayConfirmation(LauncherConfigDocument runtimeDocument)
+    {
+        var sensitiveSteps = runtimeDocument.Configuration.Steps
+            .Where(step => step.RequireSensitiveReplayConfirmation)
+            .Select(step => new
+            {
+                Step = step,
+                SensitiveEvents = step.TaughtEvents.Where(IsSensitiveReplayEvent).ToList()
+            })
+            .Where(item => item.SensitiveEvents.Count > 0)
+            .ToList();
+
+        if (sensitiveSteps.Count == 0)
+        {
+            return SensitiveReplayConfirmationOutcome.ProceedWithSensitive;
+        }
+
+        var sensitiveCount = sensitiveSteps.Sum(item => item.SensitiveEvents.Count);
+        var dialogResult = MessageBox.Show(
+            this,
+            $"This run has {sensitiveCount} masked/scanner taught event(s) across {sensitiveSteps.Count} step(s).\n\nYes = replay them\nNo = skip them for this run\nCancel = abort run",
+            "Launcher Native",
+            MessageBoxButton.YesNoCancel,
+            MessageBoxImage.Warning);
+
+        if (dialogResult == MessageBoxResult.Cancel)
+        {
+            return SensitiveReplayConfirmationOutcome.Cancelled;
+        }
+
+        if (dialogResult == MessageBoxResult.Yes)
+        {
+            return SensitiveReplayConfirmationOutcome.ProceedWithSensitive;
+        }
+
+        foreach (var sensitiveStep in sensitiveSteps)
+        {
+            foreach (var replayEvent in sensitiveStep.SensitiveEvents)
+            {
+                replayEvent.IncludeInReplay = false;
+            }
+        }
+
+        AppendLog($"Sensitive replay skipped for {sensitiveCount} event(s) this run.");
+        return SensitiveReplayConfirmationOutcome.ProceedWithoutSensitive;
+    }
+
+    private static bool IsSensitiveReplayEvent(LauncherTaughtEvent taughtEvent)
+    {
+        if (taughtEvent.IsMasked)
+        {
+            return true;
+        }
+
+        if (string.Equals(taughtEvent.InputValue, "[masked]", StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+
+        return string.Equals(taughtEvent.EventType, "barcode-scan", StringComparison.OrdinalIgnoreCase);
     }
 
     private static void RemoveTaughtStepsFromConfig(LauncherConfigDocument document)
@@ -1817,6 +2177,51 @@ public partial class MainWindow : Window
             StatusText.Text = "Program inventory refresh failed";
             AppendLog("Program inventory refresh failed: " + ex.Message);
         }
+    }
+
+    private void RefreshTeachReviewButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        RefreshTeachReviewRows();
+        StatusText.Text = $"Teach review refreshed ({_teachReviewRows.Count} event(s))";
+    }
+
+    private void MaskTeachReviewSelectionButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (TeachReviewEventsGrid.SelectedItem is not TeachReviewEventRow selected)
+        {
+            MessageBox.Show(this, "Select a teach event row first.", "Launcher Native", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        selected.IsMasked = true;
+        TeachReviewEventsGrid.Items.Refresh();
+        StatusText.Text = "Selected teach event masked";
+    }
+
+    private void UnmaskTeachReviewSelectionButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (TeachReviewEventsGrid.SelectedItem is not TeachReviewEventRow selected)
+        {
+            MessageBox.Show(this, "Select a teach event row first.", "Launcher Native", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        selected.IsMasked = false;
+        TeachReviewEventsGrid.Items.Refresh();
+        StatusText.Text = "Selected teach event unmasked";
+    }
+
+    private void RemoveTeachReviewSelectionButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (TeachReviewEventsGrid.SelectedItem is not TeachReviewEventRow selected)
+        {
+            MessageBox.Show(this, "Select a teach event row first.", "Launcher Native", MessageBoxButton.OK, MessageBoxImage.Information);
+            return;
+        }
+
+        _teachReviewRows.Remove(selected);
+        TeachReviewEventsGrid.Items.Refresh();
+        StatusText.Text = $"Teach event removed ({_teachReviewRows.Count} remaining)";
     }
 
     private void RenameSecretButton_OnClick(object sender, RoutedEventArgs e)
@@ -2096,12 +2501,121 @@ public partial class MainWindow : Window
         public string? ProcessPath { get; set; }
     }
 
+    private sealed class TeachReviewEventRow
+    {
+        public DateTimeOffset ObservedAtUtc { get; set; }
+
+        public string EventType { get; set; } = string.Empty;
+
+        public int? DelayMs { get; set; }
+
+        public string? InputValue { get; set; }
+
+        public string? MouseButton { get; set; }
+
+        public int? MouseX { get; set; }
+
+        public int? MouseY { get; set; }
+
+        public string? WindowTitle { get; set; }
+
+        public string? ProcessPath { get; set; }
+
+        public bool IsMasked { get; set; }
+
+        public bool IncludeInSave { get; set; } = true;
+
+        public string DisplayValue
+        {
+            get
+            {
+                if (string.Equals(EventType, "key-input", StringComparison.OrdinalIgnoreCase))
+                {
+                    return IsMasked ? "[masked]" : (InputValue ?? string.Empty);
+                }
+
+                if (string.Equals(EventType, "barcode-scan", StringComparison.OrdinalIgnoreCase))
+                {
+                    return IsMasked ? "[masked]" : (InputValue ?? string.Empty);
+                }
+
+                if (string.Equals(EventType, "mouse-click", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(EventType, "mouse-move", StringComparison.OrdinalIgnoreCase))
+                {
+                    if (MouseX.HasValue && MouseY.HasValue)
+                    {
+                        var buttonPrefix = string.IsNullOrWhiteSpace(MouseButton) ? string.Empty : MouseButton + " @ ";
+                        return buttonPrefix + MouseX.Value + "," + MouseY.Value;
+                    }
+                }
+
+                return InputValue ?? string.Empty;
+            }
+            set
+            {
+                if (string.Equals(EventType, "key-input", StringComparison.OrdinalIgnoreCase))
+                {
+                    InputValue = value;
+                    return;
+                }
+
+                if (string.Equals(EventType, "barcode-scan", StringComparison.OrdinalIgnoreCase))
+                {
+                    InputValue = value;
+                    return;
+                }
+
+                if (string.Equals(EventType, "mouse-click", StringComparison.OrdinalIgnoreCase) ||
+                    string.Equals(EventType, "mouse-move", StringComparison.OrdinalIgnoreCase))
+                {
+                    var raw = value?.Trim() ?? string.Empty;
+                    if (raw.Contains('@'))
+                    {
+                        var split = raw.Split('@', 2, StringSplitOptions.TrimEntries);
+                        if (split.Length == 2)
+                        {
+                            MouseButton = split[0];
+                            raw = split[1];
+                        }
+                    }
+
+                    var coords = raw.Split(',', 2, StringSplitOptions.TrimEntries);
+                    if (coords.Length == 2 && int.TryParse(coords[0], out var x) && int.TryParse(coords[1], out var y))
+                    {
+                        MouseX = x;
+                        MouseY = y;
+                    }
+                    return;
+                }
+
+                InputValue = value;
+            }
+        }
+    }
+
+    private enum SensitiveReplayConfirmationOutcome
+    {
+        ProceedWithSensitive,
+        ProceedWithoutSensitive,
+        Cancelled
+    }
+
     private const int WH_KEYBOARD_LL = 13;
     private const int WH_MOUSE_LL = 14;
     private const int WM_KEYDOWN = 0x0100;
     private const int WM_SYSKEYDOWN = 0x0104;
     private const int WM_LBUTTONDOWN = 0x0201;
     private const int WM_RBUTTONDOWN = 0x0204;
+    private const int WM_MOUSEMOVE = 0x0200;
+    private const int VK_SHIFT = 0x10;
+    private const int VK_LSHIFT = 0xA0;
+    private const int VK_RSHIFT = 0xA1;
+    private const int VK_CONTROL = 0x11;
+    private const int VK_LCONTROL = 0xA2;
+    private const int VK_RCONTROL = 0xA3;
+    private const int VK_MENU = 0x12;
+    private const int VK_LMENU = 0xA4;
+    private const int VK_RMENU = 0xA5;
 
     private delegate IntPtr HookProc(int nCode, IntPtr wParam, IntPtr lParam);
 
@@ -2143,6 +2657,18 @@ public partial class MainWindow : Window
 
     [DllImport("kernel32.dll", CharSet = CharSet.Auto)]
     private static extern IntPtr GetModuleHandle(string? lpModuleName);
+
+    [DllImport("user32.dll")]
+    private static extern short GetAsyncKeyState(int vKey);
+
+    [DllImport("user32.dll")]
+    private static extern bool GetKeyboardState(byte[] lpKeyState);
+
+    [DllImport("user32.dll", CharSet = CharSet.Unicode)]
+    private static extern int ToUnicodeEx(uint wVirtKey, uint wScanCode, byte[] lpKeyState, [Out] StringBuilder pwszBuff, int cchBuff, uint wFlags, IntPtr dwhkl);
+
+    [DllImport("user32.dll")]
+    private static extern IntPtr GetKeyboardLayout(uint idThread);
 
     [DllImport("user32.dll")]
     private static extern IntPtr GetForegroundWindow();
