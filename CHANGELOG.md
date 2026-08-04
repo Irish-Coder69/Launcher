@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.10 - 2026-08-04
+
+- Updated the Run tab main two-column layout to use an even 50/50 split so the left column is easier to read and interact with.
+
 ## 1.2.9 - 2026-08-04
 
 - Updated the in-app updater flow to run a guided sequence after download: close Launcher, start uninstall of the old version, then start installation of the new version.

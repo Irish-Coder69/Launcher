@@ -1,5 +1,17 @@
 [
   {
+    "version": "1.2.10",
+    "releaseDate": "2026-08-04",
+    "description": "Evenly split Run tab columns to improve left-pane readability",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.2.10/Launcher-1.2.10-Setup.exe",
+    "checksum": "",
+    "isRequired": false,
+    "notes": [
+      "Run tab now uses an even two-column layout so both panels share space equally",
+      "Left-side configured steps and teach-session controls are easier to view at typical window sizes"
+    ]
+  },
+  {
     "version": "1.2.9",
     "releaseDate": "2026-08-04",
     "description": "Guide update flow to close app, uninstall old version, then install new version",
