@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.2.11",
+    "releaseDate": "2026-08-04",
+    "description": "Add Show/Hide password controls across login, create user, and edit user dialogs",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.2.11/Launcher-1.2.11-Setup.exe",
+    "checksum": "",
+    "isRequired": false,
+    "notes": [
+      "Login window now includes a Show/Hide toggle for the password field",
+      "Create User now includes Show/Hide toggles for password and confirm password",
+      "Edit User now includes Show/Hide toggles for current password, new password, and confirm new password"
+    ]
+  },
+  {
     "version": "1.2.10",
     "releaseDate": "2026-08-04",
     "description": "Evenly split Run tab columns to improve left-pane readability",

@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.11 - 2026-08-04
+
+- Added Show/Hide password toggle on the main login window.
+- Added Show/Hide password toggles on Create User for both password and confirm password fields.
+- Added Show/Hide password toggles on Edit User for current password, new password, and confirm new password fields.
+
 ## 1.2.10 - 2026-08-04
 
 - Updated the Run tab main two-column layout to use an even 50/50 split so the left column is easier to read and interact with.

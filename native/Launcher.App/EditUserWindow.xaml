@@ -58,13 +58,37 @@
                 <TextBox x:Name="DepartmentTextBox" Grid.Row="3" Grid.Column="1" Height="28" Margin="0,0,0,8" />
 
                 <TextBlock Grid.Row="4" Text="Current Password" Foreground="#DCE6FF" Margin="0,5,8,8" />
-                <PasswordBox x:Name="CurrentPasswordBox" Grid.Row="4" Grid.Column="1" Height="28" Margin="0,0,0,8" />
+                <Grid Grid.Row="4" Grid.Column="1" Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="68" />
+                    </Grid.ColumnDefinitions>
+                    <PasswordBox x:Name="CurrentPasswordBox" Grid.Column="0" Height="28" />
+                    <TextBox x:Name="CurrentPasswordTextBox" Grid.Column="0" Height="28" Visibility="Collapsed" />
+                    <Button x:Name="ToggleCurrentPasswordVisibilityButton" Grid.Column="1" Height="28" Margin="8,0,0,0" Content="Show" Click="ToggleCurrentPasswordVisibilityButton_OnClick" />
+                </Grid>
 
                 <TextBlock Grid.Row="5" Text="New Password" Foreground="#DCE6FF" Margin="0,5,8,8" />
-                <PasswordBox x:Name="NewPasswordBox" Grid.Row="5" Grid.Column="1" Height="28" Margin="0,0,0,8" />
+                <Grid Grid.Row="5" Grid.Column="1" Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="68" />
+                    </Grid.ColumnDefinitions>
+                    <PasswordBox x:Name="NewPasswordBox" Grid.Column="0" Height="28" />
+                    <TextBox x:Name="NewPasswordTextBox" Grid.Column="0" Height="28" Visibility="Collapsed" />
+                    <Button x:Name="ToggleNewPasswordVisibilityButton" Grid.Column="1" Height="28" Margin="8,0,0,0" Content="Show" Click="ToggleNewPasswordVisibilityButton_OnClick" />
+                </Grid>
 
                 <TextBlock Grid.Row="6" Text="Confirm New Password" Foreground="#DCE6FF" Margin="0,5,8,8" />
-                <PasswordBox x:Name="ConfirmNewPasswordBox" Grid.Row="6" Grid.Column="1" Height="28" Margin="0,0,0,8" />
+                <Grid Grid.Row="6" Grid.Column="1" Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="68" />
+                    </Grid.ColumnDefinitions>
+                    <PasswordBox x:Name="ConfirmNewPasswordBox" Grid.Column="0" Height="28" />
+                    <TextBox x:Name="ConfirmNewPasswordTextBox" Grid.Column="0" Height="28" Visibility="Collapsed" />
+                    <Button x:Name="ToggleConfirmNewPasswordVisibilityButton" Grid.Column="1" Height="28" Margin="8,0,0,0" Content="Show" Click="ToggleConfirmNewPasswordVisibilityButton_OnClick" />
+                </Grid>
 
                 <TextBlock Grid.Row="7" Grid.Column="1" Foreground="#8FA8D8" FontSize="12" Margin="0,0,0,8" TextWrapping="Wrap"
                            Text="Leave New Password blank if you only want to update the user name, display info, or notes." />

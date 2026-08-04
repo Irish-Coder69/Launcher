@@ -56,10 +56,26 @@
                 <TextBox x:Name="DepartmentTextBox" Grid.Row="3" Grid.Column="1" Height="28" Margin="0,0,0,8" />
 
                 <TextBlock Grid.Row="4" Text="Password" Foreground="#DCE6FF" Margin="0,5,8,8" />
-                <PasswordBox x:Name="PasswordBox" Grid.Row="4" Grid.Column="1" Height="28" Margin="0,0,0,8" />
+                <Grid Grid.Row="4" Grid.Column="1" Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="68" />
+                    </Grid.ColumnDefinitions>
+                    <PasswordBox x:Name="PasswordBox" Grid.Column="0" Height="28" />
+                    <TextBox x:Name="PasswordTextBox" Grid.Column="0" Height="28" Visibility="Collapsed" />
+                    <Button x:Name="TogglePasswordVisibilityButton" Grid.Column="1" Height="28" Margin="8,0,0,0" Content="Show" Click="TogglePasswordVisibilityButton_OnClick" />
+                </Grid>
 
                 <TextBlock Grid.Row="5" Text="Confirm Password" Foreground="#DCE6FF" Margin="0,5,8,8" />
-                <PasswordBox x:Name="ConfirmPasswordBox" Grid.Row="5" Grid.Column="1" Height="28" Margin="0,0,0,8" />
+                <Grid Grid.Row="5" Grid.Column="1" Margin="0,0,0,8">
+                    <Grid.ColumnDefinitions>
+                        <ColumnDefinition Width="*" />
+                        <ColumnDefinition Width="68" />
+                    </Grid.ColumnDefinitions>
+                    <PasswordBox x:Name="ConfirmPasswordBox" Grid.Column="0" Height="28" />
+                    <TextBox x:Name="ConfirmPasswordTextBox" Grid.Column="0" Height="28" Visibility="Collapsed" />
+                    <Button x:Name="ToggleConfirmPasswordVisibilityButton" Grid.Column="1" Height="28" Margin="8,0,0,0" Content="Show" Click="ToggleConfirmPasswordVisibilityButton_OnClick" />
+                </Grid>
 
                 <TextBlock Grid.Row="6" Text="Notes" Foreground="#DCE6FF" Margin="0,5,8,8" VerticalAlignment="Top" />
                 <TextBox x:Name="NotesTextBox" Grid.Row="6" Grid.Column="1" AcceptsReturn="True" Height="120" TextWrapping="Wrap" VerticalScrollBarVisibility="Auto" />

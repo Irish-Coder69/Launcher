@@ -39,6 +39,8 @@ public partial class LoginWindow : Window
             LoginButton.IsEnabled = true;
             EditUserButton.IsEnabled = true;
             PasswordBox.IsEnabled = true;
+            PasswordTextBox.IsEnabled = true;
+            TogglePasswordVisibilityButton.IsEnabled = true;
         }
         else
         {
@@ -46,6 +48,8 @@ public partial class LoginWindow : Window
             LoginButton.IsEnabled = false;
             EditUserButton.IsEnabled = false;
             PasswordBox.IsEnabled = false;
+            PasswordTextBox.IsEnabled = false;
+            TogglePasswordVisibilityButton.IsEnabled = false;
         }
     }
 
@@ -56,14 +60,14 @@ public partial class LoginWindow : Window
 
         try
         {
-            if (!_userProfileService.TryAuthenticate(selectedUserName, PasswordBox.Password, out var user, out var errorMessage) || user is null)
+            var enteredPassword = GetEnteredPassword();
+            if (!_userProfileService.TryAuthenticate(selectedUserName, enteredPassword, out var user, out var errorMessage) || user is null)
             {
                 LoginStatusTextBlock.Text = string.IsNullOrWhiteSpace(errorMessage)
                     ? "Login failed. Check user and password and try again."
                     : errorMessage;
                 MessageBox.Show(this, LoginStatusTextBlock.Text, "Launcher Native", MessageBoxButton.OK, MessageBoxImage.Warning);
-                PasswordBox.SelectAll();
-                PasswordBox.Focus();
+                SelectPasswordAndFocus();
                 return;
             }
 
@@ -120,9 +124,56 @@ public partial class LoginWindow : Window
         if (editWindow.ShowDialog() == true)
         {
             LoadUsers(editWindow.UpdatedUserName);
-            PasswordBox.Clear();
+            ClearPasswordInputs();
             LoginStatusTextBlock.Text = "User updated. Sign in with the latest credentials.";
         }
+    }
+
+    private void TogglePasswordVisibilityButton_OnClick(object sender, RoutedEventArgs e)
+    {
+        if (PasswordTextBox.Visibility == Visibility.Visible)
+        {
+            PasswordBox.Password = PasswordTextBox.Text;
+            PasswordTextBox.Visibility = Visibility.Collapsed;
+            PasswordBox.Visibility = Visibility.Visible;
+            TogglePasswordVisibilityButton.Content = "Show";
+            PasswordBox.Focus();
+            PasswordBox.SelectAll();
+            return;
+        }
+
+        PasswordTextBox.Text = PasswordBox.Password;
+        PasswordBox.Visibility = Visibility.Collapsed;
+        PasswordTextBox.Visibility = Visibility.Visible;
+        TogglePasswordVisibilityButton.Content = "Hide";
+        PasswordTextBox.Focus();
+        PasswordTextBox.SelectAll();
+    }
+
+    private string GetEnteredPassword()
+    {
+        return PasswordTextBox.Visibility == Visibility.Visible
+            ? PasswordTextBox.Text
+            : PasswordBox.Password;
+    }
+
+    private void SelectPasswordAndFocus()
+    {
+        if (PasswordTextBox.Visibility == Visibility.Visible)
+        {
+            PasswordTextBox.Focus();
+            PasswordTextBox.SelectAll();
+            return;
+        }
+
+        PasswordBox.Focus();
+        PasswordBox.SelectAll();
+    }
+
+    private void ClearPasswordInputs()
+    {
+        PasswordBox.Clear();
+        PasswordTextBox.Clear();
     }
 
     private void CancelButton_OnClick(object sender, RoutedEventArgs e)
