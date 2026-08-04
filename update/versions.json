@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.2.9",
+    "releaseDate": "2026-08-04",
+    "description": "Guide update flow to close app, uninstall old version, then install new version",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.2.9/Launcher-1.2.9-Setup.exe",
+    "checksum": "",
+    "isRequired": false,
+    "notes": [
+      "After installer download, Launcher can now start a guided update sequence instead of requiring manual website flow",
+      "Guided sequence closes Launcher, launches old-version uninstall, and prompts user to confirm uninstall completion before continuing",
+      "After confirmation, Launcher starts the downloaded 1.2.9 installer automatically"
+    ]
+  },
+  {
     "version": "1.2.8",
     "releaseDate": "2026-08-04",
     "description": "Add teach-review masking controls, scanner burst grouping, and sensitive replay confirmation",

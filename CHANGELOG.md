@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.2.9 - 2026-08-04
+
+- Updated the in-app updater flow to run a guided sequence after download: close Launcher, start uninstall of the old version, then start installation of the new version.
+- Added a detached helper process so update orchestration continues cleanly after the main app exits.
+- Added explicit uninstall-complete confirmation before launching the new installer.
+- Added uninstall command fallback resolution (registry uninstall string first, then LocalAppData uninstall executable).
+
 ## 1.2.8 - 2026-08-04
 
 - Added Teach Session review panel controls to refresh, mask, unmask, remove, and edit captured events before applying taught flow.

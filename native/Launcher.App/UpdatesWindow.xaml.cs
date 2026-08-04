@@ -1,5 +1,6 @@
 using System.Diagnostics;
 using System.IO;
+using System.Text;
 using System.Windows;
 using Launcher.Core.Services;
 
@@ -119,14 +120,14 @@ public partial class UpdatesWindow : Window
 
             _downloadedInstallerPath = installerPath;
 
-            var uninstallPrompt = MessageBox.Show(
+            var startGuidedUpdate = MessageBox.Show(
                 this,
-                "Installer downloaded successfully.\n\nBefore installing the new version, uninstall the current Launcher from Windows Apps (Installed Apps).\n\nClick Yes only after uninstall is complete to launch the installer.",
+                "Installer downloaded successfully.\n\nStart guided update now?\n\nThis will close Launcher, open old-version uninstall, then open the new installer after you confirm uninstall is finished.",
                 "Launcher Update",
                 MessageBoxButton.YesNo,
                 MessageBoxImage.Question);
 
-            if (uninstallPrompt != MessageBoxResult.Yes)
+            if (startGuidedUpdate != MessageBoxResult.Yes)
             {
                 Process.Start(new ProcessStartInfo
                 {
@@ -135,45 +136,16 @@ public partial class UpdatesWindow : Window
                     UseShellExecute = true
                 });
 
-                UpdateStatusTextBlock.Text = "Installer downloaded. Uninstall the old version first, then run the installer from your Downloads cache.";
+                UpdateStatusTextBlock.Text = "Installer downloaded. You can run it manually when ready.";
                 DownloadProgressPanel.Visibility = Visibility.Collapsed;
                 UpdateAvailablePanel.Visibility = Visibility.Visible;
                 SetBusy(false);
                 return;
             }
 
-            var launchPrompt = MessageBox.Show(
-                this,
-                "Launch the installer now?",
-                "Launcher Update",
-                MessageBoxButton.YesNo,
-                MessageBoxImage.Question);
-
-            if (launchPrompt == MessageBoxResult.Yes)
-            {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = installerPath,
-                    UseShellExecute = true
-                });
-
-                UpdateStatusTextBlock.Text = "Installer launched. Follow the installer to complete installation.";
-            }
-            else
-            {
-                Process.Start(new ProcessStartInfo
-                {
-                    FileName = "explorer.exe",
-                    Arguments = "/select,\"" + installerPath + "\"",
-                    UseShellExecute = true
-                });
-
-                UpdateStatusTextBlock.Text = "Installer downloaded. Launch it when ready after uninstalling old Launcher.";
-            }
-
-            DownloadProgressPanel.Visibility = Visibility.Collapsed;
-            UpdateAvailablePanel.Visibility = Visibility.Visible;
-            SetBusy(false);
+            StartGuidedUninstallAndInstall(installerPath);
+            UpdateStatusTextBlock.Text = "Starting guided update: closing Launcher, then launching uninstall and installer sequence.";
+            Application.Current.Shutdown();
         }
         catch (Exception ex)
         {
@@ -208,6 +180,61 @@ public partial class UpdatesWindow : Window
         _isBusy = isBusy;
         CheckUpdatesButton.IsEnabled = !isBusy;
         DownloadInstallerButton.IsEnabled = !isBusy;
+    }
+
+    private static void StartGuidedUninstallAndInstall(string installerPath)
+    {
+        var launcherPid = Environment.ProcessId;
+        var escapedInstallerPath = installerPath.Replace("'", "''");
+        var script = $@"
+$ErrorActionPreference = 'SilentlyContinue'
+$launcherPid = {launcherPid}
+
+try {{
+    Wait-Process -Id $launcherPid -ErrorAction SilentlyContinue
+}} catch {{}}
+
+$uninstallCmd = $null
+try {{
+    $uninstallCmd = (Get-ItemProperty -Path 'HKCU:\Software\Microsoft\Windows\CurrentVersion\Uninstall\Launcher' -Name 'UninstallString' -ErrorAction Stop).UninstallString
+}} catch {{}}
+
+if ([string]::IsNullOrWhiteSpace($uninstallCmd)) {{
+    $fallbackUninstallPath = Join-Path $env:LOCALAPPDATA 'Programs\Launcher\Uninstall.exe'
+    if (Test-Path $fallbackUninstallPath) {{
+        $quote = [char]34
+        $uninstallCmd = $quote + $fallbackUninstallPath + $quote
+    }}
+}}
+
+if (-not [string]::IsNullOrWhiteSpace($uninstallCmd)) {{
+    Start-Process -FilePath 'cmd.exe' -ArgumentList '/c', $uninstallCmd -Wait
+}} else {{
+    Add-Type -AssemblyName PresentationFramework
+    [System.Windows.MessageBox]::Show('Could not find Launcher uninstaller automatically. Please uninstall Launcher manually from Installed Apps, then click OK to continue.', 'Launcher Update') | Out-Null
+}}
+
+Add-Type -AssemblyName PresentationFramework
+$confirm = [System.Windows.MessageBox]::Show('Click OK after uninstall has fully finished to start installing the new Launcher version.', 'Launcher Update', 'OKCancel', 'Question')
+if ($confirm -ne 'OK') {{
+    exit
+}}
+
+if (Test-Path '{escapedInstallerPath}') {{
+    Start-Process -FilePath '{escapedInstallerPath}' -Wait
+}} else {{
+    [System.Windows.MessageBox]::Show('Downloaded installer was not found: {escapedInstallerPath}', 'Launcher Update') | Out-Null
+}}
+";
+
+        var encoded = Convert.ToBase64String(Encoding.Unicode.GetBytes(script));
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = "powershell.exe",
+            Arguments = "-NoProfile -ExecutionPolicy Bypass -EncodedCommand " + encoded,
+            UseShellExecute = false,
+            CreateNoWindow = true
+        });
     }
 
     private void CloseButton_OnClick(object sender, RoutedEventArgs e)
