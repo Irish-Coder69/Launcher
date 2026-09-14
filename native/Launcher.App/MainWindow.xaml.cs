@@ -582,19 +582,15 @@ public partial class MainWindow : Window
         ReloadConfigView();
     }
 
-    private const string ReceiverFolderPath = "P:/Stockroom/Receiver's";
-
     private void BrowseConfigButton_OnClick(object sender, RoutedEventArgs e)
     {
         var dialog = new OpenFileDialog
         {
             Filter = "Launcher Config|*.json|All Files|*.*",
             CheckFileExists = true,
-            InitialDirectory = Directory.Exists(ReceiverFolderPath)
-                ? ReceiverFolderPath
-                : File.Exists(ConfigPathTextBox.Text)
-                    ? Path.GetDirectoryName(ConfigPathTextBox.Text)
-                    : _launcherRoot
+            InitialDirectory = File.Exists(ConfigPathTextBox.Text)
+                ? Path.GetDirectoryName(ConfigPathTextBox.Text)
+                : _launcherRoot
         };
 
         if (dialog.ShowDialog(this) == true)

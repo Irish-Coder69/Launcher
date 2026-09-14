@@ -1,9 +1,5 @@
 # Changelog
 
-## 1.2.12 - 2026-09-14
-
-- Config file Browse dialog on the main window now defaults to the Receiver's folder (`P:/Stockroom/Receiver's`) so selecting a file there is quicker.
-
 ## 1.2.11 - 2026-08-04
 
 - Added Show/Hide password toggle on the main login window.
