@@ -1,5 +1,16 @@
 [
   {
+    "version": "1.2.12",
+    "releaseDate": "2026-09-14",
+    "description": "Browse dialog now defaults to the Receiver's folder",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.2.12/Launcher-1.2.12-Setup.exe",
+    "checksum": "",
+    "isRequired": false,
+    "notes": [
+      "Config file Browse dialog on the main window now defaults to P:/Stockroom/Receiver's"
+    ]
+  },
+  {
     "version": "1.2.11",
     "releaseDate": "2026-08-04",
     "description": "Add Show/Hide password controls across login, create user, and edit user dialogs",
