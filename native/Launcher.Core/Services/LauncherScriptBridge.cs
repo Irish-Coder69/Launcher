@@ -88,7 +88,7 @@ public sealed class LauncherScriptBridge
         }
     }
 
-    public void LaunchInteractiveStartAndWait(string launcherScriptPath, string configPath, bool dryRun)
+    public void LaunchInteractiveStartAndWait(string launcherScriptPath, string configPath, bool dryRun, bool skipUpdateTable)
     {
         var hostExecutable = ResolvePowerShellHost();
 
@@ -97,6 +97,11 @@ public sealed class LauncherScriptBridge
         if (dryRun)
         {
             arguments += " -DryRun";
+        }
+
+        if (skipUpdateTable)
+        {
+            arguments += " -SkipUpdateTable";
         }
 
         var startInfo = new ProcessStartInfo

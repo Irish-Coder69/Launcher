@@ -19,6 +19,7 @@ public sealed class LauncherNativeStartRunner
         LauncherConfigDocument document,
         bool dryRun,
         Action<string>? onOutput,
+        bool skipUpdateTable = false,
         CancellationToken cancellationToken = default)
     {
         var config = document.Configuration;
@@ -40,7 +41,7 @@ public sealed class LauncherNativeStartRunner
             switch ((step.Type ?? string.Empty).Trim().ToLowerInvariant())
             {
                 case "launch":
-                    await RunLaunchStepAsync(step, configDirectory, dryRun, onOutput, launchedSteps, cancellationToken);
+                    await RunLaunchStepAsync(step, configDirectory, dryRun, onOutput, launchedSteps, skipUpdateTable, cancellationToken);
                     break;
                 case "access-sql":
                     if (dryRun)
@@ -87,6 +88,7 @@ public sealed class LauncherNativeStartRunner
         bool dryRun,
         Action<string>? onOutput,
         List<LauncherSessionStep> launchedSteps,
+        bool skipUpdateTable,
         CancellationToken cancellationToken)
     {
         var launchOnlyIfMissing = step.LaunchOnlyIfMissing ?? true;
@@ -153,7 +155,14 @@ public sealed class LauncherNativeStartRunner
 
         await ConfirmLoginCompletionAsync(step, process, dryRun, onOutput, cancellationToken);
         await InvokeMoveWindowToMonitorAsync(step, process, beforeLogin: false, dryRun, onOutput, cancellationToken);
-        await InvokeUpdateTableFlowAsync(step, process, dryRun, onOutput, cancellationToken);
+        if (skipUpdateTable && step.UpdateTableFlow is not null)
+        {
+            Log(onOutput, $"Skipping Update Table flow for '{step.Name}' by user request.");
+        }
+        else
+        {
+            await InvokeUpdateTableFlowAsync(step, process, dryRun, onOutput, cancellationToken);
+        }
         await InvokeMinimizeLaunchedWindowAsync(step, process, afterCompletion: true, dryRun, onOutput, cancellationToken);
         await InvokeMinimizeAdditionalWindowTitlesAfterCompletionAsync(step, dryRun, onOutput, cancellationToken);
 

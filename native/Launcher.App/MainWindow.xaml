@@ -95,6 +95,7 @@
                 <Button x:Name="StartButton" Width="220" Height="36" Margin="0,0,8,8" Content="Run Start" Click="StartButton_OnClick" />
                 <Button x:Name="CloseButton" Width="220" Height="36" Margin="0,0,8,8" Content="Run Close" Click="CloseButton_OnClick" />
                 <Button x:Name="StartAndWaitButton" Width="220" Height="36" Margin="0,0,8,8" Content="Start + Wait For CLOSEAPPS" Click="StartAndWaitButton_OnClick" />
+                <CheckBox x:Name="SkipUpdateTableCheckBox" Margin="4,8,12,8" Foreground="#DCE6FF" Content="Skip Update Table" VerticalAlignment="Center" />
                 <Button x:Name="StopButton" Width="220" Height="36" Margin="0,0,0,8" Content="STOP" FontWeight="Bold" IsEnabled="False" Click="StopButton_OnClick">
                     <Button.Style>
                         <Style TargetType="Button">

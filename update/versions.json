@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.2.14",
+    "releaseDate": "2026-09-16",
+    "description": "Add a per-run option to skip Update Table automation",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.2.14/Launcher-1.2.14-Setup.exe",
+    "checksum": "",
+    "isRequired": false,
+    "notes": [
+      "Added a Skip Update Table checkbox for startup runs",
+      "The option is supported by both Run Start and Start + Wait For CLOSEAPPS",
+      "Other startup steps continue normally when Update Table is skipped"
+    ]
+  },
+  {
     "version": "1.2.13",
     "releaseDate": "2026-09-16",
     "description": "Remove learning and restore configured launch order",

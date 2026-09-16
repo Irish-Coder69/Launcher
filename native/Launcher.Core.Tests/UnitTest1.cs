@@ -1,11 +1,44 @@
 using Launcher.Core.Models;
 using Launcher.Core.Services;
+using System.Text.Json.Nodes;
 using Xunit;
 
 namespace Launcher.Core.Tests;
 
 public class LauncherCoreTests
 {
+    [Fact]
+    public async Task NativeStartRunner_SkipUpdateTable_BypassesConfiguredFlow()
+    {
+        var output = new List<string>();
+        var document = new LauncherConfigDocument
+        {
+            FilePath = Path.Combine(Path.GetTempPath(), "launcher.config.json"),
+            Root = new JsonObject(),
+            Configuration = new LauncherConfiguration
+            {
+                EnsureCapsLockOn = false,
+                EnsureNumLockOn = false,
+                Steps =
+                {
+                    new LauncherStep
+                    {
+                        Name = "Visual Board",
+                        Type = "launch",
+                        ProgramPath = "visual-board.exe",
+                        LaunchOnlyIfMissing = false,
+                        PostLaunchDelaySeconds = 0,
+                        UpdateTableFlow = new LauncherUpdateTableFlow()
+                    }
+                }
+            }
+        };
+
+        await new LauncherNativeStartRunner().RunAsync(document, true, output.Add, skipUpdateTable: true);
+
+        Assert.Contains("Skipping Update Table flow for 'Visual Board' by user request.", output);
+    }
+
     [Fact]
     public void TryGetFirstTextLoginValue_UsesConfiguredLoginFieldValue_WhenPresent()
     {

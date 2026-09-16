@@ -288,6 +288,7 @@ public partial class MainWindow : Window
                     _configDocument,
                     dryRun,
                     line => Dispatcher.Invoke(() => AppendLog(line)),
+                    SkipUpdateTableCheckBox.IsChecked == true,
                     cancellationToken);
 
                 StatusText.Text = "Completed";
@@ -336,6 +337,7 @@ public partial class MainWindow : Window
         DetectCloseTargetsButton.IsEnabled = !isBusy;
         ReloadConfigButton.IsEnabled = !isBusy;
         BrowseConfigButton.IsEnabled = !isBusy;
+        SkipUpdateTableCheckBox.IsEnabled = !isBusy;
         SaveSettingsButton.IsEnabled = !isBusy;
         ResetSettingsButton.IsEnabled = !isBusy;
         AddOrUpdateProgramStepButton.IsEnabled = !isBusy;
@@ -437,9 +439,12 @@ public partial class MainWindow : Window
         try
         {
             var dryRun = DryRunCheckBox.IsChecked == true;
-            _scriptBridge.LaunchInteractiveStartAndWait(_launcherScriptPath, configPath, dryRun);
+            var skipUpdateTable = SkipUpdateTableCheckBox.IsChecked == true;
+            _scriptBridge.LaunchInteractiveStartAndWait(_launcherScriptPath, configPath, dryRun, skipUpdateTable);
             StatusText.Text = "Interactive window opened";
-            AppendLog("Opened interactive StartAndWait session in a separate PowerShell window.");
+            AppendLog(skipUpdateTable
+                ? "Opened interactive StartAndWait session with Update Table skipped."
+                : "Opened interactive StartAndWait session in a separate PowerShell window.");
         }
         catch (Exception ex)
         {

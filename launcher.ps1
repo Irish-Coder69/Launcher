@@ -3,7 +3,8 @@ param(
     [string]$ConfigPath = ".\launcher.config.json",
     [ValidateSet("Start", "Close", "StartAndWaitForCloseCommand")]
     [string]$Mode = "Start",
-    [switch]$DryRun
+    [switch]$DryRun,
+    [switch]$SkipUpdateTable
 )
 
 Set-StrictMode -Version Latest
@@ -15,6 +16,7 @@ $script:SessionStateFile = Join-Path -Path $script:SessionDirectory -ChildPath "
 $script:InstanceMutex = $null
 $script:HasInstanceLock = $false
 $script:SkipClosePrompt = $false
+$script:SkipUpdateTableRequested = [bool]$SkipUpdateTable
 $script:LauncherVersion = "unknown"
 if (Test-Path -Path $script:VersionFile) {
     try {
@@ -3793,7 +3795,12 @@ function Invoke-LaunchStep {
         }
         Confirm-LoginCompletion -Step $Step -Process $null -DryRun:$DryRun
         Invoke-MoveWindowToMonitor -Step $Step -Process $null -DryRun:$DryRun
-        Invoke-UpdateTableFlow -Step $Step -DryRun:$DryRun
+        if ($script:SkipUpdateTableRequested -and ($Step.PSObject.Properties.Name -contains "updateTableFlow")) {
+            Write-LauncherLog "Skipping Update Table flow for '$($Step.name)' by user request."
+        }
+        else {
+            Invoke-UpdateTableFlow -Step $Step -DryRun:$DryRun
+        }
         Invoke-MinimizeLaunchedWindow -Step $Step -Process $null -AfterCompletion -DryRun:$DryRun
         return
     }
@@ -3933,7 +3940,12 @@ function Invoke-LaunchStep {
 
     Confirm-LoginCompletion -Step $Step -Process $process -DryRun:$DryRun
     Invoke-MoveWindowToMonitor -Step $Step -Process $process -DryRun:$DryRun
-    Invoke-UpdateTableFlow -Step $Step -Process $process -DryRun:$DryRun
+    if ($script:SkipUpdateTableRequested -and ($Step.PSObject.Properties.Name -contains "updateTableFlow")) {
+        Write-LauncherLog "Skipping Update Table flow for '$($Step.name)' by user request."
+    }
+    else {
+        Invoke-UpdateTableFlow -Step $Step -Process $process -DryRun:$DryRun
+    }
     Invoke-MinimizeLaunchedWindow -Step $Step -Process $process -AfterCompletion -DryRun:$DryRun
 
     if ($Step.PSObject.Properties.Name -contains "minimizeAdditionalWindowTitlesAfterCompletion") {

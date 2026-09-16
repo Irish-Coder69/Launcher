@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.14 - 2026-09-16
+
+- Added a per-run option to skip Update Table automation.
+- Applied the skip option to both Run Start and Start + Wait For CLOSEAPPS.
+
 ## 1.2.13 - 2026-09-16
 
 - Removed launch-order learning and Teach Session capture/replay functionality.
