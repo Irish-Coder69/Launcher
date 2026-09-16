@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.12 - 2026-09-16
+
+- Removed Microsoft Outlook from the default launcher start and close workflows.
+
 ## 1.2.11 - 2026-08-04
 
 - Added Show/Hide password toggle on the main login window.

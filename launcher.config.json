@@ -18,45 +18,6 @@
   },
   "steps": [
     {
-      "name": "Outlook",
-      "type": "launch",
-      "enabled": true,
-      "programPath": "olk.exe",
-      "runningWindowTitles": [
-        "Outlook",
-        "Microsoft Outlook"
-      ],
-      "runningProcessNames": [
-        "OUTLOOK"
-      ],
-      "closeEnabled": true,
-      "closeMethod": "both",
-      "closeTimeoutSeconds": 12,
-      "closeForce": false,
-      "closeWindowTitles": [
-        "Outlook",
-        "Microsoft Outlook",
-        "Inbox"
-      ],
-      "closeProcessNames": [
-        "OUTLOOK"
-      ],
-      "windowStyle": "Maximized",
-      "minimizeAfterLaunch": true,
-      "minimizeAfterCompletion": false,
-      "minimizeAfterLaunchDelaySeconds": 2,
-      "maximizeBeforeMinimizeDelayMs": 1400,
-      "minimizeWindowTitles": [
-        "Outlook",
-        "Microsoft Outlook",
-        "Inbox"
-      ],
-      "arguments": "",
-      "workingDirectory": "",
-      "postLaunchDelaySeconds": 8,
-      "waitAfterStepSeconds": 4
-    },
-    {
       "name": "Local Visual Board",
       "type": "launch",
       "enabled": true,

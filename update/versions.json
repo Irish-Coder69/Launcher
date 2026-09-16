@@ -1,5 +1,17 @@
 [
   {
+    "version": "1.2.12",
+    "releaseDate": "2026-09-16",
+    "description": "Remove Microsoft Outlook from the default launcher workflow",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.2.12/Launcher-1.2.12-Setup.exe",
+    "checksum": "",
+    "isRequired": false,
+    "notes": [
+      "Microsoft Outlook is no longer opened by the default launcher workflow",
+      "Microsoft Outlook is no longer included in the default close workflow"
+    ]
+  },
+  {
     "version": "1.2.11",
     "releaseDate": "2026-08-04",
     "description": "Add Show/Hide password controls across login, create user, and edit user dialogs",
