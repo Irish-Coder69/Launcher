@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.15 - 2026-09-16
+
+- Made the Live Output pane independently scrollable with the mouse wheel while keeping the Run tab columns fixed.
+
 ## 1.2.14 - 2026-09-16
 
 - Added a per-run option to skip Update Table automation.
