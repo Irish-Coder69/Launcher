@@ -1,5 +1,18 @@
 [
   {
+    "version": "1.2.13",
+    "releaseDate": "2026-09-16",
+    "description": "Remove learning and restore configured launch order",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.2.13/Launcher-1.2.13-Setup.exe",
+    "checksum": "",
+    "isRequired": false,
+    "notes": [
+      "Removed launch-order learning and recommendation history",
+      "Removed Teach Session capture, review, and replay controls",
+      "Run Start now executes enabled configured steps in their saved order"
+    ]
+  },
+  {
     "version": "1.2.12",
     "releaseDate": "2026-09-16",
     "description": "Remove Microsoft Outlook from the default launcher workflow",

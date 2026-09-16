@@ -95,7 +95,6 @@
                 <Button x:Name="StartButton" Width="220" Height="36" Margin="0,0,8,8" Content="Run Start" Click="StartButton_OnClick" />
                 <Button x:Name="CloseButton" Width="220" Height="36" Margin="0,0,8,8" Content="Run Close" Click="CloseButton_OnClick" />
                 <Button x:Name="StartAndWaitButton" Width="220" Height="36" Margin="0,0,8,8" Content="Start + Wait For CLOSEAPPS" Click="StartAndWaitButton_OnClick" />
-                <CheckBox x:Name="UseLearnedOrderThisRunCheckBox" Margin="0,8,12,8" Foreground="#DCE6FF" Content="Use Learned Order This Run" VerticalAlignment="Center" />
                 <Button x:Name="StopButton" Width="220" Height="36" Margin="0,0,0,8" Content="STOP" FontWeight="Bold" IsEnabled="False" Click="StopButton_OnClick">
                     <Button.Style>
                         <Style TargetType="Button">
@@ -146,7 +145,6 @@
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="Auto" />
                                 <RowDefinition Height="*" />
-                                <RowDefinition Height="230" />
                             </Grid.RowDefinitions>
 
                             <TextBlock Text="Configured Steps (Editable Enabled State)" FontWeight="SemiBold" Foreground="#DCE6FF" />
@@ -155,9 +153,6 @@
                                 <Button x:Name="DetectRunningButton" Content="Native Detect Running" Width="160" Height="30" Click="DetectRunningButton_OnClick" />
                                 <Button x:Name="DetectCloseTargetsButton" Content="Native Detect Close Targets" Width="190" Height="30" Margin="8,0,0,0" Click="DetectCloseTargetsButton_OnClick" />
                                 <Button x:Name="LearnOpenAppsButton" Content="Learn Open Apps" Width="140" Height="30" Margin="8,0,0,0" Click="LearnOpenAppsButton_OnClick" />
-                                <Button x:Name="StartTeachSessionButton" Content="Start Teach Session" Width="160" Height="30" Margin="8,0,0,0" Click="StartTeachSessionButton_OnClick" />
-                                <Button x:Name="StopTeachSessionButton" Content="Stop Teach Session" Width="160" Height="30" Margin="8,0,0,0" Click="StopTeachSessionButton_OnClick" IsEnabled="False" />
-                                <Button x:Name="ApplyTeachSessionButton" Content="Apply Taught Flow" Width="150" Height="30" Margin="8,0,0,0" Click="ApplyTeachSessionButton_OnClick" IsEnabled="False" />
                             </WrapPanel>
 
                             <DataGrid x:Name="StepsGrid" Grid.Row="2" AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
@@ -172,39 +167,6 @@
                                 </DataGrid.Columns>
                             </DataGrid>
 
-                            <Grid Grid.Row="3" Margin="0,10,0,0">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="*" />
-                                </Grid.RowDefinitions>
-                                <WrapPanel>
-                                    <TextBlock Text="Teach Session Review" FontWeight="SemiBold" Foreground="#DCE6FF" VerticalAlignment="Center" Margin="0,0,12,0" />
-                                    <Button x:Name="RefreshTeachReviewButton" Content="Refresh Review" Width="120" Height="28" Margin="0,0,8,0" Click="RefreshTeachReviewButton_OnClick" />
-                                    <Button x:Name="MaskTeachReviewSelectionButton" Content="Mask Selected" Width="120" Height="28" Margin="0,0,8,0" Click="MaskTeachReviewSelectionButton_OnClick" />
-                                    <Button x:Name="UnmaskTeachReviewSelectionButton" Content="Unmask Selected" Width="130" Height="28" Margin="0,0,8,0" Click="UnmaskTeachReviewSelectionButton_OnClick" />
-                                    <Button x:Name="RemoveTeachReviewSelectionButton" Content="Remove Selected" Width="130" Height="28" Click="RemoveTeachReviewSelectionButton_OnClick" />
-                                    <CheckBox x:Name="RequireConfirmSensitiveReplayCheckBox"
-                                              Margin="14,5,0,0"
-                                              Foreground="#DCE6FF"
-                                              Content="Require confirm before replaying masked/scanner events"
-                                              IsChecked="True" />
-                                </WrapPanel>
-
-                                <DataGrid x:Name="TeachReviewEventsGrid" Grid.Row="1" Margin="0,8,0,0"
-                                          AutoGenerateColumns="False" CanUserAddRows="False" CanUserDeleteRows="False"
-                                          Background="#0D1422" Foreground="#DCE6FF" BorderBrush="#2A3652" BorderThickness="1"
-                                          HeadersVisibility="Column" GridLinesVisibility="Horizontal"
-                                          SelectionMode="Single" SelectionUnit="FullRow">
-                                    <DataGrid.Columns>
-                                        <DataGridCheckBoxColumn Header="Use" Binding="{Binding IncludeInSave, Mode=TwoWay}" Width="50" />
-                                        <DataGridCheckBoxColumn Header="Masked" Binding="{Binding IsMasked, Mode=TwoWay}" Width="70" />
-                                        <DataGridTextColumn Header="Type" Binding="{Binding EventType}" IsReadOnly="True" Width="100" />
-                                        <DataGridTextColumn Header="Delay (ms)" Binding="{Binding DelayMs, Mode=TwoWay}" Width="85" />
-                                        <DataGridTextColumn Header="Window" Binding="{Binding WindowTitle}" IsReadOnly="True" Width="220" />
-                                        <DataGridTextColumn Header="Input / Mouse" Binding="{Binding DisplayValue, Mode=TwoWay}" Width="*" />
-                                    </DataGrid.Columns>
-                                </DataGrid>
-                            </Grid>
                         </Grid>
                     </Border>
 
@@ -212,21 +174,10 @@
                         <Grid>
                             <Grid.RowDefinitions>
                                 <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
-                                <RowDefinition Height="Auto" />
                                 <RowDefinition Height="*" />
                             </Grid.RowDefinitions>
-                            <TextBlock Text="Learned Recommended Order" FontWeight="SemiBold" Foreground="#DCE6FF" />
-                            <TextBlock x:Name="RecommendedOrderStatusText" Grid.Row="1" Margin="0,6,0,0" Foreground="#8FA8D8" TextWrapping="Wrap" />
-                            <ListBox x:Name="RecommendedOrderListBox" Grid.Row="2" Margin="0,8,0,12" Height="130" Background="#0D1422" Foreground="#DCE6FF" BorderBrush="#2A3652" BorderThickness="1" />
-                            <Grid Grid.Row="3">
-                                <Grid.RowDefinitions>
-                                    <RowDefinition Height="Auto" />
-                                    <RowDefinition Height="*" />
-                                </Grid.RowDefinitions>
-                                <TextBlock Text="Live Output" FontWeight="SemiBold" Foreground="#DCE6FF" />
-                                <ListBox x:Name="LogListBox" Grid.Row="1" Margin="0,8,0,0" Background="#0D1422" Foreground="#BFD2F7" BorderBrush="#2A3652" BorderThickness="1" FontFamily="Consolas" />
-                            </Grid>
+                            <TextBlock Text="Live Output" FontWeight="SemiBold" Foreground="#DCE6FF" />
+                            <ListBox x:Name="LogListBox" Grid.Row="1" Margin="0,8,0,0" Background="#0D1422" Foreground="#BFD2F7" BorderBrush="#2A3652" BorderThickness="1" FontFamily="Consolas" />
                         </Grid>
                     </Border>
                 </Grid>
@@ -289,32 +240,7 @@
 
                     <TextBlock Grid.Row="2" Margin="2,10,0,0" Text="Tip: You can toggle individual step enabled states in the Run tab and save all settings together." Foreground="#8FA8D8" />
 
-                    <Border Grid.Row="3" Margin="0,10,0,0" Padding="12" CornerRadius="10" Background="#101829" BorderBrush="#2A3652" BorderThickness="1">
-                        <Grid>
-                            <Grid.ColumnDefinitions>
-                                <ColumnDefinition Width="1.1*" />
-                                <ColumnDefinition Width="1*" />
-                                <ColumnDefinition Width="1*" />
-                                <ColumnDefinition Width="Auto" />
-                            </Grid.ColumnDefinitions>
-                            <StackPanel Grid.Column="0">
-                                <TextBlock Text="Learning" Foreground="#DCE6FF" />
-                                <CheckBox x:Name="LearningEnabledCheckBox" Content="Enable Learning" Foreground="#DCE6FF" Margin="0,6,0,0" />
-                                <CheckBox x:Name="ShowRecommendedOrderCheckBox" Content="Show Recommended Order" Foreground="#DCE6FF" Margin="0,4,0,0" />
-                                <CheckBox x:Name="AutoApplyRecommendedOrderCheckBox" Content="Auto Apply Recommended Order" Foreground="#DCE6FF" Margin="0,4,0,0" />
-                            </StackPanel>
-                            <StackPanel Grid.Column="1" Margin="10,0,0,0">
-                                <TextBlock Text="Minimum Runs" Foreground="#DCE6FF" />
-                                <TextBox x:Name="MinRunsBeforeSuggestionsTextBox" Margin="0,6,0,0" Height="28" Width="120" />
-                            </StackPanel>
-                            <TextBlock Grid.Column="2" Margin="10,0,0,0" Foreground="#8FA8D8" TextWrapping="Wrap"
-                                       Text="When auto-apply is enabled, launch steps run in learned order once enough history exists." />
-                            <Button x:Name="ResetLearningHistoryButton" Grid.Column="3" Width="190" Height="34" Margin="12,0,0,0"
-                                    VerticalAlignment="Top" Content="Reset Learning History" Click="ResetLearningHistoryButton_OnClick" />
-                        </Grid>
-                    </Border>
-
-                    <StackPanel Grid.Row="4" Orientation="Horizontal" Margin="0,10,0,0">
+                    <StackPanel Grid.Row="3" Orientation="Horizontal" Margin="0,10,0,0">
                         <Button x:Name="SaveSettingsButton" Width="180" Height="34" Content="Save Config Changes" Click="SaveSettingsButton_OnClick" />
                         <Button x:Name="ResetSettingsButton" Width="180" Height="34" Margin="8,0,0,0" Content="Reload Without Saving" Click="ResetSettingsButton_OnClick" />
                     </StackPanel>

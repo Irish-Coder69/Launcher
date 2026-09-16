@@ -27,11 +27,4 @@ public sealed class LauncherSettingsInput
 
     public bool DefaultCloseForce { get; set; }
 
-    public bool LearningEnabled { get; set; } = true;
-
-    public bool ShowRecommendedOrder { get; set; } = true;
-
-    public bool AutoApplyRecommendedOrder { get; set; }
-
-    public int MinRunsBeforeSuggestions { get; set; } = 3;
 }

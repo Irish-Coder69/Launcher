@@ -12,7 +12,6 @@ namespace Launcher.Core.Services;
 public sealed class LauncherNativeStartRunner
 {
     private readonly LauncherNativeDetectionService _detectionService = new();
-    private readonly LauncherLearningService _learningService = new();
     private readonly LauncherSecretStoreService _secretStore = new();
     private readonly LauncherProgramInventoryService _programInventoryService = new();
 
@@ -20,42 +19,13 @@ public sealed class LauncherNativeStartRunner
         LauncherConfigDocument document,
         bool dryRun,
         Action<string>? onOutput,
-        bool? autoApplyRecommendedOrderOverride = null,
         CancellationToken cancellationToken = default)
     {
         var config = document.Configuration;
         var configDirectory = Path.GetDirectoryName(document.FilePath) ?? Environment.CurrentDirectory;
         var launchedSteps = new List<LauncherSessionStep>();
-        var observedLaunchSteps = new List<string>();
-        var learningOptions = config.Learning ?? new LauncherLearningOptions();
 
-        var learningEnabled = learningOptions.Enabled;
-        var showRecommendedOrder = learningOptions.ShowRecommendedOrder;
-        var autoApplyRecommendedOrder = autoApplyRecommendedOrderOverride ?? learningOptions.AutoApplyRecommendedOrder;
-        var minRunsBeforeSuggestions = Math.Max(1, learningOptions.MinRunsBeforeSuggestions);
-        var launchStepNames = config.Steps
-            .Where(step => step.Enabled && IsLaunchStep(step))
-            .Select(step => step.Name)
-            .ToList();
-        var recommendedOrder = (learningEnabled && (showRecommendedOrder || autoApplyRecommendedOrder))
-            ? _learningService.GetRecommendedOrder(launchStepNames, minRunsBeforeSuggestions)
-            : Array.Empty<string>();
-
-        if (learningEnabled && showRecommendedOrder)
-        {
-            if (recommendedOrder.Count > 0)
-            {
-                Log(onOutput, "Learned recommended launch order: " + string.Join(" -> ", recommendedOrder));
-            }
-            else
-            {
-                Log(onOutput, $"Learning mode is collecting launch history (need at least {minRunsBeforeSuggestions} run(s) before suggestions).");
-            }
-        }
-
-        var executionSteps = BuildStepExecutionOrder(config.Steps, autoApplyRecommendedOrder && recommendedOrder.Count > 0, recommendedOrder, onOutput);
-
-        foreach (var step in executionSteps)
+        foreach (var step in config.Steps)
         {
             cancellationToken.ThrowIfCancellationRequested();
 
@@ -70,7 +40,7 @@ public sealed class LauncherNativeStartRunner
             switch ((step.Type ?? string.Empty).Trim().ToLowerInvariant())
             {
                 case "launch":
-                    await RunLaunchStepAsync(step, configDirectory, dryRun, onOutput, launchedSteps, observedLaunchSteps, cancellationToken);
+                    await RunLaunchStepAsync(step, configDirectory, dryRun, onOutput, launchedSteps, cancellationToken);
                     break;
                 case "access-sql":
                     if (dryRun)
@@ -105,12 +75,6 @@ public sealed class LauncherNativeStartRunner
         else
         {
             SaveLauncherSessionState(document.FilePath, launchedSteps);
-
-            if (learningEnabled)
-            {
-                _learningService.RecordRun(observedLaunchSteps);
-                Log(onOutput, $"Learning recorded {observedLaunchSteps.Count} observed launch step(s) for this run.");
-            }
         }
 
         await EnsureLockKeysOnAsync(config, dryRun, onOutput, cancellationToken);
@@ -123,7 +87,6 @@ public sealed class LauncherNativeStartRunner
         bool dryRun,
         Action<string>? onOutput,
         List<LauncherSessionStep> launchedSteps,
-        List<string> observedLaunchSteps,
         CancellationToken cancellationToken)
     {
         var launchOnlyIfMissing = step.LaunchOnlyIfMissing ?? true;
@@ -139,7 +102,6 @@ public sealed class LauncherNativeStartRunner
                 Log(onOutput, dryRun
                     ? $"[DryRun] Would skip '{step.Name}' because it is already running"
                     : $"Skipping '{step.Name}' launch because it is already running");
-                observedLaunchSteps.Add(step.Name);
                 return;
             }
         }
@@ -174,7 +136,6 @@ public sealed class LauncherNativeStartRunner
         await WaitForWindowToCloseAsync(step, dryRun, onOutput, cancellationToken);
         await InvokePreLoginWindowPreparationAsync(step, process, dryRun, onOutput, cancellationToken);
         await SendLoginSequenceAsync(step, process, dryRun, onOutput, cancellationToken);
-        await ReplayTaughtEventsAsync(step, process, dryRun, onOutput, cancellationToken);
 
         var loginCompleteWait = step.WaitForLoginCompleteSeconds ?? 0;
         if (loginCompleteWait > 0)
@@ -213,65 +174,7 @@ public sealed class LauncherNativeStartRunner
                 Closed = false,
                 LaunchedAt = DateTimeOffset.Now.ToString("O")
             });
-
-            observedLaunchSteps.Add(step.Name);
         }
-    }
-
-    private static List<LauncherStep> BuildStepExecutionOrder(
-        IReadOnlyList<LauncherStep> steps,
-        bool autoApplyRecommendedOrder,
-        IReadOnlyList<string> recommendedOrder,
-        Action<string>? onOutput)
-    {
-        if (!autoApplyRecommendedOrder || recommendedOrder.Count == 0)
-        {
-            return steps.ToList();
-        }
-
-        var enabledLaunchStepsByName = steps
-            .Where(step => step.Enabled && IsLaunchStep(step))
-            .GroupBy(step => step.Name, StringComparer.Ordinal)
-            .ToDictionary(group => group.Key, group => group.First(), StringComparer.Ordinal);
-
-        if (enabledLaunchStepsByName.Count == 0)
-        {
-            return steps.ToList();
-        }
-
-        var orderedLaunchSteps = new List<LauncherStep>();
-        foreach (var stepName in recommendedOrder)
-        {
-            if (enabledLaunchStepsByName.Remove(stepName, out var step))
-            {
-                orderedLaunchSteps.Add(step);
-            }
-        }
-
-        foreach (var step in steps)
-        {
-            if (step.Enabled && IsLaunchStep(step) && enabledLaunchStepsByName.Remove(step.Name, out var remaining))
-            {
-                orderedLaunchSteps.Add(remaining);
-            }
-        }
-
-        var launchQueue = new Queue<LauncherStep>(orderedLaunchSteps);
-        var executionPlan = new List<LauncherStep>(steps.Count);
-        foreach (var step in steps)
-        {
-            if (step.Enabled && IsLaunchStep(step) && launchQueue.Count > 0)
-            {
-                executionPlan.Add(launchQueue.Dequeue());
-            }
-            else
-            {
-                executionPlan.Add(step);
-            }
-        }
-
-        Log(onOutput, "Auto-applying learned launch order for this run.");
-        return executionPlan;
     }
 
     private static bool IsLaunchStep(LauncherStep step)
@@ -1331,192 +1234,6 @@ public sealed class LauncherNativeStartRunner
             string.Equals(Path.GetFileName(item.ProgramPath), leafName, StringComparison.OrdinalIgnoreCase));
     }
 
-    private static async Task ReplayTaughtEventsAsync(
-        LauncherStep step,
-        Process? process,
-        bool dryRun,
-        Action<string>? onOutput,
-        CancellationToken cancellationToken)
-    {
-        if (step.TaughtEvents.Count == 0)
-        {
-            return;
-        }
-
-        foreach (var taughtEvent in step.TaughtEvents)
-        {
-            cancellationToken.ThrowIfCancellationRequested();
-
-            if (!taughtEvent.IncludeInReplay)
-            {
-                continue;
-            }
-
-            var delayMs = Math.Max(0, taughtEvent.DelayMs ?? 0);
-            if (delayMs > 0)
-            {
-                if (dryRun)
-                {
-                    Log(onOutput, $"[DryRun] Would wait {delayMs} ms before taught focus event '{taughtEvent.WindowTitle}'");
-                }
-                else
-                {
-                    await Task.Delay(delayMs, cancellationToken);
-                }
-            }
-
-            var eventType = taughtEvent.EventType?.Trim().ToLowerInvariant();
-            switch (eventType)
-            {
-                case "focus-window":
-                {
-                    var title = taughtEvent.WindowTitle;
-                    if (string.IsNullOrWhiteSpace(title))
-                    {
-                        continue;
-                    }
-
-                    if (dryRun)
-                    {
-                        Log(onOutput, $"[DryRun] Would verify/activate taught window '{title}'");
-                        continue;
-                    }
-
-                    var activated = await TryActivateWindowAsync(new[] { title }, process?.Id, 5, 250, cancellationToken);
-                    if (activated)
-                    {
-                        Log(onOutput, $"Taught flow matched window '{title}'");
-                    }
-                    else
-                    {
-                        Log(onOutput, $"Taught flow window not observed in time: '{title}'");
-                    }
-
-                    break;
-                }
-                case "key-input":
-                {
-                    if (string.IsNullOrWhiteSpace(taughtEvent.InputValue))
-                    {
-                        continue;
-                    }
-
-                    if (taughtEvent.IsMasked || string.Equals(taughtEvent.InputValue, "[masked]", StringComparison.OrdinalIgnoreCase))
-                    {
-                        Log(onOutput, "Skipping masked key-input taught event.");
-                        continue;
-                    }
-
-                    if (dryRun)
-                    {
-                        Log(onOutput, $"[DryRun] Would replay key input '{taughtEvent.InputValue}'");
-                        continue;
-                    }
-
-                    if (!string.IsNullOrWhiteSpace(taughtEvent.WindowTitle))
-                    {
-                        await TryActivateWindowAsync(new[] { taughtEvent.WindowTitle }, process?.Id, 3, 200, cancellationToken);
-                    }
-
-                    SendTaughtInput(taughtEvent.InputValue!);
-                    break;
-                }
-                case "barcode-scan":
-                {
-                    if (string.IsNullOrWhiteSpace(taughtEvent.InputValue))
-                    {
-                        continue;
-                    }
-
-                    if (taughtEvent.IsMasked || string.Equals(taughtEvent.InputValue, "[masked]", StringComparison.OrdinalIgnoreCase))
-                    {
-                        Log(onOutput, "Skipping masked barcode-scan taught event.");
-                        continue;
-                    }
-
-                    if (dryRun)
-                    {
-                        Log(onOutput, $"[DryRun] Would replay barcode scan '{taughtEvent.InputValue}'");
-                        continue;
-                    }
-
-                    if (!string.IsNullOrWhiteSpace(taughtEvent.WindowTitle))
-                    {
-                        await TryActivateWindowAsync(new[] { taughtEvent.WindowTitle }, process?.Id, 3, 200, cancellationToken);
-                    }
-
-                    SendTaughtInput(taughtEvent.InputValue!);
-                    break;
-                }
-                case "mouse-click":
-                {
-                    if (!taughtEvent.MouseX.HasValue || !taughtEvent.MouseY.HasValue)
-                    {
-                        continue;
-                    }
-
-                    if (dryRun)
-                    {
-                        Log(onOutput, $"[DryRun] Would replay mouse {taughtEvent.MouseButton ?? "left"} click at ({taughtEvent.MouseX.Value}, {taughtEvent.MouseY.Value})");
-                        continue;
-                    }
-
-                    if (!string.IsNullOrWhiteSpace(taughtEvent.WindowTitle))
-                    {
-                        await TryActivateWindowAsync(new[] { taughtEvent.WindowTitle }, process?.Id, 3, 200, cancellationToken);
-                    }
-
-                    ReplayMouseClick(taughtEvent.MouseX.Value, taughtEvent.MouseY.Value, taughtEvent.MouseButton);
-                    break;
-                }
-                case "mouse-move":
-                {
-                    if (!taughtEvent.MouseX.HasValue || !taughtEvent.MouseY.HasValue)
-                    {
-                        continue;
-                    }
-
-                    if (dryRun)
-                    {
-                        Log(onOutput, $"[DryRun] Would move mouse to ({taughtEvent.MouseX.Value}, {taughtEvent.MouseY.Value})");
-                        continue;
-                    }
-
-                    NativeMethods.SetCursorPos(taughtEvent.MouseX.Value, taughtEvent.MouseY.Value);
-                    break;
-                }
-            }
-        }
-    }
-
-    private static void SendTaughtInput(string inputValue)
-    {
-        if (string.IsNullOrWhiteSpace(inputValue))
-        {
-            return;
-        }
-
-        SendKeys.SendWait(inputValue);
-        Thread.Sleep(25);
-    }
-
-    private static void ReplayMouseClick(int x, int y, string? mouseButton)
-    {
-        NativeMethods.SetCursorPos(x, y);
-
-        if (string.Equals(mouseButton, "right", StringComparison.OrdinalIgnoreCase))
-        {
-            NativeMethods.mouse_event(NativeMethods.MOUSEEVENTF_RIGHTDOWN, 0, 0, 0, UIntPtr.Zero);
-            Thread.Sleep(20);
-            NativeMethods.mouse_event(NativeMethods.MOUSEEVENTF_RIGHTUP, 0, 0, 0, UIntPtr.Zero);
-            return;
-        }
-
-        NativeMethods.mouse_event(NativeMethods.MOUSEEVENTF_LEFTDOWN, 0, 0, 0, UIntPtr.Zero);
-        Thread.Sleep(20);
-        NativeMethods.mouse_event(NativeMethods.MOUSEEVENTF_LEFTUP, 0, 0, 0, UIntPtr.Zero);
-    }
-
     private static List<int> GetTrackedProcessIds(LauncherStep step)
     {
         var names = step.CloseProcessNames.Count > 0
@@ -2298,8 +2015,6 @@ public sealed class LauncherNativeStartRunner
         internal const int SW_MINIMIZE = 6;
         internal const uint MOUSEEVENTF_LEFTDOWN = 0x0002;
         internal const uint MOUSEEVENTF_LEFTUP = 0x0004;
-        internal const uint MOUSEEVENTF_RIGHTDOWN = 0x0008;
-        internal const uint MOUSEEVENTF_RIGHTUP = 0x0010;
 
         internal delegate bool EnumWindowsProc(IntPtr hWnd, IntPtr lParam);
 

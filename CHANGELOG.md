@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.13 - 2026-09-16
+
+- Removed launch-order learning and Teach Session capture/replay functionality.
+- Restored Run Start to execute enabled configured steps in their saved order.
+
 ## 1.2.12 - 2026-09-16
 
 - Removed Microsoft Outlook from the default launcher start and close workflows.
