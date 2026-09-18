@@ -99,14 +99,19 @@ public sealed class LauncherNativeDetectionService
     private static List<string> BuildWindowTitleCandidates(LauncherStep step, bool isAccessHosted)
     {
         var titles = new List<string>();
-        titles.AddRange(step.RunningWindowTitles);
 
-        if (!string.IsNullOrWhiteSpace(step.WindowTitle))
+        if (step.RunningWindowTitles.Count > 0)
+        {
+            titles.AddRange(step.RunningWindowTitles);
+        }
+        else if (!string.IsNullOrWhiteSpace(step.WindowTitle))
         {
             titles.Add(step.WindowTitle);
         }
-
-        titles.AddRange(step.FallbackWindowTitles);
+        else
+        {
+            titles.AddRange(step.FallbackWindowTitles);
+        }
 
         if (isAccessHosted)
         {
@@ -119,6 +124,13 @@ public sealed class LauncherNativeDetectionService
             .Where(s => !string.IsNullOrWhiteSpace(s))
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToList();
+    }
+
+    public static IReadOnlyList<string> BuildRunningWindowTitleCandidatesForTests(LauncherStep step)
+    {
+        var processNames = BuildProcessCandidates(step);
+        var isAccessHosted = IsAccessHostedStep(step, processNames);
+        return BuildWindowTitleCandidates(step, isAccessHosted);
     }
 
     private static List<string> BuildProcessCandidates(LauncherStep step)

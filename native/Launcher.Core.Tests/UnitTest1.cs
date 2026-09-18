@@ -54,6 +54,27 @@ public class LauncherCoreTests
     }
 
     [Fact]
+    public void BuildRunningWindowTitleCandidates_PrefersExplicitRunningTitles_OverFallbackAliases()
+    {
+        var step = new LauncherStep
+        {
+            Name = "Visual Mfg",
+            Type = "launch",
+            ProgramPath = @"\\INFOR-VMSERVER\Visual1000$\VMFG\VM.EXE",
+            WindowTitle = "Visual Manufacturing",
+            RunningWindowTitles = { "Visual Manufacturing", "VMFG" },
+            FallbackWindowTitles = { "Visual", "VMFG", "VM" }
+        };
+
+        var titles = LauncherNativeDetectionService.BuildRunningWindowTitleCandidatesForTests(step);
+
+        Assert.Contains("Visual Manufacturing", titles);
+        Assert.Contains("VMFG", titles);
+        Assert.DoesNotContain("Visual", titles);
+        Assert.DoesNotContain("VM", titles);
+    }
+
+    [Fact]
     public void ResolveDirectoryLaunchTargetPath_CreatesMonthAndDateFolders_WhenConfigured()
     {
         var baseDirectory = Path.Combine(Path.GetTempPath(), $"launcher-receiver-{Guid.NewGuid():N}");

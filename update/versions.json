@@ -1,5 +1,17 @@
 [
   {
+    "version": "1.2.18",
+    "releaseDate": "2026-09-18",
+    "description": "Fix Visual Mfg false already-running detection",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.2.18/Launcher-1.2.18-Setup.exe",
+    "checksum": "",
+    "isRequired": false,
+    "notes": [
+      "Visual Mfg no longer uses broad fallback titles like 'Visual' as running-state proof when explicit running titles are configured",
+      "This prevents unrelated windows such as Visual Studio Code from falsely making Visual Mfg look already open"
+    ]
+  },
+  {
     "version": "1.2.17",
     "releaseDate": "2026-09-18",
     "description": "Complete Receiver's month/day folder flow and reopen the base folder",

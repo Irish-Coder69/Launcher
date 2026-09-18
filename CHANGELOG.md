@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.18 - 2026-09-18
+
+- Fixed native Visual Mfg running detection so broad fallback titles no longer make unrelated windows look like the app is already open.
+- Running-state checks now prefer explicit configured running titles instead of generic fallback aliases when both are present.
+
 ## 1.2.17 - 2026-09-18
 
 - Added native support for Receiver's current month/current day folder flow so the launcher creates and opens the dated subfolder instead of stopping at the base folder.
