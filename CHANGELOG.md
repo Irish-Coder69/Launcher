@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.17 - 2026-09-18
+
+- Added native support for Receiver's current month/current day folder flow so the launcher creates and opens the dated subfolder instead of stopping at the base folder.
+- Added an option for Receiver's to reopen the base folder after the dated folder launch completes.
+
 ## 1.2.16 - 2026-09-18
 
 - Fixed Stockroom Analytics login so the native launcher targets the configured User ID field instead of falling back to the wrong textbox during Access form flicker.

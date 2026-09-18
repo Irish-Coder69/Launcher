@@ -110,14 +110,15 @@ public sealed class LauncherNativeStartRunner
 
         var beforeProcessIds = GetTrackedProcessIds(step);
         Process? process = null;
+        var launchTarget = ResolveLaunchTargetPath(step, configDirectory, createMissing: !dryRun, dryRun, onOutput);
 
         if (dryRun)
         {
-            Log(onOutput, $"[DryRun] Would launch: {GetDryRunTarget(step, configDirectory)} {step.Arguments ?? string.Empty} (WindowStyle={ResolveWindowStyle(step)})");
+            Log(onOutput, $"[DryRun] Would launch: {launchTarget} {step.Arguments ?? string.Empty} (WindowStyle={ResolveWindowStyle(step)})");
         }
         else
         {
-            process = StartStepProcess(step, configDirectory);
+            process = StartStepProcess(step, configDirectory, launchTarget);
             Log(onOutput, $"Launching '{step.Name}'");
         }
 
@@ -165,6 +166,7 @@ public sealed class LauncherNativeStartRunner
         }
         await InvokeMinimizeLaunchedWindowAsync(step, process, afterCompletion: true, dryRun, onOutput, cancellationToken);
         await InvokeMinimizeAdditionalWindowTitlesAfterCompletionAsync(step, dryRun, onOutput, cancellationToken);
+        await OpenBaseDirectoryAfterLaunchAsync(step, configDirectory, launchTarget, dryRun, onOutput, cancellationToken);
 
         if (!runningBeforeLaunch)
         {
@@ -1091,7 +1093,7 @@ public sealed class LauncherNativeStartRunner
         }
     }
 
-    private Process? StartStepProcess(LauncherStep step, string configDirectory)
+    private Process? StartStepProcess(LauncherStep step, string configDirectory, string? resolvedLaunchTarget = null)
     {
         if (string.IsNullOrWhiteSpace(step.ProgramPath))
         {
@@ -1100,7 +1102,9 @@ public sealed class LauncherNativeStartRunner
 
         var rawProgramPath = step.ProgramPath;
         var looksLikePath = LooksLikePath(rawProgramPath);
-        var resolvedProgramPath = ResolveLaunchTarget(step, configDirectory);
+        var resolvedProgramPath = string.IsNullOrWhiteSpace(resolvedLaunchTarget)
+            ? ResolveLaunchTargetPath(step, configDirectory, createMissing: true, dryRun: false, onOutput: null)
+            : resolvedLaunchTarget;
 
         if (looksLikePath && string.IsNullOrWhiteSpace(resolvedProgramPath))
         {
@@ -1153,17 +1157,25 @@ public sealed class LauncherNativeStartRunner
 
     private string GetDryRunTarget(LauncherStep step, string configDirectory)
     {
-        if (string.IsNullOrWhiteSpace(step.ProgramPath))
+        return ResolveLaunchTargetPath(step, configDirectory, createMissing: false, dryRun: true, onOutput: null);
+    }
+
+    private string ResolveLaunchTargetPath(LauncherStep step, string configDirectory, bool createMissing, bool dryRun, Action<string>? onOutput)
+    {
+        var resolvedTarget = ResolveLaunchTarget(step, configDirectory);
+        if (string.IsNullOrWhiteSpace(resolvedTarget))
         {
-            return string.Empty;
+            return string.IsNullOrWhiteSpace(step.ProgramPath)
+                ? string.Empty
+                : ResolveStepPath(configDirectory, step.ProgramPath);
         }
 
-        if (!LooksLikePath(step.ProgramPath))
+        if (!LooksLikePath(resolvedTarget) || !ShouldResolveDirectoryLaunchTarget(step, resolvedTarget))
         {
-            return step.ProgramPath;
+            return resolvedTarget;
         }
 
-        return ResolveLaunchTarget(step, configDirectory) ?? ResolveStepPath(configDirectory, step.ProgramPath);
+        return ResolveDirectoryLaunchTargetPath(step, resolvedTarget, createMissing, dryRun, onOutput, DateTime.Now);
     }
 
     private string? ResolveLaunchTarget(LauncherStep step, string configDirectory)
@@ -1192,6 +1204,123 @@ public sealed class LauncherNativeStartRunner
         }
 
         return null;
+    }
+
+    private static bool ShouldResolveDirectoryLaunchTarget(LauncherStep step, string resolvedTarget)
+    {
+        return (step.EnsureCurrentMonthFolder || step.EnsureCurrentDateFolder) &&
+               !string.IsNullOrWhiteSpace(resolvedTarget) &&
+               string.IsNullOrWhiteSpace(Path.GetExtension(resolvedTarget));
+    }
+
+    private static string ResolveDirectoryLaunchTargetPath(
+        LauncherStep step,
+        string baseDirectory,
+        bool createMissing,
+        bool dryRun,
+        Action<string>? onOutput,
+        DateTime now)
+    {
+        if (string.IsNullOrWhiteSpace(baseDirectory) || (!step.EnsureCurrentMonthFolder && !step.EnsureCurrentDateFolder))
+        {
+            return baseDirectory;
+        }
+
+        var targetPath = baseDirectory;
+        var monthPath = baseDirectory;
+        var monthFolderFormat = string.IsNullOrWhiteSpace(step.CurrentMonthFolderFormat)
+            ? "MM"
+            : step.CurrentMonthFolderFormat!;
+        var dateFolderFormat = string.IsNullOrWhiteSpace(step.CurrentDateFolderFormat)
+            ? "MM_dd_yyyy"
+            : step.CurrentDateFolderFormat!;
+
+        var monthFolderName = now.ToString(monthFolderFormat, System.Globalization.CultureInfo.InvariantCulture);
+        monthPath = Path.Combine(baseDirectory, monthFolderName);
+        EnsureDirectoryExists(monthPath, createMissing, dryRun, onOutput, "month");
+        targetPath = monthPath;
+
+        if (step.EnsureCurrentDateFolder)
+        {
+            var dateFolderName = now.ToString(dateFolderFormat, System.Globalization.CultureInfo.InvariantCulture);
+            var datePath = Path.Combine(monthPath, dateFolderName);
+            EnsureDirectoryExists(datePath, createMissing, dryRun, onOutput, "date");
+            targetPath = datePath;
+        }
+
+        return targetPath;
+    }
+
+    private static void EnsureDirectoryExists(string path, bool createMissing, bool dryRun, Action<string>? onOutput, string descriptor)
+    {
+        if (Directory.Exists(path))
+        {
+            return;
+        }
+
+        if (dryRun)
+        {
+            Log(onOutput, $"[DryRun] Would create current {descriptor} folder '{path}'");
+            return;
+        }
+
+        if (!createMissing)
+        {
+            return;
+        }
+
+        Directory.CreateDirectory(path);
+        Log(onOutput, $"Created current {descriptor} folder '{path}'");
+    }
+
+    private static async Task OpenBaseDirectoryAfterLaunchAsync(
+        LauncherStep step,
+        string configDirectory,
+        string launchTarget,
+        bool dryRun,
+        Action<string>? onOutput,
+        CancellationToken cancellationToken)
+    {
+        if (!step.OpenBaseDirectoryAfterLaunch || string.IsNullOrWhiteSpace(step.ProgramPath) || !LooksLikePath(step.ProgramPath))
+        {
+            return;
+        }
+
+        var baseDirectory = ResolveStepPath(configDirectory, step.ProgramPath);
+        if (string.IsNullOrWhiteSpace(baseDirectory) || !Directory.Exists(baseDirectory))
+        {
+            return;
+        }
+
+        if (PathsEqual(baseDirectory, launchTarget))
+        {
+            return;
+        }
+
+        if (dryRun)
+        {
+            Log(onOutput, $"[DryRun] Would open base directory '{baseDirectory}' after launch target '{launchTarget}'");
+            return;
+        }
+
+        cancellationToken.ThrowIfCancellationRequested();
+        Process.Start(new ProcessStartInfo
+        {
+            FileName = baseDirectory,
+            UseShellExecute = true,
+            WorkingDirectory = baseDirectory,
+            WindowStyle = ParseWindowStyle(step.WindowStyle)
+        });
+        Log(onOutput, $"Opened base directory '{baseDirectory}' after launch target '{launchTarget}'");
+        await Task.CompletedTask;
+    }
+
+    private static bool PathsEqual(string left, string right)
+    {
+        return string.Equals(
+            Path.GetFullPath(left).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+            Path.GetFullPath(right).TrimEnd(Path.DirectorySeparatorChar, Path.AltDirectorySeparatorChar),
+            StringComparison.OrdinalIgnoreCase);
     }
 
     private LauncherProgramInventoryEntry? FindInventoryMatchForStep(LauncherStep step)
@@ -1682,6 +1811,22 @@ public sealed class LauncherNativeStartRunner
     public static string? TryGetFirstTextLoginValueForTests(IEnumerable<LauncherKeySequenceEntry> entries)
     {
         return TryGetFirstTextLoginValue(entries);
+    }
+
+    public static string ResolveDirectoryLaunchTargetPathForTests(LauncherStep step, string baseDirectory, bool createMissing, DateTime now)
+    {
+        return ResolveDirectoryLaunchTargetPath(step, baseDirectory, createMissing, dryRun: false, onOutput: null, now);
+    }
+
+    public static bool ShouldOpenBaseDirectoryAfterLaunchForTests(LauncherStep step, string configDirectory, string launchTarget)
+    {
+        if (!step.OpenBaseDirectoryAfterLaunch || string.IsNullOrWhiteSpace(step.ProgramPath) || !LooksLikePath(step.ProgramPath))
+        {
+            return false;
+        }
+
+        var baseDirectory = ResolveStepPath(configDirectory, step.ProgramPath);
+        return !string.IsNullOrWhiteSpace(baseDirectory) && Directory.Exists(baseDirectory) && !PathsEqual(baseDirectory, launchTarget);
     }
 
     private static string? TryGetFirstTextLoginValue(IEnumerable<LauncherKeySequenceEntry> entries)

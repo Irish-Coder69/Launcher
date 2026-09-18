@@ -1,5 +1,17 @@
 [
   {
+    "version": "1.2.17",
+    "releaseDate": "2026-09-18",
+    "description": "Complete Receiver's month/day folder flow and reopen the base folder",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.2.17/Launcher-1.2.17-Setup.exe",
+    "checksum": "",
+    "isRequired": false,
+    "notes": [
+      "Receiver's now creates and opens the current month folder and current date folder in the native launcher instead of stopping at the base folder",
+      "Receiver's can reopen the base folder after the dated folder is opened so both views are available"
+    ]
+  },
+  {
     "version": "1.2.16",
     "releaseDate": "2026-09-18",
     "description": "Fix Stockroom Analytics login field targeting",

@@ -64,6 +64,21 @@ public sealed class LauncherStep
     [JsonPropertyName("fallbackProgramPath")]
     public string? FallbackProgramPath { get; set; }
 
+    [JsonPropertyName("ensureCurrentMonthFolder")]
+    public bool EnsureCurrentMonthFolder { get; set; }
+
+    [JsonPropertyName("ensureCurrentDateFolder")]
+    public bool EnsureCurrentDateFolder { get; set; }
+
+    [JsonPropertyName("currentMonthFolderFormat")]
+    public string? CurrentMonthFolderFormat { get; set; }
+
+    [JsonPropertyName("currentDateFolderFormat")]
+    public string? CurrentDateFolderFormat { get; set; }
+
+    [JsonPropertyName("openBaseDirectoryAfterLaunch")]
+    public bool OpenBaseDirectoryAfterLaunch { get; set; }
+
     [JsonPropertyName("databasePath")]
     public string? DatabasePath { get; set; }
 

@@ -306,6 +306,7 @@
         "ensureCurrentDateFolder": true,
         "currentMonthFolderFormat": "MMMM yyyy",
         "currentDateFolderFormat": "MM_dd_yyyy",
+        "openBaseDirectoryAfterLaunch": true,
         "runningWindowTitles": [
           "Receiver's"
         ],

@@ -54,6 +54,70 @@ public class LauncherCoreTests
     }
 
     [Fact]
+    public void ResolveDirectoryLaunchTargetPath_CreatesMonthAndDateFolders_WhenConfigured()
+    {
+        var baseDirectory = Path.Combine(Path.GetTempPath(), $"launcher-receiver-{Guid.NewGuid():N}");
+
+        try
+        {
+            Directory.CreateDirectory(baseDirectory);
+
+            var step = new LauncherStep
+            {
+                Name = "Receiver's",
+                ProgramPath = baseDirectory,
+                EnsureCurrentMonthFolder = true,
+                EnsureCurrentDateFolder = true,
+                CurrentMonthFolderFormat = "MMMM yyyy",
+                CurrentDateFolderFormat = "MM_dd_yyyy"
+            };
+
+            var target = LauncherNativeStartRunner.ResolveDirectoryLaunchTargetPathForTests(step, baseDirectory, createMissing: true, new DateTime(2026, 9, 18));
+            var expected = Path.Combine(baseDirectory, "September 2026", "09_18_2026");
+
+            Assert.Equal(expected, target);
+            Assert.True(Directory.Exists(Path.Combine(baseDirectory, "September 2026")));
+            Assert.True(Directory.Exists(expected));
+        }
+        finally
+        {
+            if (Directory.Exists(baseDirectory))
+            {
+                Directory.Delete(baseDirectory, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
+    public void ShouldOpenBaseDirectoryAfterLaunch_ReturnsTrue_WhenBaseAndDateFoldersDiffer()
+    {
+        var baseDirectory = Path.Combine(Path.GetTempPath(), $"launcher-receiver-base-{Guid.NewGuid():N}");
+
+        try
+        {
+            Directory.CreateDirectory(baseDirectory);
+            var launchTarget = Path.Combine(baseDirectory, "September 2026", "09_18_2026");
+            Directory.CreateDirectory(launchTarget);
+
+            var step = new LauncherStep
+            {
+                Name = "Receiver's",
+                ProgramPath = baseDirectory,
+                OpenBaseDirectoryAfterLaunch = true
+            };
+
+            Assert.True(LauncherNativeStartRunner.ShouldOpenBaseDirectoryAfterLaunchForTests(step, baseDirectory, launchTarget));
+        }
+        finally
+        {
+            if (Directory.Exists(baseDirectory))
+            {
+                Directory.Delete(baseDirectory, recursive: true);
+            }
+        }
+    }
+
+    [Fact]
     public void SecretStoreService_SaveAndResolveToken_ReturnsSecretValue()
     {
         var storePath = Path.Combine(Path.GetTempPath(), $"launcher-secrets-{Guid.NewGuid():N}.json");
