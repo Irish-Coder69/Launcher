@@ -1,5 +1,17 @@
 [
   {
+    "version": "1.2.16",
+    "releaseDate": "2026-09-18",
+    "description": "Fix Stockroom Analytics login field targeting",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.2.16/Launcher-1.2.16-Setup.exe",
+    "checksum": "",
+    "isRequired": false,
+    "notes": [
+      "Stockroom Analytics now targets the configured User ID field instead of falling back to another textbox when the Access logon form repaints",
+      "Added Stockroom-specific login field aliases and exclusions to reduce wrong-password retries caused by focus landing in the password box"
+    ]
+  },
+  {
     "version": "1.2.15",
     "releaseDate": "2026-09-16",
     "description": "Make Live Output independently scrollable",

@@ -188,6 +188,22 @@
           "JudsonF Welcome to Main Menu.",
           "Welcome to Main Menu"
         ],
+        "loginFieldPreferredNames": [
+          "User Id",
+          "User ID",
+          "UserId",
+          "User Name",
+          "UserName",
+          "User"
+        ],
+        "loginFieldExcludeNames": [
+          "Password",
+          "Passcode",
+          "Help",
+          "Search",
+          "Tell me",
+          "Find"
+        ],
         "minimizeAfterCompletion": true,
         "minimizeAdditionalWindowTitlesAfterCompletionDelaySeconds": 3,
         "minimizeAdditionalWindowTitlesAfterCompletion": [
@@ -198,8 +214,9 @@
           "JudsonF Welcome to Main Menu.",
           "Welcome to Main Menu"
         ],
+        "loginFieldValue": "9563",
+        "loginFieldFallbackClearKeys": "^a{BACKSPACE}",
         "loginSequence": [
-          { "keys": "9563", "delayMs": 600 },
           { "keys": "{ENTER}", "delayMs": 1500 }
         ],
         "waitForLoginCompleteSeconds": 8,

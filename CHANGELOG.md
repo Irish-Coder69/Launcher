@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.2.16 - 2026-09-18
+
+- Fixed Stockroom Analytics login so the native launcher targets the configured User ID field instead of falling back to the wrong textbox during Access form flicker.
+- Added Stockroom-specific login field aliases and exclusions to reduce wrong-password retries caused by focus landing in the password box.
+
 ## 1.2.15 - 2026-09-16
 
 - Made the Live Output pane independently scrollable with the mouse wheel while keeping the Run tab columns fixed.

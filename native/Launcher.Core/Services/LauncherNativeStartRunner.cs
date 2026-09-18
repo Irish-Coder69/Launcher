@@ -354,9 +354,10 @@ public sealed class LauncherNativeStartRunner
                 candidateHandles.Add(loginWindowHandle);
             }
 
-            if (process?.MainWindowHandle != IntPtr.Zero)
+            var mainWindowHandle = process?.MainWindowHandle ?? IntPtr.Zero;
+            if (mainWindowHandle != IntPtr.Zero)
             {
-                candidateHandles.Add(process.MainWindowHandle);
+                candidateHandles.Add(mainWindowHandle);
             }
 
             if (candidateHandles.Count > 0 && TrySetPreferredEditValueFromHandles(candidateHandles, inputValue, preferredNames, excludedNames, out focusedControl))
@@ -1498,6 +1499,8 @@ public sealed class LauncherNativeStartRunner
             return false;
         }
 
+        var requirePreferredMatch = preferredNames.Count > 0;
+
         foreach (AutomationElement control in window.FindAll(TreeScope.Descendants, Condition.TrueCondition))
         {
             if (control.Current.ControlType != ControlType.Edit)
@@ -1523,6 +1526,11 @@ public sealed class LauncherNativeStartRunner
                     continue;
                 }
             }
+        }
+
+        if (requirePreferredMatch)
+        {
+            return false;
         }
 
         foreach (AutomationElement control in window.FindAll(TreeScope.Descendants, Condition.TrueCondition))
@@ -1582,6 +1590,8 @@ public sealed class LauncherNativeStartRunner
             return false;
         }
 
+        var requirePreferredMatch = preferredNames.Count > 0;
+
         foreach (AutomationElement control in window.FindAll(TreeScope.Descendants, Condition.TrueCondition))
         {
             if (control.Current.ControlType != ControlType.Edit)
@@ -1597,6 +1607,11 @@ public sealed class LauncherNativeStartRunner
             {
                 return true;
             }
+        }
+
+        if (requirePreferredMatch)
+        {
+            return false;
         }
 
         foreach (AutomationElement control in window.FindAll(TreeScope.Descendants, Condition.TrueCondition))
