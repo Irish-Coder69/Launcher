@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.2.19 - 2026-09-18
+
+- Fixed native Visual Mfg login activation so window lookup stays scoped to the launched process instead of falling back across unrelated windows on the desktop.
+- Added `VMFG` as an explicit Visual Mfg login window alias.
+- Fixed close-mode interruptions caused by folder steps tracking the shared Explorer shell process instead of closing by folder window title.
+
 ## 1.2.18 - 2026-09-18
 
 - Fixed native Visual Mfg running detection so broad fallback titles no longer make unrelated windows look like the app is already open.

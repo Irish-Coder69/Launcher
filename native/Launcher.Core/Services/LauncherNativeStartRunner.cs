@@ -108,9 +108,10 @@ public sealed class LauncherNativeStartRunner
             }
         }
 
-        var beforeProcessIds = GetTrackedProcessIds(step);
-        Process? process = null;
         var launchTarget = ResolveLaunchTargetPath(step, configDirectory, createMissing: !dryRun, dryRun, onOutput);
+        var trackProcessIds = ShouldTrackProcessIdsForSession(launchTarget);
+        var beforeProcessIds = trackProcessIds ? GetTrackedProcessIds(step) : new List<int>();
+        Process? process = null;
 
         if (dryRun)
         {
@@ -170,7 +171,7 @@ public sealed class LauncherNativeStartRunner
 
         if (!runningBeforeLaunch)
         {
-            var afterProcessIds = GetTrackedProcessIds(step);
+            var afterProcessIds = trackProcessIds ? GetTrackedProcessIds(step) : new List<int>();
             var newProcessIds = afterProcessIds.Except(beforeProcessIds).Distinct().ToList();
             if (newProcessIds.Count == 0)
             {
@@ -1399,6 +1400,11 @@ public sealed class LauncherNativeStartRunner
             .ToList();
     }
 
+    private static bool ShouldTrackProcessIdsForSession(string launchTarget)
+    {
+        return !string.IsNullOrWhiteSpace(launchTarget) && !Directory.Exists(launchTarget);
+    }
+
     private static List<string> BuildProcessCandidates(LauncherStep step)
     {
         var processNames = new List<string>(step.RunningProcessNames);
@@ -1921,13 +1927,7 @@ public sealed class LauncherNativeStartRunner
 
     private static IntPtr TryFindFirstWindow(IReadOnlyList<string> titles, int? processId)
     {
-        var found = TryFindFirstWindowCore(titles, processId);
-        if (found != IntPtr.Zero || !processId.HasValue || processId.Value <= 0)
-        {
-            return found;
-        }
-
-        return TryFindFirstWindowCore(titles, null);
+        return TryFindFirstWindowCore(titles, processId);
     }
 
     private static IntPtr TryFindFirstWindowCore(IReadOnlyList<string> titles, int? processId)

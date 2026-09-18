@@ -256,6 +256,7 @@
         "loginWindowTitle": "Visual Manufacturing",
         "loginFallbackWindowTitles": [
           "Visual Manufacturing",
+          "VMFG",
           "Login",
           "Logon"
         ],

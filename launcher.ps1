@@ -288,6 +288,18 @@ function Get-StepCloseConfiguration {
         }
     }
 
+    $programForProcessDetection = if (-not [string]::IsNullOrWhiteSpace($ResolvedProgramPath)) { $ResolvedProgramPath } else { $RawProgramPath }
+    $isDirectoryTarget = $false
+    if (-not [string]::IsNullOrWhiteSpace($programForProcessDetection)) {
+        try {
+            $candidateItem = Get-Item -LiteralPath $programForProcessDetection -ErrorAction Stop
+            $isDirectoryTarget = [bool]$candidateItem.PSIsContainer
+        }
+        catch {
+            $null = $_
+        }
+    }
+
     $processCandidates = @()
     if ($Step.PSObject.Properties.Name -contains "closeProcessNames") {
         $processCandidates += @($Step.closeProcessNames | ForEach-Object { [string]$_ })
@@ -295,18 +307,6 @@ function Get-StepCloseConfiguration {
     else {
         if ($Step.PSObject.Properties.Name -contains "runningProcessNames") {
             $processCandidates += @($Step.runningProcessNames | ForEach-Object { [string]$_ })
-        }
-
-        $programForProcessDetection = if (-not [string]::IsNullOrWhiteSpace($ResolvedProgramPath)) { $ResolvedProgramPath } else { $RawProgramPath }
-        $isDirectoryTarget = $false
-        if (-not [string]::IsNullOrWhiteSpace($programForProcessDetection)) {
-            try {
-                $candidateItem = Get-Item -LiteralPath $programForProcessDetection -ErrorAction Stop
-                $isDirectoryTarget = [bool]$candidateItem.PSIsContainer
-            }
-            catch {
-                $null = $_
-            }
         }
 
         if (-not $isDirectoryTarget -and -not [string]::IsNullOrWhiteSpace($programForProcessDetection)) {
@@ -330,6 +330,7 @@ function Get-StepCloseConfiguration {
         CloseMethod = $closeMethod
         CloseTimeoutSeconds = $closeTimeoutSeconds
         CloseForce = $closeForce
+        IsDirectoryTarget = $isDirectoryTarget
         CloseWindowTitles = $windowCandidates
         CloseProcessNames = $processCandidates
     }
@@ -431,26 +432,35 @@ function Invoke-CloseStep {
     }
 
     $targetProcesses = New-Object System.Collections.Generic.List[System.Diagnostics.Process]
-    foreach ($processId in $trackedIds) {
-        $proc = Get-Process -Id $processId -ErrorAction SilentlyContinue
-        if ($proc) {
-            $targetProcesses.Add($proc)
+    $strictTrackedStep = $CloseOnlyTrackedApps -and $SessionStep
+
+    if (-not $closeConfig.IsDirectoryTarget) {
+        foreach ($processId in $trackedIds) {
+            $proc = Get-Process -Id $processId -ErrorAction SilentlyContinue
+            if ($proc) {
+                $targetProcesses.Add($proc)
+            }
         }
     }
 
-    if ($targetProcesses.Count -eq 0) {
+    if ($targetProcesses.Count -eq 0 -and -not $strictTrackedStep) {
         foreach ($proc in @(Get-RunningProcessByNameCandidate -ProcessCandidates $closeConfig.CloseProcessNames)) {
             $targetProcesses.Add($proc)
         }
     }
 
-    if ($targetProcesses.Count -eq 0) {
+    if ($targetProcesses.Count -eq 0 -and (-not $strictTrackedStep -or $closeConfig.IsDirectoryTarget)) {
         foreach ($proc in @(Get-RunningProcessByWindowTitleCandidate -TitleCandidates $closeConfig.CloseWindowTitles)) {
             $targetProcesses.Add($proc)
         }
     }
 
     $targetProcesses = New-Object System.Collections.Generic.List[System.Diagnostics.Process] (@($targetProcesses | Sort-Object -Property Id -Unique))
+    if ($strictTrackedStep -and -not $closeConfig.IsDirectoryTarget -and $trackedIds.Count -gt 0 -and $targetProcesses.Count -eq 0) {
+        Write-LauncherLog "Skipping close for '$($Step.name)' because its tracked process IDs are no longer running"
+        return
+    }
+
     if ($targetProcesses.Count -eq 0) {
         Write-LauncherLog "No matching running apps found to close for '$($Step.name)'"
         return
@@ -4098,13 +4108,13 @@ try {
                             $runningBeforeLaunch = Test-LaunchStepAlreadyRunning -Step $step -RawProgramPath $rawProgramPathForTracking -ResolvedProgramPath $resolvedProgramPathForTracking
                         }
 
-                        $beforeProcessIds = @()
                         $closeConfigForTracking = Get-StepCloseConfiguration -Step $step -RawProgramPath $rawProgramPathForTracking -ResolvedProgramPath $resolvedProgramPathForTracking -Defaults @{
                             defaultCloseMethod = "both"
                             defaultCloseTimeoutSeconds = 12
                             defaultCloseForce = $false
                         }
-                        if ($closeConfigForTracking.CloseProcessNames.Count -gt 0) {
+                        $beforeProcessIds = @()
+                        if (-not $closeConfigForTracking.IsDirectoryTarget -and $closeConfigForTracking.CloseProcessNames.Count -gt 0) {
                             $beforeProcessIds = @(
                                 Get-RunningProcessByNameCandidate -ProcessCandidates $closeConfigForTracking.CloseProcessNames | ForEach-Object { [int]$_.Id }
                             )
@@ -4114,7 +4124,7 @@ try {
 
                         if (-not $runningBeforeLaunch) {
                             $afterProcessIds = @()
-                            if ($closeConfigForTracking.CloseProcessNames.Count -gt 0) {
+                            if (-not $closeConfigForTracking.IsDirectoryTarget -and $closeConfigForTracking.CloseProcessNames.Count -gt 0) {
                                 $afterProcessIds = @(
                                     Get-RunningProcessByNameCandidate -ProcessCandidates $closeConfigForTracking.CloseProcessNames | ForEach-Object { [int]$_.Id }
                                 )
