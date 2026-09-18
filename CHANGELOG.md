@@ -1,5 +1,9 @@
 # Changelog
 
+## 1.2.20 - 2026-09-18
+
+- Fixed native Visual Board move-to-monitor after the updater check by restoring title-based desktop fallback for monitor moves without weakening the stricter Visual Mfg login lookup.
+
 ## 1.2.19 - 2026-09-18
 
 - Fixed native Visual Mfg login activation so window lookup stays scoped to the launched process instead of falling back across unrelated windows on the desktop.

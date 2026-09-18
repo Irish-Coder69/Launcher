@@ -718,7 +718,7 @@ public sealed class LauncherNativeStartRunner
             IntPtr handle = IntPtr.Zero;
             for (var attempt = 0; attempt < Math.Max(1, (int)Math.Ceiling(searchTimeoutSeconds * 1000d / Math.Max(1, searchIntervalMs))); attempt++)
             {
-                handle = TryFindFirstWindow(group.Titles, process?.Id);
+                handle = TryFindFirstWindowForMonitorMove(group.Titles, process?.Id);
                 if (handle != IntPtr.Zero)
                 {
                     break;
@@ -1928,6 +1928,17 @@ public sealed class LauncherNativeStartRunner
     private static IntPtr TryFindFirstWindow(IReadOnlyList<string> titles, int? processId)
     {
         return TryFindFirstWindowCore(titles, processId);
+    }
+
+    private static IntPtr TryFindFirstWindowForMonitorMove(IReadOnlyList<string> titles, int? processId)
+    {
+        var found = TryFindFirstWindowCore(titles, processId);
+        if (found != IntPtr.Zero || !processId.HasValue || processId.Value <= 0)
+        {
+            return found;
+        }
+
+        return TryFindFirstWindowCore(titles, null);
     }
 
     private static IntPtr TryFindFirstWindowCore(IReadOnlyList<string> titles, int? processId)

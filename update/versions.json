@@ -1,5 +1,17 @@
 [
   {
+    "version": "1.2.20",
+    "releaseDate": "2026-09-18",
+    "description": "Fix Visual Board move-to-monitor after updater check",
+    "downloadUrl": "https://github.com/Irish-Coder69/Launcher/releases/download/v1.2.20/Launcher-1.2.20-Setup.exe",
+    "checksum": "",
+    "isRequired": false,
+    "notes": [
+      "Visual Board can again be moved to the target monitor after the updater check even when the visible Access window is no longer tied to the original launch PID",
+      "The fallback was restored only for monitor-move window lookup so the stricter Visual Mfg login activation fix remains intact"
+    ]
+  },
+  {
     "version": "1.2.19",
     "releaseDate": "2026-09-18",
     "description": "Fix Visual Mfg login activation and close-mode interruption",
